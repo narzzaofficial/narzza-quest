@@ -23,7 +23,8 @@ import {
     X,
     CalendarDays, // <-- ICON ROADMAP
     Trophy,        // <-- ICON LEADERBOARD
-    Wallet
+    Wallet,
+    Receipt
 } from 'lucide-react';
 
 // Type definition untuk badge counts
@@ -224,6 +225,7 @@ export default function TopBar() {
         { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- LEADERBOARD GM
         { name: 'Review Submissions', href: '/gm/review', icon: <ClipboardCheck className="w-5 h-5" />, badge: 'reviewSubmissions' as BadgeKey },
         { name: 'Send Encouragement', href: '/gm/encourage', icon: <HeartHandshake className="w-5 h-5" />, badge: 'encourage' as BadgeKey },
+        { name: 'Payouts', href: '/gm/payouts', icon: <Receipt className="w-5 h-5" />, badge: null as BadgeKey | null },
         { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badge: 'network' as BadgeKey },
         { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badge: 'notifications' as BadgeKey },
     ];

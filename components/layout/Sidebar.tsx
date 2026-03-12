@@ -21,7 +21,8 @@ import {
     Settings,
     CalendarDays, // <-- ICON ROADMAP
     Trophy,        // <-- ICON LEADERBOARD
-    Wallet
+    Wallet,
+    Receipt
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -66,6 +67,7 @@ export default function Sidebar() {
         { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" /> },
         { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" /> },
         { name: 'Review Submissions', href: '/gm/review', icon: <ClipboardCheck className="w-5 h-5" /> },
+        { name: 'Payouts', href: '/gm/payouts', icon: <Receipt className="w-5 h-5" /> },
         { name: 'Send Encouragement', href: '/gm/encourage', icon: <HeartHandshake className="w-5 h-5" /> },
         { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" /> },
         { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" /> },
