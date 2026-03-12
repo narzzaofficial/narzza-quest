@@ -200,7 +200,7 @@ export default function DashboardPage() {
                             <span className="text-purple-500">📜</span> Active Quests
                         </h2>
                         <button onClick={() => router.push('/quest-board')} className="text-sm font-bold text-purple-600 bg-purple-50 px-5 py-2.5 rounded-full hover:bg-purple-100 transition-colors border border-purple-100">
-                            View All Board →
+                            View All Board
                         </button>
                     </div>
 

@@ -11,6 +11,7 @@ export interface UserProfile {
         uid: string;
         email: string;
         displayName: string;
+        avatar?: string;
     };
     avatar?: string;
     level: number;

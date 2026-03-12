@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
-// Import Ikon Lucide yang sama dengan Sidebar
 import {
     LayoutDashboard,
     ScrollText,
@@ -32,7 +31,6 @@ export default function TopBar() {
     const { profile, logout } = useAuth();
     const [unreadCount, setUnreadCount] = useState(0);
 
-    // Hitung Notifikasi Real-time
     useEffect(() => {
         if (profile?.uid) {
             const q = query(
@@ -47,12 +45,25 @@ export default function TopBar() {
         }
     }, [profile]);
 
-    // Tutup menu otomatis setiap kali pindah halaman
     useEffect(() => {
+        // Mencegah body agar tidak bisa discroll saat menu terbuka
+        if (isMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
         setIsMenuOpen(false);
     }, [pathname]);
 
-    // Definisi Link Hero dengan Ikon Lucide
+    // Tambahan useEffect khusus untuk handle body overflow saat manual toggle
+    useEffect(() => {
+        if (isMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+    }, [isMenuOpen]);
+
     const heroLinks = [
         { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
         { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" /> },
@@ -62,7 +73,6 @@ export default function TopBar() {
         { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" /> },
     ];
 
-    // Definisi Link GM dengan Ikon Lucide
     const gmLinks = [
         { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
         { name: 'Hero Profile', href: '/gm/hero-profile', icon: <UserCircle className="w-5 h-5" /> },
@@ -90,7 +100,6 @@ export default function TopBar() {
 
     return (
         <>
-            {/* ─── STICKY MOBILE HEADER ─── */}
             <header
                 className="flex md:hidden items-center justify-between w-full p-4 sticky top-0 z-40 border-b shadow-sm"
                 style={{
@@ -100,7 +109,6 @@ export default function TopBar() {
                     borderColor: 'rgba(233, 213, 255, 0.6)',
                 }}
             >
-                {/* Hamburger Menu Button */}
                 <button
                     onClick={() => setIsMenuOpen(true)}
                     className="p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 active:scale-95 transition-transform"
@@ -108,14 +116,12 @@ export default function TopBar() {
                     <Menu className="w-6 h-6" />
                 </button>
 
-                {/* Logo */}
                 <Link href="/dashboard">
                     <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-700 to-pink-500" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                         Life Quest
                     </h1>
                 </Link>
 
-                {/* Mini PP */}
                 <Link href="/profile" className="w-10 h-10 rounded-full border-2 border-pink-200 overflow-hidden shadow-sm bg-white active:scale-90 transition-transform">
                     <img src={avatarUrl} alt="PP" className="w-full h-full object-cover" />
                 </Link>
@@ -123,16 +129,17 @@ export default function TopBar() {
 
             {/* ─── MOBILE SLIDE-OUT MENU OVERLAY ─── */}
             <div
-                className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 md:hidden transition-opacity duration-300 ${isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+                className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 md:hidden transition-opacity duration-300 ${isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
                 onClick={() => setIsMenuOpen(false)}
             />
 
-            {/* ─── SLIDE PANEL ─── */}
+            {/* ─── SLIDE PANEL FIX (Menggunakan inset-y-0 agar tidak goyang) ─── */}
             <div
-                className={`fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white z-50 md:hidden shadow-2xl flex flex-col transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                className={`fixed inset-y-0 left-0 w-[85%] max-w-sm bg-white z-50 md:hidden shadow-2xl flex flex-col transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                style={{ height: '100dvh' }} // Menggunakan Dynamic Viewport Height
             >
-                {/* Header Profil dalam Menu */}
-                <div className="p-6 border-b border-purple-100 bg-gradient-to-br from-purple-50 via-white to-pink-50 relative">
+                {/* Header Menu */}
+                <div className="p-6 border-b border-purple-100 bg-gradient-to-br from-purple-50 via-white to-pink-50 relative flex-shrink-0">
                     <button
                         onClick={() => setIsMenuOpen(false)}
                         className="absolute top-4 right-4 text-slate-400 p-2 hover:text-rose-500 transition-colors"
@@ -141,11 +148,11 @@ export default function TopBar() {
                     </button>
 
                     <div className="flex items-center gap-4 mt-2">
-                        <div className="w-16 h-16 rounded-2xl border-2 border-pink-200 overflow-hidden shadow-md bg-white">
+                        <div className="w-14 h-14 rounded-2xl border-2 border-pink-200 overflow-hidden shadow-md bg-white">
                             <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                         </div>
                         <div className="flex flex-col">
-                            <h2 className="text-xl font-bold text-purple-950 truncate max-w-[160px]" style={{ fontFamily: 'var(--font-playfair), serif' }}>
+                            <h2 className="text-lg font-bold text-purple-950 truncate max-w-[160px]" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                                 {profile.displayName}
                             </h2>
                             <span className="text-[10px] font-extrabold uppercase tracking-widest text-pink-500 mt-0.5">
@@ -155,8 +162,8 @@ export default function TopBar() {
                     </div>
                 </div>
 
-                {/* Navigasi Links dengan Ikon Lucide */}
-                <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
+                {/* Navigasi Links - Scrollable Area */}
+                <nav className="flex-1 overflow-y-auto p-4 space-y-1 overscroll-contain">
                     {links.map((link) => {
                         const isActive = pathname === link.href || pathname?.startsWith(`${link.href}/`);
                         const isNotif = link.name === 'Notifications';
@@ -179,7 +186,7 @@ export default function TopBar() {
                                 </div>
 
                                 {isNotif && unreadCount > 0 && (
-                                    <span className="bg-pink-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                                    <span className="bg-pink-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
                                         {unreadCount}
                                     </span>
                                 )}
@@ -188,11 +195,11 @@ export default function TopBar() {
                     })}
                 </nav>
 
-                {/* Footer Actions */}
-                <div className="p-4 border-t border-purple-100 bg-slate-50/80 grid grid-cols-2 gap-3">
+                {/* Footer Actions - Tetap di Bawah */}
+                <div className="p-4 border-t border-purple-100 bg-slate-50 flex-shrink-0 grid grid-cols-2 gap-3 pb-[env(safe-area-inset-bottom,16px)]">
                     <Link
                         href="/profile"
-                        className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-purple-100 text-slate-600 font-bold text-xs shadow-sm hover:bg-purple-50 active:scale-95 transition-all"
+                        className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-purple-100 text-slate-600 font-bold text-xs shadow-sm"
                         style={{ fontFamily: 'var(--font-nunito), sans-serif' }}
                     >
                         <Settings className="w-4 h-4 text-purple-400" />
@@ -200,7 +207,7 @@ export default function TopBar() {
                     </Link>
                     <button
                         onClick={handleLogout}
-                        className="flex items-center justify-center gap-2 py-3 rounded-xl bg-rose-50 text-rose-500 font-bold text-xs border border-rose-100 shadow-sm hover:bg-rose-100 active:scale-95 transition-all"
+                        className="flex items-center justify-center gap-2 py-3 rounded-xl bg-rose-50 text-rose-500 font-bold text-xs border border-rose-100 shadow-sm"
                         style={{ fontFamily: 'var(--font-nunito), sans-serif' }}
                     >
                         <LogOut className="w-4 h-4" />

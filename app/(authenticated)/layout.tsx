@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
+import Footer from '@/components/layout/Footer'; // <--- IMPORT FOOTER BARU
 import Toast from '@/components/ui/Toast';
 
 export default function AuthenticatedLayout({
@@ -31,7 +32,6 @@ export default function AuthenticatedLayout({
     useEffect(() => {
         if (!profile) return;
 
-        // Ambil 5 notif terbaru dari user ini
         const q = query(
             collection(db, 'notifications'),
             where('toUid', '==', profile.uid),
@@ -39,28 +39,23 @@ export default function AuthenticatedLayout({
             limit(5)
         );
 
-        let isInitialLoad = true; // Trik Sakti: Tandai kalau ini baru pertama kali load halaman
+        let isInitialLoad = true;
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            // Jika ini load pertama saat buka halaman, abaikan (jangan munculkan notif lama)
             if (isInitialLoad) {
                 isInitialLoad = false;
                 return;
             }
 
-            // Jika ada perubahan setelah load pertama, periksa apa itu tambahan dokumen baru?
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const notif = change.doc.data();
-
-                    // Bunyikan Alarm (Munculkan Toast)!
                     setGlobalToast({
                         show: true,
                         message: `${notif.fromName}: ${notif.title}`,
                         type: notif.type === 'quest_approved' ? 'success' : 'info'
                     });
 
-                    // Otomatis matikan toast setelah 4 detik (backup timer)
                     setTimeout(() => {
                         setGlobalToast(prev => ({ ...prev, show: false }));
                     }, 4000);
@@ -86,16 +81,28 @@ export default function AuthenticatedLayout({
 
     return (
         <div className="flex h-screen overflow-hidden bg-slate-50">
+            {/* Desktop Sidebar */}
             <Sidebar />
 
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+                {/* Mobile TopBar */}
                 <TopBar />
-                <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
-                    {children}
+
+                {/* AREA SCROLL UTAMA */}
+                <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth flex flex-col">
+
+                    {/* ISI KONTEN HALAMAN */}
+                    <div className="flex-1">
+                        {children}
+                    </div>
+
+                    {/* ─── GLOBAL CUTE FOOTER ─── */}
+                    {/* Ditaruh di sini agar ikut kescroll bersama konten halaman */}
+                    <Footer />
                 </main>
             </div>
 
-            {/* Komponen Toast dipasang di luar agar menimpa seluruh layar */}
+            {/* Komponen Toast Global */}
             <Toast
                 isVisible={globalToast.show}
                 onClose={() => setGlobalToast(prev => ({ ...prev, show: false }))}

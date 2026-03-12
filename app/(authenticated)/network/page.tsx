@@ -16,11 +16,10 @@ import {
     Users,
     UserPlus,
     Mail,
-    Check,
-    X,
     UserCircle2,
     ShieldAlert,
-    Crown
+    Crown,
+    Shield
 } from 'lucide-react';
 
 export default function NetworkPage() {
@@ -128,26 +127,31 @@ export default function NetworkPage() {
                     </p>
                 </header>
 
-                {/* ─── 1. KOTAK PERMINTAAN MASUK (Jika Ada) ─── */}
+                {/* ─── 1. KOTAK PERMINTAAN MASUK ─── */}
                 {profile?.pendingPartnerRequest && (
                     <Card className="border-emerald-200 bg-emerald-50 shadow-sm relative overflow-hidden">
                         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 border border-emerald-200">
-                                    <ShieldAlert className="w-6 h-6" />
+                                {/* PP Pengirim di Request */}
+                                <div className="w-14 h-14 rounded-2xl border-2 border-white overflow-hidden shadow-sm bg-white">
+                                    <img
+                                        src={profile.pendingPartnerRequest.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.pendingPartnerRequest.displayName)}&background=10b981&color=fff&bold=true`}
+                                        alt="Avatar"
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-bold text-emerald-900 mb-1">Ada Permintaan Baru!</h2>
+                                    <h2 className="text-lg font-bold text-emerald-900 mb-0.5">Ada Permintaan Baru!</h2>
                                     <p className="text-emerald-700 text-sm font-medium">
-                                        <strong className="text-emerald-900">{profile.pendingPartnerRequest.displayName}</strong> ({profile.pendingPartnerRequest.email}) ingin terhubung denganmu.
+                                        <strong className="text-emerald-900">{profile.pendingPartnerRequest.displayName}</strong> ingin bergabung ke Guild-mu.
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
-                                <Button variant="outline" onClick={handleReject} disabled={isLinking} className="flex-1 md:flex-none border-emerald-300 text-emerald-700 hover:bg-emerald-100 px-4">
+                            <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
+                                <Button variant="outline" onClick={handleReject} disabled={isLinking} className="flex-1 md:flex-none border-emerald-300 text-emerald-700 hover:bg-emerald-100">
                                     Tolak
                                 </Button>
-                                <Button variant="primary" onClick={handleAccept} isLoading={isLinking} className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 px-6">
+                                <Button variant="primary" onClick={handleAccept} isLoading={isLinking} className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 border-none shadow-emerald-200">
                                     Terima
                                 </Button>
                             </div>
@@ -156,17 +160,17 @@ export default function NetworkPage() {
                 )}
 
                 {/* ─── 2. FORM UNDANG ANGGOTA ─── */}
-                <Card className="bg-white shadow-[0_10px_30px_rgba(168,85,247,0.06)] border-purple-100">
+                <Card className="bg-white shadow-[0_10px_30px_rgba(168,85,247,0.06)] border-purple-100 p-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
                         <div className="flex-1 text-center md:text-left">
                             <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
                                 <UserPlus className="w-5 h-5 text-purple-600" />
                                 <h2 className="text-xl font-bold text-purple-900" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                                    Undang Anggota Baru!
+                                    Undang Anggota Baru
                                 </h2>
                             </div>
                             <p className="text-slate-500 font-medium text-sm">
-                                Kirim permintaan ke email Hero atau GM lain untuk bergabung ke jaringanmu.
+                                Masukkan email rekanmu untuk mengirimkan undangan aliansi Guild.
                             </p>
                         </div>
 
@@ -179,10 +183,10 @@ export default function NetworkPage() {
                                     required
                                     value={partnerEmail}
                                     onChange={(e) => setPartnerEmail(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white transition-all font-medium text-sm placeholder:text-slate-400"
+                                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:ring-2 focus:ring-purple-400 focus:bg-white transition-all font-bold text-sm"
                                 />
                             </div>
-                            <Button type="submit" variant="primary" isLoading={isLinking} className="shrink-0 bg-purple-600 hover:bg-purple-700 py-3 shadow-sm">
+                            <Button type="submit" variant="primary" isLoading={isLinking} className="shrink-0 bg-purple-600 shadow-purple-200">
                                 Kirim Undangan
                             </Button>
                         </form>
@@ -191,35 +195,46 @@ export default function NetworkPage() {
 
                 {/* ─── 3. DAFTAR RELASI / ANGGOTA ─── */}
                 <div>
-                    <h2 className="text-xl font-bold text-purple-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                        <Users className="w-5 h-5" /> Daftar Relasi Aktif
+                    <h2 className="text-xl font-bold text-purple-900 mb-6 flex items-center gap-2" style={{ fontFamily: 'var(--font-playfair), serif' }}>
+                        <Users className="w-5 h-5 text-purple-500" /> Daftar Relasi Aktif
                     </h2>
 
                     {loadingPartners ? (
                         <div className="text-center py-10 text-purple-400 font-medium">Memuat daftar anggota...</div>
                     ) : linkedPartners.length === 0 ? (
-                        <div className="text-center py-12 bg-white/50 border border-slate-200 rounded-2xl border-dashed">
-                            <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                        <div className="text-center py-16 bg-white/50 border border-slate-200 rounded-3xl border-dashed">
+                            <Users className="w-12 h-12 text-slate-300 mx-auto mb-3 opacity-50" />
                             <p className="text-slate-500 font-bold">Belum ada anggota di jaringanmu.</p>
-                            <p className="text-slate-400 text-sm mt-1">Gunakan form di atas untuk mulai mengundang!</p>
+                            <p className="text-slate-400 text-sm mt-1 font-medium">Aliansi membuat perjalananmu lebih bermakna!</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                             {linkedPartners.map((member) => (
-                                <div key={member.uid} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-purple-200 transition-colors">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${member.role === 'gm' ? 'bg-amber-50 text-amber-500 border-amber-200' : 'bg-purple-50 text-purple-500 border-purple-200'
-                                        }`}>
-                                        {member.role === 'gm' ? <Crown className="w-6 h-6" /> : <UserCircle2 className="w-6 h-6" />}
+                                <div key={member.uid} className="flex items-center gap-4 p-4 bg-white border border-purple-50 rounded-2xl shadow-sm hover:shadow-md hover:border-purple-200 transition-all group">
+
+                                    {/* PHOTO PROFIL (Avatar) */}
+                                    <div className="w-14 h-14 rounded-2xl border-2 border-purple-100 overflow-hidden shadow-sm flex-shrink-0 group-hover:border-purple-300 transition-colors bg-slate-50">
+                                        <img
+                                            src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.displayName)}&background=f3e8ff&color=9333ea&bold=true`}
+                                            alt={member.displayName}
+                                            className="w-full h-full object-cover"
+                                        />
                                     </div>
+
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-800 truncate">{member.displayName}</h3>
-                                        <p className="text-xs text-slate-500 truncate">{member.email}</p>
-                                    </div>
-                                    <div>
-                                        <span className={`text-[10px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md ${member.role === 'gm' ? 'bg-amber-100 text-amber-700' : 'bg-purple-100 text-purple-700'
-                                            }`}>
-                                            {member.role === 'gm' ? 'GM' : 'Hero'}
-                                        </span>
+                                        <h3 className="font-bold text-slate-800 truncate leading-snug">{member.displayName}</h3>
+                                        <p className="text-xs text-slate-500 truncate font-medium">{member.email}</p>
+                                        <div className="flex items-center gap-1 mt-1.5">
+                                            {member.role === 'gm' ? (
+                                                <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-100">
+                                                    <Crown className="w-2.5 h-2.5" /> Game Master
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-50 text-purple-600 border border-purple-100">
+                                                    <Shield className="w-2.5 h-2.5" /> Lv. {member.level || 1} Hero
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))}
