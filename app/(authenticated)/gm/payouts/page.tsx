@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 import {
     Banknote, Receipt, CheckCircle2, Clock, FileText,
-    Upload, AlertCircle, ExternalLink, MessageSquare
+    Upload, AlertCircle, ExternalLink, X, Image as ImageIcon, UploadCloud
 } from 'lucide-react';
 
 export default function GMPayoutsPage() {
@@ -19,7 +19,8 @@ export default function GMPayoutsPage() {
 
     // State untuk form upload bukti
     const [uploadingId, setUploadingId] = useState<string | null>(null);
-    const [proofUrl, setProofUrl] = useState('');
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadProgress, setUploadProgress] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
 
     const [toast, setToast] = useState({ show: false, msg: '', type: 'success' as 'success' | 'info' | 'error' });
@@ -35,23 +36,46 @@ export default function GMPayoutsPage() {
         return () => unsubscribe();
     }, [profile]);
 
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setSelectedFile(e.target.files[0]);
+        }
+    };
+
+    const removeFile = () => {
+        setSelectedFile(null);
+    };
+
     const handleSubmitProof = async (id: string) => {
-        if (!proofUrl.trim()) {
-            alert("Harap masukkan link/URL bukti transfer!");
+        if (!selectedFile) {
+            alert("Harap pilih gambar bukti transfer!");
             return;
         }
 
         setIsProcessing(true);
         try {
-            await submitWithdrawalProof(id, proofUrl);
+            setUploadProgress('Mengunggah bukti transfer...');
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+            if (!res.ok) throw new Error(`Gagal upload file ${selectedFile.name}`);
+            
+            const data = await res.json();
+            const uploadedUrl = data.url;
+
+            setUploadProgress('Menyimpan data transaksi...');
+            await submitWithdrawalProof(id, uploadedUrl);
+            
             setToast({ show: true, msg: "Bukti transfer berhasil dikirim ke Hero!", type: 'success' });
             setUploadingId(null);
-            setProofUrl('');
+            setSelectedFile(null);
         } catch (error) {
             console.error(error);
             setToast({ show: true, msg: "Gagal mengirim bukti transfer.", type: 'error' });
         } finally {
             setIsProcessing(false);
+            setUploadProgress('');
         }
     };
 
@@ -97,9 +121,9 @@ export default function GMPayoutsPage() {
                         </h1>
                         <p className="text-slate-500 text-sm font-medium">Proses pencairan dana dari quest yang telah diselesaikan.</p>
                     </div>
-                    <div className="bg-rose-50 border border-rose-100 px-6 py-4 rounded-2xl text-right w-full md:w-auto">
-                        <p className="text-rose-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Harus Dibayar</p>
-                        <p className="text-2xl md:text-3xl font-black text-rose-600">Rp {pendingTotal.toLocaleString('id-ID')}</p>
+                    <div className="bg-rose-50 border border-rose-100 px-6 py-4 rounded-2xl w-full md:w-auto flex flex-col items-center justify-center">
+                        <p className="text-rose-500 text-[10px] md:text-xs font-black uppercase tracking-widest mb-1 text-center">Total Harus Dibayar</p>
+                        <p className="text-2xl md:text-3xl font-black text-rose-600 text-center">Rp {pendingTotal.toLocaleString('id-ID')}</p>
                     </div>
                 </header>
 
@@ -154,19 +178,34 @@ export default function GMPayoutsPage() {
                                             {uploadingId === wd.id ? (
                                                 <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100 animate-in slide-in-from-top-2">
                                                     <label className="block text-[10px] font-black text-purple-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                                        <ExternalLink className="w-3.5 h-3.5" /> Link Bukti Transfer (Gdrive/Imgur)
+                                                        <ExternalLink className="w-3.5 h-3.5" /> Bukti Transfer (Upload Gambar)
                                                     </label>
-                                                    <input
-                                                        type="url"
-                                                        placeholder="https://..."
-                                                        value={proofUrl}
-                                                        onChange={(e) => setProofUrl(e.target.value)}
-                                                        className="w-full text-sm p-3 rounded-xl border border-purple-200 bg-white mb-3 focus:outline-none focus:ring-2 focus:ring-purple-400 font-medium"
-                                                    />
+                                                    
+                                                    {!selectedFile ? (
+                                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-purple-200 border-dashed rounded-xl cursor-pointer bg-white hover:bg-purple-50 transition-colors mb-4">
+                                                            <div className="flex flex-col items-center justify-center pt-5 pb-6 text-purple-500">
+                                                                <UploadCloud className="w-8 h-8 mb-2 opacity-70" />
+                                                                <p className="mb-1 text-sm font-bold">Pilih gambar bukti transfer</p>
+                                                                <p className="text-xs font-medium opacity-70">PNG, JPG (Maks. 5MB)</p>
+                                                            </div>
+                                                            <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                                                        </label>
+                                                    ) : (
+                                                        <div className="flex items-center justify-between p-3 bg-white border border-purple-200 rounded-xl shadow-sm mb-4">
+                                                            <div className="flex items-center gap-3 overflow-hidden text-slate-600">
+                                                                <ImageIcon className="w-5 h-5 shrink-0 text-purple-500" />
+                                                                <span className="text-sm font-bold truncate">{selectedFile.name}</span>
+                                                            </div>
+                                                            <button type="button" onClick={removeFile} className="text-rose-400 hover:text-rose-600">
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    )}
+
                                                     <div className="flex justify-end gap-2">
-                                                        <Button size="sm" variant="ghost" onClick={() => setUploadingId(null)} className="text-slate-500">Batal</Button>
-                                                        <Button size="sm" variant="primary" className="bg-purple-600 text-white shadow-md flex items-center gap-1.5" onClick={() => handleSubmitProof(wd.id)} isLoading={isProcessing}>
-                                                            <Upload className="w-3.5 h-3.5" /> Kirim Bukti
+                                                        <Button size="sm" variant="ghost" onClick={() => { setUploadingId(null); setSelectedFile(null); }} className="text-slate-500">Batal</Button>
+                                                        <Button size="sm" variant="primary" className="bg-purple-600 text-white shadow-md flex items-center justify-center min-w-[140px]" onClick={() => handleSubmitProof(wd.id)} isLoading={isProcessing} disabled={!selectedFile}>
+                                                            {isProcessing ? uploadProgress || 'Memproses...' : <><Upload className="w-3.5 h-3.5 mr-1.5" /> Kirim Bukti</>}
                                                         </Button>
                                                     </div>
                                                 </div>

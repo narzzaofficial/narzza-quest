@@ -6,7 +6,7 @@ import { getPlayerQuests, getLinkedProfiles } from '@/lib/db';
 import { Quest, UserProfile } from '@/types';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { BookOpen, Calendar, MessageSquare, Award, Feather, Users } from 'lucide-react';
+import { BookOpen, Calendar, MessageSquare, Award, Feather, Users, Wallet } from 'lucide-react';
 
 export default function JournalPage() {
     const { profile, loading } = useAuth();
@@ -155,10 +155,18 @@ export default function JournalPage() {
                                         style={{ fontFamily: 'var(--font-noto-serif), serif' }}>
                                         {quest.title}
                                     </h3>
-                                    <p className="text-sm font-bold text-pink-600 mb-3 flex items-center gap-1.5">
-                                        <Award className="w-3.5 h-3.5" />
-                                        +{quest.expReward + (quest.bonusExp || 0)} EXP
-                                    </p>
+                                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                                        <p className="text-sm font-bold text-pink-600 flex items-center gap-1.5">
+                                            <Award className="w-3.5 h-3.5" />
+                                            +{quest.expReward + (quest.bonusExp || 0)} EXP
+                                        </p>
+                                        {quest.moneyReward && quest.moneyReward > 0 ? (
+                                            <span className="text-emerald-700 font-black text-[10px] md:text-xs bg-emerald-100 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border border-emerald-200 ml-1.5 inline-flex items-center gap-1">
+                                                <Wallet className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                                                Rp {quest.moneyReward.toLocaleString('id-ID')}
+                                            </span>
+                                        ) : null}
+                                    </div>
                                 </div>
 
                                 {/* Notes Grid */}

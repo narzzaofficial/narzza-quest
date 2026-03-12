@@ -9,6 +9,7 @@ import Card from '@/components/ui/Card';
 import ExpBar from '@/components/ui/ExpBar';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import { Wallet } from 'lucide-react';
 
 export default function DashboardPage() {
     const { user, profile, loading } = useAuth();
@@ -241,7 +242,8 @@ export default function DashboardPage() {
                                         <div className="flex flex-wrap items-center gap-1.5 justify-end">
                                             {/* Badge Uang (Tampil jika moneyReward > 0) */}
                                             {quest.moneyReward && quest.moneyReward > 0 ? (
-                                                <span className="text-emerald-700 font-black text-[10px] md:text-xs bg-emerald-100 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border border-emerald-200">
+                                                <span className="text-emerald-700 font-black text-[10px] md:text-xs bg-emerald-100 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                                                    <Wallet className="w-3 h-3 md:w-3.5 md:h-3.5" />
                                                     Rp {quest.moneyReward.toLocaleString('id-ID')}
                                                 </span>
                                             ) : null}

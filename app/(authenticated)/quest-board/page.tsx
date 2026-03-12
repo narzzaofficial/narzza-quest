@@ -7,6 +7,7 @@ import { subscribeToQuests } from '@/lib/db';
 import { Quest } from '@/types';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
+import { Wallet } from 'lucide-react';
 
 export default function QuestBoardPage() {
     const { profile } = useAuth();
@@ -92,10 +93,22 @@ export default function QuestBoardPage() {
                                     {/* Header Card: Rank & EXP */}
                                     <div className="flex justify-between items-start mb-4">
                                         <Badge variant={quest.difficulty}>Rank {quest.difficulty}</Badge>
-                                        <span className={`font-black text-xs px-3 py-1.5 rounded-xl border shadow-sm ${isCompleted ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-pink-50 text-pink-600 border-pink-100'
-                                            }`}>
-                                            +{quest.expReward} EXP
-                                        </span>
+
+                                        {/* Container flex untuk menampung badge uang & EXP */}
+                                        <div className="flex flex-wrap items-center gap-1.5 justify-end">
+                                            {/* Badge Uang (Tampil jika moneyReward > 0) */}
+                                            {quest.moneyReward && quest.moneyReward > 0 ? (
+                                                <span className="text-emerald-700 font-black text-[10px] md:text-xs bg-emerald-100 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                                                    <Wallet className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                                                    Rp {quest.moneyReward.toLocaleString('id-ID')}
+                                                </span>
+                                            ) : null}
+
+                                            {/* Badge EXP */}
+                                            <span className={`font-black text-[10px] md:text-xs px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border shadow-sm ${isCompleted ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-pink-50 text-pink-600 border-pink-100'}`}>
+                                                +{quest.expReward} EXP
+                                            </span>
+                                        </div>
                                     </div>
 
                                     {/* Judul & Deskripsi */}
