@@ -73,7 +73,7 @@ export default function VocabArena() {
             <div className="absolute top-0 right-0 w-[30rem] h-[30rem] bg-blue-300/20 rounded-full blur-[100px] pointer-events-none" />
 
             <Link href="/arena" className="absolute top-8 left-8 text-blue-600 font-bold hover:text-blue-800 transition-colors">
-                ← Kembali ke Arena
+                Kembali ke Arena
             </Link>
 
             <Card className="max-w-lg w-full text-center p-8 md:p-12 relative z-10 shadow-[0_20px_50px_rgba(59,130,246,0.1)] border-blue-100">

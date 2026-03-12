@@ -1,10 +1,9 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // <-- 1. Tambahkan impor useRouter
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import Button from '@/components/ui/Button';
 
 // Data daftar Mini Games di Arena
 const arenaGames = [
@@ -83,6 +82,8 @@ const arenaGames = [
 ];
 
 export default function ArenaHubPage() {
+    const router = useRouter(); // <-- 2. Panggil useRouter
+
     return (
         <div
             className="min-h-screen p-4 md:p-8 relative overflow-hidden text-slate-800"
@@ -119,7 +120,8 @@ export default function ArenaHubPage() {
                     {arenaGames.map((game) => (
                         <Card
                             key={game.id}
-                            className="group relative overflow-hidden hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(236,72,153,0.15)] hover:border-pink-200 transition-all duration-500 flex flex-col"
+                            onClick={() => router.push(`/arena/${game.id}`)} // <-- 3. Redirect ke halaman saat card diklik
+                            className="group relative overflow-hidden cursor-pointer hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(236,72,153,0.15)] hover:border-pink-200 transition-all duration-500 flex flex-col"
                         >
                             {/* Dekorasi Warna Latar Ikon */}
                             <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-10 bg-gradient-to-br ${game.color} group-hover:scale-150 transition-transform duration-700`} />
@@ -147,11 +149,10 @@ export default function ArenaHubPage() {
                                         {game.expReward}
                                     </span>
 
-                                    <Link href={`/arena/${game.id}`}>
-                                        <Button variant="ghost" size="sm" className={`hover:${game.bgLight} hover:${game.textDark}`}>
-                                            Mulai 🚀
-                                        </Button>
-                                    </Link>
+                                    {/* 4. Ganti <Link> dan <Button> dengan div gaya tombol agar tidak bentrok dengan onClick Card */}
+                                    <div className={`px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors duration-300 ${game.bgLight} ${game.textDark} group-hover:bg-white group-hover:shadow-md`}>
+                                        Mulai 🚀
+                                    </div>
                                 </div>
                             </div>
                         </Card>

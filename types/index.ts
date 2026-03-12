@@ -23,10 +23,21 @@ export interface UserProfile {
     totalQuestsCompleted: number;
     totalHoursWorked: number;
     createdAt: string;
+
+    // Badge tracking timestamps
+    lastQuestCheck?: Date | null;
+    lastJournalCheck?: Date | null;
+    lastArenaCheck?: Date | null;
+    lastNetworkCheck?: Date | null;
+    lastHeroCheck?: Date | null;
+    lastSubmissionCheck?: Date | null;
+
+    // GM specific fields
+    needsEncouragement?: boolean;
 }
 
 export type QuestCategory = 'daily' | 'weekly' | 'main' | 'side';
-export type QuestStatus = "pending" | "in_progress" | "submitted" | "approved" | "rejected";
+export type QuestStatus = "pending" | "in_progress" | "submitted" | "approved" | "rejected" | "active";
 export type QuestDifficulty = "E" | "D" | "C" | "B" | "A" | "S";
 
 export interface Quest {
@@ -51,10 +62,12 @@ export interface Quest {
     reviewedAt?: string;
     reviewNote?: string;
     bonusExp?: number;
+    needsReview?: boolean; // GM flag untuk quest yang perlu review
 }
 
 export interface JournalEntry {
     id: string;
+    uid: string; // Author/owner uid
     questId?: string;
     questTitle?: string;
     content: string;
@@ -75,6 +88,38 @@ export interface Notification {
     message: string;
     isRead: boolean;
     createdAt: string;
+}
+
+// Battle/Arena types
+export interface Battle {
+    id: string;
+    participants: string[]; // Array of user UIDs
+    status: 'pending' | 'active' | 'completed';
+    challengerId: string;
+    challengedId: string;
+    createdAt: string;
+    completedAt?: string;
+}
+
+// Connection/Network types
+export interface Connection {
+    id: string;
+    fromUid: string;
+    toUid: string;
+    status: 'pending' | 'accepted' | 'rejected';
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Submission types (for GM review)
+export interface Submission {
+    id: string;
+    questId: string;
+    userId: string;
+    status: 'pending' | 'approved' | 'rejected';
+    submittedAt: string;
+    reviewedAt?: string;
+    note?: string;
 }
 
 export const LEVEL_TITLES: Record<number, string> = {
