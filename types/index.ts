@@ -92,6 +92,22 @@ export interface Notification {
     createdAt: string;
 }
 
+// ─── TYPES PENCAIRAN DANA (WITHDRAWAL) ───
+export type WithdrawalStatus = 'pending' | 'transfer_submitted' | 'completed';
+
+export interface Withdrawal {
+    id: string;
+    heroUid: string;
+    gmUid: string;
+    heroName: string; // Biar GM gampang lihat siapa yang narik
+    amount: number;
+    status: WithdrawalStatus;
+    proofUrl?: string; // Link foto bukti transfer dari GM
+    note?: string; // Pesan penolakan dari Hero (jika ada)
+    createdAt: string;
+    updatedAt: string;
+}
+
 // Battle/Arena types
 export interface Battle {
     id: string;

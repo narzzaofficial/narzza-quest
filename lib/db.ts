@@ -358,3 +358,90 @@ export async function getLinkedProfiles(uids: string[]): Promise<UserProfile[]> 
 
     return profiles;
 }
+
+// ─────────────────────────────────────────
+// WITHDRAWALS (PENCAIRAN DANA)
+// ─────────────────────────────────────────
+
+// 1. Hero mengajukan penarikan
+export async function createWithdrawalRequest(heroProfile: UserProfile, gmUid: string, amount: number) {
+    const batch = writeBatch(db);
+
+    // Potong saldo hero (menggunakan increment negatif)
+    const userRef = doc(db, 'users', heroProfile.uid);
+    batch.update(userRef, {
+        [`balances.${gmUid}`]: increment(-amount)
+    });
+
+    // Buat dokumen pencairan
+    const wdRef = doc(collection(db, 'withdrawals'));
+    batch.set(wdRef, {
+        heroUid: heroProfile.uid,
+        gmUid: gmUid,
+        heroName: heroProfile.displayName,
+        amount: amount,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    });
+
+    await batch.commit();
+
+    // Kirim notifikasi ke GM
+    await sendNotification({
+        toUid: gmUid,
+        fromUid: heroProfile.uid,
+        fromName: heroProfile.displayName,
+        type: 'reminder',
+        title: '💸 Tagihan Pencairan Baru',
+        message: `${heroProfile.displayName} meminta pencairan Rp ${amount.toLocaleString('id-ID')}. Mohon segera upload bukti transfer.`
+    });
+}
+
+// 2. GM mengunggah bukti transfer
+export async function submitWithdrawalProof(withdrawalId: string, proofUrl: string) {
+    await updateDoc(doc(db, "withdrawals", withdrawalId), {
+        status: 'transfer_submitted',
+        proofUrl: proofUrl,
+        updatedAt: new Date().toISOString(),
+    });
+}
+
+// 3. Hero menyetujui atau menolak bukti transfer
+export async function resolveWithdrawal(
+    withdrawalId: string, 
+    action: 'approve' | 'reject', 
+    rejectNote: string = ""
+) {
+    if (action === 'approve') {
+        await updateDoc(doc(db, "withdrawals", withdrawalId), {
+            status: 'completed',
+            updatedAt: new Date().toISOString(),
+            note: "Terkonfirmasi oleh Hero."
+        });
+    } else {
+        // Kalau di-reject, status kembali ke pending agar GM bisa upload ulang
+        await updateDoc(doc(db, "withdrawals", withdrawalId), {
+            status: 'pending',
+            updatedAt: new Date().toISOString(),
+            note: rejectNote, // Alasan kenapa ditolak (misal: "Gambar burem" atau "Uang belum masuk")
+            proofUrl: null // Hapus bukti yang salah
+        });
+    }
+}
+
+// Realtime listener untuk Hero (melihat status penarikannya)
+export function subscribeToHeroWithdrawals(heroUid: string, callback: (wds: any[]) => void) {
+    const q = query(collection(db, "withdrawals"), where("heroUid", "==", heroUid), orderBy("createdAt", "desc"));
+    return onSnapshot(q, (snap) => {
+        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+}
+
+// Realtime listener untuk GM (melihat tagihan dari Hero)
+export function subscribeToGMWithdrawals(gmUid: string, callback: (wds: any[]) => void) {
+    const q = query(collection(db, "withdrawals"), where("gmUid", "==", gmUid), orderBy("createdAt", "desc"));
+    return onSnapshot(q, (snap) => {
+        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+}

@@ -232,13 +232,29 @@ export default function DashboardPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                             {activeQuests.map((quest) => (
                                 <div key={quest.id} onClick={() => router.push(`/quest-board/${quest.id}`)} className="cursor-pointer bg-white border border-purple-100 rounded-3xl p-5 md:p-6 shadow-[0_8px_30px_rgba(168,85,247,0.08)] flex flex-col hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(236,72,153,0.15)] hover:border-pink-200 transition-all duration-300">
+
+                                    {/* AREA LENCANA (RANK, UANG, EXP) */}
                                     <div className="flex justify-between items-start mb-4 md:mb-5">
                                         <Badge variant={quest.difficulty}>Rank {quest.difficulty}</Badge>
-                                        <span className="text-pink-600 font-bold text-[10px] md:text-xs bg-pink-50 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border border-pink-100">
-                                            +{quest.expReward} EXP
-                                        </span>
+
+                                        {/* Container flex untuk menampung badge uang & EXP */}
+                                        <div className="flex flex-wrap items-center gap-1.5 justify-end">
+                                            {/* Badge Uang (Tampil jika moneyReward > 0) */}
+                                            {quest.moneyReward && quest.moneyReward > 0 ? (
+                                                <span className="text-emerald-700 font-black text-[10px] md:text-xs bg-emerald-100 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border border-emerald-200">
+                                                    Rp {quest.moneyReward.toLocaleString('id-ID')}
+                                                </span>
+                                            ) : null}
+
+                                            {/* Badge EXP */}
+                                            <span className="text-pink-600 font-bold text-[10px] md:text-xs bg-pink-50 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border border-pink-100">
+                                                +{quest.expReward} EXP
+                                            </span>
+                                        </div>
                                     </div>
+
                                     <h3 className="text-base md:text-lg font-bold text-purple-950 mb-3 leading-snug">{quest.title}</h3>
+
                                     <div className="mt-auto pt-4 md:pt-5 border-t border-purple-50 flex justify-between items-center text-[10px] md:text-xs font-bold text-purple-400">
                                         <Badge variant={quest.category}>{quest.category}</Badge>
                                     </div>
