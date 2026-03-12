@@ -7,7 +7,7 @@ import { getLinkedProfiles } from '@/lib/db';
 import { UserProfile } from '@/types';
 import Card from '@/components/ui/Card';
 import ExpBar from '@/components/ui/ExpBar';
-import { Users, BookOpen, Send, UserCircle2, ShieldAlert } from 'lucide-react';
+import { Users, BookOpen, Send, UserCircle2, ShieldAlert, Award, Shield } from 'lucide-react';
 
 export default function GMHeroProfilePage() {
     const { profile, loading: authLoading } = useAuth();
@@ -48,7 +48,7 @@ export default function GMHeroProfilePage() {
         return (
             <div className="min-h-screen p-6 flex flex-col items-center justify-center text-center bg-slate-50">
                 <ShieldAlert className="w-16 h-16 text-purple-300 mb-4" />
-                <h2 className="text-2xl font-bold text-purple-900 mb-2" style={{ fontFamily: 'var(--font-noto-serif), serif' }}>Belum Ada Hero</h2>
+                <h2 className="text-2xl font-bold text-purple-900 mb-2" style={{ fontFamily: 'var(--font-playfair), serif' }}>Belum Ada Hero</h2>
                 <p className="text-purple-600/80 mb-6 text-sm max-w-sm">Kamu belum terhubung dengan Hero mana pun. Undang anggota ke Guild-mu terlebih dahulu.</p>
                 <button onClick={() => router.push('/network')} className="px-6 py-3 bg-purple-600 hover:bg-purple-700 transition-colors text-white font-bold rounded-xl shadow-sm">
                     Buka Halaman Network
@@ -59,19 +59,22 @@ export default function GMHeroProfilePage() {
 
     if (!heroProfile) return null;
 
+    // Fallback Avatar jika Hero belum upload foto
+    const heroAvatarUrl = heroProfile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(heroProfile.displayName)}&background=f3e8ff&color=9333ea&bold=true&size=200`;
+
     return (
         <div
             className="min-h-screen p-4 md:p-8 relative overflow-hidden text-slate-800"
             style={{
                 background: 'linear-gradient(135deg, #F8FAFC 0%, #F3E8FF 100%)',
-                fontFamily: 'var(--font-inter), sans-serif'
+                fontFamily: 'var(--font-nunito), sans-serif'
             }}
         >
             <div className="max-w-xl mx-auto relative z-10 pt-2 md:pt-4">
 
                 {/* Header Minimalis */}
                 <header className="text-center mb-6">
-                    <h1 className="text-3xl font-bold text-purple-950" style={{ fontFamily: 'var(--font-noto-serif), serif' }}>
+                    <h1 className="text-3xl font-bold text-purple-950" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                         Hero Dossier
                     </h1>
                     <p className="text-purple-600/70 text-sm font-medium mt-1">Status dan Statistik Partnermu</p>
@@ -97,19 +100,42 @@ export default function GMHeroProfilePage() {
                 </div>
 
                 {/* ─── KARTU IDENTITAS HERO (CLEAN) ─── */}
-                <Card className="p-6 md:p-8 border-purple-100 shadow-[0_10px_40px_rgba(168,85,247,0.08)] bg-white">
+                <Card className="p-6 md:p-8 border-purple-100 shadow-[0_10px_40px_rgba(168,85,247,0.08)] bg-white overflow-hidden">
+
+                    {/* FOTO PROFIL HERO (SYNCED) */}
+                    <div className="flex justify-center mb-6">
+                        <div className="w-28 h-28 rounded-3xl border-4 border-purple-50 overflow-hidden shadow-md bg-slate-50">
+                            <img
+                                src={heroAvatarUrl}
+                                alt={heroProfile.displayName}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    </div>
 
                     {/* Info Utama */}
                     <div className="text-center mb-8">
-                        <h2 className="text-2xl md:text-3xl font-bold text-purple-950 mb-1" style={{ fontFamily: 'var(--font-noto-serif), serif' }}>
+                        <h2 className="text-2xl md:text-3xl font-bold text-purple-950 mb-1" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                             {heroProfile.displayName}
                         </h2>
-                        <p className="text-pink-500 font-bold">{heroProfile.title || "Rookie Adventurer"}</p>
+                        <p className="text-pink-500 font-bold flex items-center justify-center gap-1">
+                            <Award className="w-4 h-4" />
+                            {heroProfile.title || "Rookie Adventurer"}
+                        </p>
                         <p className="text-sm font-medium text-slate-400 mt-1">{heroProfile.email}</p>
                     </div>
 
                     {/* Area Level & EXP */}
                     <div className="bg-purple-50 rounded-2xl p-5 border border-purple-100 mb-6">
+                        <div className="flex justify-between items-end mb-3">
+                            <span className="font-bold text-purple-900 flex items-center gap-1.5">
+                                <Shield className="w-4 h-4 text-purple-600" />
+                                Level {heroProfile.level}
+                            </span>
+                            <span className="text-xs font-bold text-purple-600">
+                                {heroProfile.exp} / {heroProfile.expToNextLevel} EXP
+                            </span>
+                        </div>
                         <ExpBar currentExp={heroProfile.exp} maxExp={heroProfile.expToNextLevel} level={heroProfile.level} />
                         <p className="text-[10px] text-center text-purple-400 mt-4 font-bold uppercase tracking-wider">
                             Butuh {heroProfile.expToNextLevel - heroProfile.exp} EXP untuk naik pangkat
@@ -119,21 +145,21 @@ export default function GMHeroProfilePage() {
                     {/* Grid Statistik */}
                     <div className="grid grid-cols-3 gap-3">
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
-                            <p className="text-2xl font-black text-purple-900 leading-none mb-1" style={{ fontFamily: 'var(--font-noto-serif), serif' }}>
+                            <p className="text-2xl font-black text-purple-900 leading-none mb-1" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                                 {heroProfile.totalQuestsCompleted || 0}
                             </p>
                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Quest</p>
                         </div>
 
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
-                            <p className="text-2xl font-black text-purple-900 leading-none mb-1" style={{ fontFamily: 'var(--font-noto-serif), serif' }}>
+                            <p className="text-2xl font-black text-purple-900 leading-none mb-1" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                                 {heroProfile.totalHoursWorked ? heroProfile.totalHoursWorked.toFixed(1) : 0}
                             </p>
                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Jam</p>
                         </div>
 
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
-                            <p className="text-2xl font-black text-pink-500 leading-none mb-1" style={{ fontFamily: 'var(--font-noto-serif), serif' }}>
+                            <p className="text-2xl font-black text-pink-500 leading-none mb-1" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                                 {heroProfile.streak || 0}
                             </p>
                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Streak</p>
