@@ -20,14 +20,18 @@ import {
     Users,
     Settings,
     Menu,
-    X
+    X,
+    CalendarDays, // <-- ICON ROADMAP
+    Trophy        // <-- ICON LEADERBOARD
 } from 'lucide-react';
 
 // Type definition untuk badge counts
-type BadgeKey = 'questBoard' | 'warRoom' | 'arena' | 'network' | 'heroProfile' | 'manageQuests' | 'reviewSubmissions' | 'encourage' | 'notifications';
+type BadgeKey = 'questBoard' | 'roadmap' | 'leaderboard' | 'warRoom' | 'arena' | 'network' | 'heroProfile' | 'manageQuests' | 'reviewSubmissions' | 'encourage' | 'notifications';
 
 interface BadgeCounts {
     questBoard: number;
+    roadmap: number;
+    leaderboard: number;
     warRoom: number;
     arena: number;
     network: number;
@@ -48,6 +52,8 @@ export default function TopBar() {
     // Badge counts untuk setiap menu dengan proper typing
     const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>({
         questBoard: 0,
+        roadmap: 0,
+        leaderboard: 0,
         warRoom: 0,
         arena: 0,
         network: 0,
@@ -188,7 +194,6 @@ export default function TopBar() {
         setIsMenuOpen(false);
     }, [pathname]);
 
-    // Tambahan useEffect khusus untuk handle body overflow saat manual toggle
     useEffect(() => {
         if (isMenuOpen) {
             document.body.style.overflow = 'hidden';
@@ -200,6 +205,8 @@ export default function TopBar() {
     const heroLinks = [
         { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badge: null as BadgeKey | null },
         { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" />, badge: 'questBoard' as BadgeKey },
+        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- KALENDER
+        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- LEADERBOARD
         { name: 'War Room', href: '/journal', icon: <BookOpen className="w-5 h-5" />, badge: 'warRoom' as BadgeKey },
         { name: 'Arena', href: '/arena', icon: <Swords className="w-5 h-5" />, badge: 'arena' as BadgeKey },
         { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badge: 'network' as BadgeKey },
@@ -210,6 +217,8 @@ export default function TopBar() {
         { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badge: null as BadgeKey | null },
         { name: 'Hero Profile', href: '/gm/hero-profile', icon: <UserCircle className="w-5 h-5" />, badge: 'heroProfile' as BadgeKey },
         { name: 'Manage Quests', href: '/gm/quests', icon: <ListTodo className="w-5 h-5" />, badge: 'manageQuests' as BadgeKey },
+        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- KALENDER GM
+        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- LEADERBOARD GM
         { name: 'Review Submissions', href: '/gm/review', icon: <ClipboardCheck className="w-5 h-5" />, badge: 'reviewSubmissions' as BadgeKey },
         { name: 'Send Encouragement', href: '/gm/encourage', icon: <HeartHandshake className="w-5 h-5" />, badge: 'encourage' as BadgeKey },
         { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badge: 'network' as BadgeKey },
@@ -296,7 +305,7 @@ export default function TopBar() {
                 </div>
 
                 {/* Navigasi Links - Scrollable Area */}
-                <nav className="flex-1 overflow-y-auto p-4 space-y-1 overscroll-contain">
+                <nav className="flex-1 overflow-y-auto p-4 space-y-1 overscroll-contain custom-scrollbar">
                     {links.map((link) => {
                         // FIX: Deteksi active state yang lebih akurat untuk nested routes
                         const isActive = pathname === link.href ||
@@ -337,7 +346,7 @@ export default function TopBar() {
                     })}
                 </nav>
 
-                {/* Footer Actions - Tetap di Bawah dengan spacing lebih besar */}
+                {/* Footer Actions */}
                 <div className="p-4 pt-6 border-t border-purple-100 bg-slate-50 flex-shrink-0 grid grid-cols-2 gap-4 pb-[calc(env(safe-area-inset-bottom,16px)+8px)]">
                     <Link
                         href="/profile"

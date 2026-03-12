@@ -18,7 +18,9 @@ import {
     HeartHandshake,
     LogOut,
     Users,
-    Settings // <--- TAMBAHAN IKON GEAR
+    Settings,
+    CalendarDays, // <-- ICON ROADMAP
+    Trophy        // <-- ICON LEADERBOARD
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -47,6 +49,8 @@ export default function Sidebar() {
     const heroLinks = [
         { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
         { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" /> },
+        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" /> },
+        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" /> },
         { name: 'War Room', href: '/journal', icon: <BookOpen className="w-5 h-5" /> },
         { name: 'Arena', href: '/arena', icon: <Swords className="w-5 h-5" /> },
         { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" /> },
@@ -57,6 +61,8 @@ export default function Sidebar() {
         { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
         { name: 'Hero Profile', href: '/gm/hero-profile', icon: <UserCircle className="w-5 h-5" /> },
         { name: 'Manage Quests', href: '/gm/quests', icon: <ListTodo className="w-5 h-5" /> },
+        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" /> },
+        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" /> },
         { name: 'Review Submissions', href: '/gm/review', icon: <ClipboardCheck className="w-5 h-5" /> },
         { name: 'Send Encouragement', href: '/gm/encourage', icon: <HeartHandshake className="w-5 h-5" /> },
         { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" /> },
