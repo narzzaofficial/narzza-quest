@@ -56,6 +56,18 @@ const arenaGames = [
         textDark: 'text-purple-900',
     },
     {
+        id: 'math-mcq', // Ini akan menjadi rute URL: /arena/math-mcq
+        title: 'Multiplication MCQ',
+        icon: '🎯',
+        description: 'Pilih jawaban yang benar dari hasil perkalian acak. Hati-hati, jawaban salah mengurangi skormu!',
+        category: 'Logic',
+        expReward: '+15 EXP / Menang',
+        color: 'from-indigo-500 to-blue-500',
+        bgLight: 'bg-indigo-50',
+        borderLight: 'border-indigo-100',
+        textDark: 'text-indigo-900',
+    },
+    {
         id: 'business',
         title: 'Startup Terms',
         icon: '💼',
