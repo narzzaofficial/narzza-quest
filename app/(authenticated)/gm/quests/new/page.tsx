@@ -19,8 +19,9 @@ export default function CreateQuestPage() {
     // Form State
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [motivation, setMotivation] = useState(''); // NEW: State untuk Surat Cinta / Penyemangat
+    const [motivation, setMotivation] = useState('');
     const [expReward, setExpReward] = useState<number>(50);
+    const [moneyReward, setMoneyReward] = useState<number>(0); // NEW: State untuk Uang/Bounty
     const [difficulty, setDifficulty] = useState<'E' | 'D' | 'C' | 'B' | 'A' | 'S'>('E');
     const [category, setCategory] = useState<'daily' | 'weekly' | 'main' | 'side'>('daily');
     const [deadline, setDeadline] = useState('');
@@ -29,7 +30,6 @@ export default function CreateQuestPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showToast, setShowToast] = useState(false);
 
-    // Ambil daftar Hero yang terhubung dengan GM ini
     useEffect(() => {
         if (profile?.partnerIds && profile.partnerIds.length > 0) {
             getLinkedProfiles(profile.partnerIds).then(heroes => {
@@ -60,8 +60,9 @@ export default function CreateQuestPage() {
             await createQuest({
                 title,
                 description,
-                motivation, // Simpan Surat Cinta ke database
+                motivation,
                 expReward: Number(expReward),
+                moneyReward: Number(moneyReward), // NEW: Simpan uang ke DB
                 difficulty,
                 category,
                 deadline: new Date(deadline).toISOString(),
@@ -95,7 +96,6 @@ export default function CreateQuestPage() {
         >
             <div className="max-w-2xl mx-auto relative z-10 pt-4">
                 <header className="mb-8">
-                    {/* Tulisan 'Game Master Panel' Dihapus Sesuai Permintaan */}
                     <h1 className="text-3xl md:text-4xl font-bold text-purple-950" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                         Rancang Misi Baru 📜
                     </h1>
@@ -113,7 +113,6 @@ export default function CreateQuestPage() {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <Card className="p-6 md:p-8 bg-white shadow-[0_10px_40px_rgba(168,85,247,0.08)] border-purple-100">
 
-                            {/* DROPDOWN PILIH HERO */}
                             <div className="mb-6 p-4 bg-purple-50 rounded-2xl border border-purple-100">
                                 <label className="block text-sm font-extrabold text-purple-900 mb-2 uppercase tracking-widest">
                                     Tugaskan Kepada 🧙‍♂️
@@ -133,7 +132,6 @@ export default function CreateQuestPage() {
                                 </select>
                             </div>
 
-                            {/* Input Judul */}
                             <div className="mb-4">
                                 <label className="block text-sm font-bold text-slate-700 mb-2">Judul Quest</label>
                                 <input
@@ -146,7 +144,6 @@ export default function CreateQuestPage() {
                                 />
                             </div>
 
-                            {/* Input Deskripsi */}
                             <div className="mb-4">
                                 <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Misi</label>
                                 <textarea
@@ -159,7 +156,6 @@ export default function CreateQuestPage() {
                                 />
                             </div>
 
-                            {/* SURAT CINTA / PENYEMANGAT */}
                             <div className="mb-6">
                                 <label className="block text-sm font-bold text-pink-600 mb-2">Penyemangat / Surat Cinta 💌 (Opsional)</label>
                                 <textarea
@@ -171,17 +167,31 @@ export default function CreateQuestPage() {
                                 />
                             </div>
 
-                            {/* Grid Atribut Quest */}
+                            {/* Grid Atribut Quest (Ditambah Kolom Bounty) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">EXP Reward</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">EXP Reward ✨</label>
                                     <input
                                         type="number"
                                         required min={10} max={1000}
                                         value={expReward}
                                         onChange={(e) => setExpReward(Number(e.target.value))}
-                                        className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-black text-pink-600 focus:ring-2 focus:ring-pink-400 focus:outline-none"
+                                        className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-black text-purple-600 focus:ring-2 focus:ring-purple-400 focus:outline-none"
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-emerald-600 mb-2">Bounty Reward 💰 (Opsional)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-emerald-500">Rp</span>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            value={moneyReward}
+                                            onChange={(e) => setMoneyReward(Number(e.target.value))}
+                                            placeholder="50000"
+                                            className="w-full pl-10 pr-3 py-3 rounded-xl border border-emerald-200 bg-emerald-50 font-black text-emerald-700 focus:ring-2 focus:ring-emerald-400 focus:outline-none focus:bg-white transition-colors"
+                                        />
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Tenggat Waktu (Deadline)</label>
@@ -208,7 +218,7 @@ export default function CreateQuestPage() {
                                         <option value="S">Rank S (Epic)</option>
                                     </select>
                                 </div>
-                                <div>
+                                <div className="md:col-span-2">
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Kategori</label>
                                     <select
                                         value={category}

@@ -2,7 +2,8 @@ import {
     doc, getDoc, setDoc, updateDoc,
     collection, addDoc, query, where,
     orderBy, getDocs, onSnapshot, limit,
-    writeBatch, deleteField, arrayUnion
+    writeBatch, deleteField, arrayUnion,
+    increment
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -50,8 +51,6 @@ export async function updateUserProfile(
 ): Promise<void> {
     await updateDoc(doc(db, "users", uid), { ...data });
 }
-
-
 
 export async function sendPartnerRequest(senderUid: string, receiverEmail: string): Promise<string | null> {
     const senderSnap = await getDoc(doc(db, "users", senderUid));
@@ -135,7 +134,6 @@ export async function updateQuestStatus(
     });
 }
 
-// Tambahkan parameter urls: string[] = []
 export const submitQuest = async (questId: string, note: string, urls: string[] = []) => {
     try {
         const questRef = doc(db, 'quests', questId);
@@ -158,7 +156,6 @@ export const getQuestById = async (questId: string): Promise<Quest | null> => {
         const questSnap = await getDoc(questRef);
 
         if (questSnap.exists()) {
-            // Kita cast sebagai Quest agar TypeScript paham bentuk datanya
             return { id: questSnap.id, ...questSnap.data() } as Quest;
         } else {
             return null;
@@ -182,6 +179,8 @@ export async function approveQuest(
     const { level, exp, expToNextLevel } = calculateLevel(newCumulative);
     const title = LEVEL_TITLES[Math.min(level, 10)] || "Mythic Legend";
 
+    const moneyToAdd = quest.moneyReward || 0;
+
     const batch = writeBatch(db);
 
     batch.update(doc(db, "quests", questId), {
@@ -192,18 +191,27 @@ export async function approveQuest(
         updatedAt: new Date().toISOString(),
     });
 
-    batch.update(doc(db, "users", playerProfile.uid), {
+    // 2. Siapkan data yang akan di-update ke profil Hero
+    const userUpdatePayload: any = {
         level,
         exp,
         expToNextLevel,
         title,
         totalQuestsCompleted: playerProfile.totalQuestsCompleted + 1,
-        totalHoursWorked:
-            playerProfile.totalHoursWorked + (quest.timeWorkedSeconds || 0) / 3600,
-    });
+        totalHoursWorked: playerProfile.totalHoursWorked + (quest.timeWorkedSeconds || 0) / 3600,
+    };
+
+    // 💰 3. MAGIC TRICK: Jika ada uangnya, tambahkan ke Dompet khusus GM pemberi quest
+    if (moneyToAdd > 0) {
+        // Ini akan otomatis membuat/menambah field "balances.UID_GM" dengan aman
+        userUpdatePayload[`balances.${quest.createdBy}`] = increment(moneyToAdd);
+    }
+
+    batch.update(doc(db, "users", playerProfile.uid), userUpdatePayload);
 
     await batch.commit();
 
+    // 4. Catat juga ke Journal sebagai "Struk / Bukti Transaksi"
     await addDoc(collection(db, "journals"), {
         questId,
         questTitle: quest.title,
@@ -211,6 +219,7 @@ export async function approveQuest(
         imageUrl: quest.submissionImageUrl || null,
         timeWorkedSeconds: quest.timeWorkedSeconds || 0,
         expEarned: totalExpEarned,
+        moneyEarned: moneyToAdd, // 💰 Catat pemasukan di jurnal
         createdAt: new Date().toISOString(),
         authorId: playerProfile.uid,
     });

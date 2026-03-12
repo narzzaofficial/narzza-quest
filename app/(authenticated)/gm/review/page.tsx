@@ -17,7 +17,8 @@ import {
   Search,
   User,
   ExternalLink,
-  Award
+  Award,
+  Wallet // Icon untuk uang
 } from 'lucide-react';
 
 export default function GMReviewPage() {
@@ -25,10 +26,7 @@ export default function GMReviewPage() {
   const [submissions, setSubmissions] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Dictionary untuk memetakan UID Hero ke Nama Display-nya
   const [heroMap, setHeroMap] = useState<Record<string, string>>({});
-
-  // State untuk form review inline
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -36,7 +34,6 @@ export default function GMReviewPage() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // 1. FETCH DATA SUBMISSION & NAMA HERO
   useEffect(() => {
     if (profile && profile.role === 'gm') {
       if (profile.partnerIds && profile.partnerIds.length > 0) {
@@ -57,13 +54,13 @@ export default function GMReviewPage() {
     }
   }, [profile]);
 
-  // 2. FUNGSI APPROVE QUEST
   const handleApprove = async (quest: Quest) => {
     setIsProcessing(true);
     try {
       const heroProfile = await getUserProfile(quest.assignedTo);
       if (!heroProfile) throw new Error("Profil Hero tidak ditemukan");
 
+      // Fungsi approveQuest akan menangani penambahan uang di dalamnya
       const result = await approveQuest(
         quest.id,
         quest,
@@ -72,7 +69,8 @@ export default function GMReviewPage() {
         0
       );
 
-      setToastMessage(`Sukses! ${heroMap[quest.assignedTo] || 'Hero'} mendapatkan +${result.expEarned} EXP.`);
+      const bountyText = quest.moneyReward ? ` & Rp ${quest.moneyReward.toLocaleString('id-ID')}` : '';
+      setToastMessage(`Sukses! ${heroMap[quest.assignedTo] || 'Hero'} mendapatkan +${result.expEarned} EXP${bountyText}.`);
       setShowToast(true);
       setReviewingId(null);
       setReviewNote('');
@@ -84,7 +82,6 @@ export default function GMReviewPage() {
     }
   };
 
-  // 3. FUNGSI REJECT QUEST
   const handleReject = async (questId: string) => {
     if (!reviewNote.trim()) {
       alert("Tuliskan alasan penolakan di catatan review agar Hero bisa memperbaikinya!");
@@ -114,10 +111,9 @@ export default function GMReviewPage() {
       className="min-h-screen p-4 md:p-8 relative overflow-hidden text-slate-800"
       style={{
         background: 'linear-gradient(135deg, #F8FAFC 0%, #F3E8FF 100%)',
-        fontFamily: 'var(--font-nunito), sans-serif' // KEMBALI MENGGUNAKAN NUNITO
+        fontFamily: 'var(--font-nunito), sans-serif'
       }}
     >
-      {/* MENGUBAH max-w-4xl MENJADI max-w-6xl AGAR LEBIH LEBAR */}
       <div className="max-w-6xl mx-auto space-y-6 relative z-10 pt-4">
 
         <header className="mb-6">
@@ -137,13 +133,11 @@ export default function GMReviewPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {submissions.map((sub) => (
-              // KARTU DIBUAT LEBIH COMPACT DENGAN MENGURANGI PADDING (p-6 menjadi p-4/p-5)
               <Card key={sub.id} className="flex flex-col border-l-4 border-l-rose-400 overflow-hidden bg-white shadow-sm border-y border-r border-slate-100 transition-all !p-5">
 
-                {/* Header Card dengan Nama Hero */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
                   <div>
-                    <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
                       <span className="text-[10px] font-extrabold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-wider">
                         Rank {sub.difficulty}
                       </span>
@@ -151,17 +145,22 @@ export default function GMReviewPage() {
                         <User className="w-3 h-3" />
                         {heroMap[sub.assignedTo] || 'Hero Tidak Diketahui'}
                       </span>
+                      {/* NEW: BADGE UANG JIKA ADA */}
+                      {sub.moneyReward && sub.moneyReward > 0 ? (
+                        <span className="flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200 tracking-wider">
+                          <Wallet className="w-3 h-3" /> Rp {sub.moneyReward.toLocaleString('id-ID')}
+                        </span>
+                      ) : null}
                     </div>
                     <h3 className="text-lg md:text-xl font-bold text-purple-950 leading-tight" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                       {sub.title}
                     </h3>
                   </div>
-                  <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 whitespace-nowrap">
                     {new Date(sub.submittedAt!).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
 
-                {/* Body: Catatan & Lampiran */}
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-3">
                   <div className="flex items-center gap-2 mb-1.5 text-purple-600">
                     <FileText className="w-4 h-4" />
@@ -169,7 +168,6 @@ export default function GMReviewPage() {
                   </div>
                   <p className="text-slate-700 font-medium text-sm italic mb-3 leading-relaxed">"{sub.submissionNote}"</p>
 
-                  {/* TAMPILKAN DAFTAR LAMPIRAN (MULTIPLE FILES) */}
                   {(sub.submissionUrls?.length || sub.submissionImageUrl) && (
                     <div className="pt-3 border-t border-slate-200">
                       <div className="flex items-center gap-2 mb-2 text-emerald-600">
@@ -180,7 +178,6 @@ export default function GMReviewPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-2">
-                        {/* Jika menggunakan format Array baru (banyak file) */}
                         {sub.submissionUrls && sub.submissionUrls.map((url, idx) => (
                           <a
                             key={idx}
@@ -193,7 +190,6 @@ export default function GMReviewPage() {
                           </a>
                         ))}
 
-                        {/* Fallback jika masih pakai format String lama (satu file) */}
                         {!sub.submissionUrls && sub.submissionImageUrl && (
                           <a
                             href={sub.submissionImageUrl}
@@ -209,7 +205,6 @@ export default function GMReviewPage() {
                   )}
                 </div>
 
-                {/* Bagian Tombol dan Form Review Inline */}
                 {reviewingId === sub.id ? (
                   <div className="bg-rose-50/70 p-4 rounded-xl border border-rose-100 mt-1 animate-[fadeIn_0.2s_ease-out]">
                     <div className="flex items-center gap-2 mb-2 text-rose-700">

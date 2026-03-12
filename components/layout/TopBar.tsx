@@ -22,7 +22,8 @@ import {
     Menu,
     X,
     CalendarDays, // <-- ICON ROADMAP
-    Trophy        // <-- ICON LEADERBOARD
+    Trophy,        // <-- ICON LEADERBOARD
+    Wallet
 } from 'lucide-react';
 
 // Type definition untuk badge counts
@@ -207,10 +208,12 @@ export default function TopBar() {
         { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" />, badge: 'questBoard' as BadgeKey },
         { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- KALENDER
         { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- LEADERBOARD
+        { name: 'My Wallet', href: '/wallet', icon: <Wallet className="w-5 h-5" />, badge: null as BadgeKey | null },
         { name: 'War Room', href: '/journal', icon: <BookOpen className="w-5 h-5" />, badge: 'warRoom' as BadgeKey },
         { name: 'Arena', href: '/arena', icon: <Swords className="w-5 h-5" />, badge: 'arena' as BadgeKey },
         { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badge: 'network' as BadgeKey },
         { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badge: 'notifications' as BadgeKey },
+
     ];
 
     const gmLinks = [

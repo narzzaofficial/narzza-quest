@@ -21,6 +21,7 @@ export interface UserProfile {
     streak: number;
     lastActiveDate: string;
     totalQuestsCompleted: number;
+    balances?: Record<string, number>;
     totalHoursWorked: number;
     createdAt: string;
 
@@ -59,6 +60,7 @@ export interface Quest {
     submissionImageUrl?: string | null;
     submissionUrls?: string[];
     timeWorkedSeconds?: number;
+    moneyReward?: number;
     reviewedAt?: string;
     reviewNote?: string;
     bonusExp?: number;

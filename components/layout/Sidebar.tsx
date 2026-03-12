@@ -20,7 +20,8 @@ import {
     Users,
     Settings,
     CalendarDays, // <-- ICON ROADMAP
-    Trophy        // <-- ICON LEADERBOARD
+    Trophy,        // <-- ICON LEADERBOARD
+    Wallet
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -55,6 +56,7 @@ export default function Sidebar() {
         { name: 'Arena', href: '/arena', icon: <Swords className="w-5 h-5" /> },
         { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" /> },
         { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" /> },
+        { name: 'My Wallet', href: '/wallet', icon: <Wallet className="w-5 h-5" /> },
     ];
 
     const gmLinks = [
