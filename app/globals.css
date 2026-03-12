@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Background */
+  --color-void:           #030508;
+  --color-dark:           #080c12;
+  --color-card:           #0d1420;
+  --color-card-hover:     #111a2a;
+
+  /* Border */
+  --color-border:         #1e2d42;
+  --color-border-glow:    #2a4a6b;
+
+  /* Gold */
+  --color-gold:           #c8a951;
+  --color-gold-light:     #e8c97a;
+  --color-gold-dark:      #8a6f2e;
+
+  /* Accent */
+  --color-crimson:        #8b2020;
+  --color-crimson-light:  #c0392b;
+  --color-azure:          #1a4a7a;
+  --color-azure-light:    #2e7eda;
+  --color-emerald:        #1a5c3a;
+  --color-emerald-light:  #27ae60;
+  --color-purple:         #4a1a7a;
+  --color-purple-light:   #8e44ad;
+
+  /* Text */
+  --color-text-primary:   #e8dcc8;
+  --color-text-secondary: #9aa0aa;
+  --color-text-muted:     #5a6070;
+
+  /* Font */
+  --font-display: var(--font-cinzel), "Cinzel", serif;
+  --font-body:    var(--font-crimson), "Crimson Text", serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  *, *::before, *::after {
+    @apply box-border m-0 p-0;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply min-h-screen text-base leading-relaxed;
+    font-family: var(--font-body);
+    color: var(--color-text-primary);
+    background-color: var(--color-void);
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(26,74,122,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(139,32,32,0.05) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.012'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-wide;
+    font-family: var(--font-display);
+    color: var(--color-text-primary);
+  }
+
+  ::-webkit-scrollbar { @apply w-1.5; }
+  ::-webkit-scrollbar-track { background-color: var(--color-dark); }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full;
+    background-color: var(--color-border-glow);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes shimmer {
+  0%, 100% { opacity: 0; }
+  50%       { opacity: 1; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes floatUp {
+  0%   { opacity: 0; transform: translateY(100vh) scale(0); }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.3; }
+  100% { opacity: 0; transform: translateY(-20px) scale(1); }
+}
+@keyframes levelUp {
+  0%   { opacity: 0; transform: scale(0.5); }
+  60%  { transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
 }
