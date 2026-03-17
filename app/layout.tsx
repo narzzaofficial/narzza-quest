@@ -18,9 +18,19 @@ const nunito = Nunito({
   weight: ["400", "500", "600", "700", "800"],
 });
 
+export const viewport = {
+  themeColor: '#121212',
+};
+
 export const metadata: Metadata = {
   title: "Life Quest — Your Personal RPG Life System",
   description: "Turn your life into an epic RPG adventure",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "LifeQuest",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({
