@@ -105,6 +105,15 @@ export default function CreateQuestPage() {
                         Rancang Misi Baru 📜
                     </h1>
                     <p className="text-slate-500 font-medium mt-2">Buat quest dan tugaskan kepada Hero di guild-mu.</p>
+                    <div className="mt-4">
+                        <Button
+                            variant="outline"
+                            onClick={() => router.push('/gm/quests/new/json')}
+                            className="text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                        >
+                            Buka Form JSON Batch
+                        </Button>
+                    </div>
                 </header>
 
                 {linkedHeroes.length === 0 ? (

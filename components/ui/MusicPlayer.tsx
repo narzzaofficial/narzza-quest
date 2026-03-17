@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Music, Play, Pause, Volume2, VolumeX, SkipForward, Disc } from 'lucide-react';
+import { Music, Play, Pause, Volume2, SkipForward, Disc } from 'lucide-react';
 
 const TRACKS = [
     {
@@ -20,7 +20,6 @@ const TRACKS = [
 
 export default function MusicPlayer() {
     const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
     const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -48,15 +47,6 @@ export default function MusicPlayer() {
             }
         }
         setIsPlaying(!isPlaying);
-    };
-
-    const toggleMute = () => {
-        if (track.type === "audio") {
-            if (!audioRef.current) return;
-            audioRef.current.muted = !isMuted;
-        }
-        // SoundCloud widget mute tidak didukung langsung via API standar
-        setIsMuted(!isMuted);
     };
 
     const nextTrack = () => {
@@ -127,21 +117,12 @@ export default function MusicPlayer() {
                     </div>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2 pt-3 border-t border-purple-50">
-                    <button onClick={toggleMute} className="text-purple-400 hover:text-purple-600">
-                        {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                    </button>
-                    <div className="flex-1 h-1 bg-purple-50 rounded-full overflow-hidden">
-                        <div className={`h-full bg-purple-500 ${isPlaying ? 'animate-pulse' : ''}`} style={{ width: '100%' }} />
-                    </div>
-                </div>
-
                 {/* SoundCloud Embed */}
                 {track.type === "soundcloud" && (
                     <iframe
                         ref={iframeRef}
                         width="100%"
-                        height="60"
+                        height="120"
                         scrolling="no"
                         frameBorder="no"
                         allow="autoplay"

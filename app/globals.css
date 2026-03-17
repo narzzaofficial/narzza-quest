@@ -2,14 +2,14 @@
 
 @theme {
   /* Background */
-  --color-void:           #030508;
-  --color-dark:           #080c12;
-  --color-card:           #0d1420;
-  --color-card-hover:     #111a2a;
+  --color-void:           #f8fafc;
+  --color-dark:           #eef2ff;
+  --color-card:           #ffffff;
+  --color-card-hover:     #f5f3ff;
 
   /* Border */
-  --color-border:         #1e2d42;
-  --color-border-glow:    #2a4a6b;
+  --color-border:         #dbe3f3;
+  --color-border-glow:    #c4b5fd;
 
   /* Gold */
   --color-gold:           #c8a951;
@@ -27,9 +27,9 @@
   --color-purple-light:   #8e44ad;
 
   /* Text */
-  --color-text-primary:   #e8dcc8;
-  --color-text-secondary: #9aa0aa;
-  --color-text-muted:     #5a6070;
+  --color-text-primary:   #312e81;
+  --color-text-secondary: #64748b;
+  --color-text-muted:     #94a3b8;
 
   /* Font */
   --font-display: var(--font-cinzel), "Cinzel", serif;
@@ -51,22 +51,22 @@
     color: var(--color-text-primary);
     background-color: var(--color-void);
     background-image:
-      radial-gradient(ellipse at 20% 20%, rgba(26,74,122,0.06) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(139,32,32,0.05) 0%, transparent 50%),
-      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.012'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+      radial-gradient(ellipse at 20% 20%, rgba(147, 51, 234, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(236, 72, 153, 0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% -20%, rgba(99, 102, 241, 0.06) 0%, transparent 55%);
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply tracking-wide;
     font-family: var(--font-display);
-    color: var(--color-text-primary);
+    color: #312e81;
   }
 
   ::-webkit-scrollbar { @apply w-1.5; }
-  ::-webkit-scrollbar-track { background-color: var(--color-dark); }
+  ::-webkit-scrollbar-track { background-color: #f1f5f9; }
   ::-webkit-scrollbar-thumb {
     @apply rounded-full;
-    background-color: var(--color-border-glow);
+    background-color: #c4b5fd;
   }
 }
 

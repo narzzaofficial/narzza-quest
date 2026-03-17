@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
         const safeFileName = file.name.replace(/\s+/g, '_');
         const fileName = `quest-proofs/${questId}/${Date.now()}_${safeFileName}`;
 
+        
         // 4. Kirim ke DigitalOcean Spaces
         await s3Client.send(new PutObjectCommand({
             Bucket: process.env.DO_SPACES_BUCKET!,
@@ -39,8 +40,7 @@ export async function POST(req: NextRequest) {
             ContentType: file.type,
         }));
 
-        // 5. Susun URL publik dari DO Spaces
-        // Format standar: https://[NAMA_BUCKET].[ENDPOINT_DOMAIN]/[NAMA_FILE]
+       
         const endpointDomain = process.env.DO_SPACES_ENDPOINT?.replace('https://', '');
         const fileUrl = `https://${process.env.DO_SPACES_BUCKET}.${endpointDomain}/${fileName}`;
 

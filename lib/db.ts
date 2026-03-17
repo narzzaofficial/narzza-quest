@@ -3,7 +3,7 @@ import {
     collection, addDoc, query, where,
     orderBy, getDocs, onSnapshot, limit,
     writeBatch, deleteField, arrayUnion,
-    increment, runTransaction, arrayRemove
+    increment, runTransaction,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -686,4 +686,4 @@ export function subscribeToGMGuildQuests(
     return onSnapshot(q, (snap) => {
         callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as GuildQuest)));
     });
-}
+}

@@ -171,7 +171,7 @@ export default function GMReviewPage() {
                     <FileText className="w-4 h-4" />
                     <p className="text-[10px] font-extrabold uppercase tracking-widest">Jurnal Hero</p>
                   </div>
-                  <p className="text-slate-700 font-medium text-sm italic mb-3 leading-relaxed">"{sub.submissionNote}"</p>
+                  <p className="text-slate-700 font-medium text-sm italic mb-3 leading-relaxed">&quot;{sub.submissionNote}&quot;</p>
 
                   {(sub.submissionUrls?.length || sub.submissionImageUrl) && (
                     <div className="pt-3 border-t border-slate-200">

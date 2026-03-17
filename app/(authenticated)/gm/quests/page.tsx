@@ -74,11 +74,18 @@ export default function GMQuestListPage() {
                             Quest Management
                         </h1>
                     </div>
-                    <Link href="/gm/quests/new" className="w-full md:w-auto">
-                        <Button variant="primary" className="w-full md:w-auto shadow-lg shadow-purple-500/20">
-                            ➕ Buat Quest Baru
-                        </Button>
-                    </Link>
+                    <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2">
+                        <Link href="/gm/quests/new" className="w-full md:w-auto">
+                            <Button variant="primary" className="w-full md:w-auto shadow-lg shadow-purple-500/20">
+                                ➕ Buat Quest Baru
+                            </Button>
+                        </Link>
+                        <Link href="/gm/quests/new/json" className="w-full md:w-auto">
+                            <Button variant="outline" className="w-full md:w-auto border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                                ⚡ Form JSON Batch
+                            </Button>
+                        </Link>
+                    </div>
                 </header>
 
                 {quests.length === 0 ? (
