@@ -91,7 +91,14 @@ export default function WalletPage() {
 
         setProcessingId(id);
         try {
-            await resolveWithdrawal(id, action, rejectReason);
+            // Cari withdrawal untuk kirim notifPayload ke GM
+            const wd = withdrawals.find(w => w.id === id);
+            await resolveWithdrawal(id, action, rejectReason, wd && profile ? {
+                heroUid: profile.uid,
+                heroName: profile.displayName,
+                gmUid: wd.gmUid,
+                amount: wd.amount
+            } : undefined);
             setToast({
                 show: true,
                 msg: action === 'approve' ? "Dana berhasil dikonfirmasi!" : "Bukti transfer ditolak.",

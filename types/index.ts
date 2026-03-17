@@ -85,14 +85,54 @@ export interface Notification {
     toUid: string;
     fromUid: string;
     fromName: string;
-    type: "quest_assigned" | "quest_approved" | "quest_rejected" | "encouragement" | "reminder";
+    type:
+        | "quest_assigned"
+        | "quest_approved"
+        | "quest_rejected"
+        | "quest_created"
+        | "encouragement"
+        | "reminder"
+        | "withdrawal_requested"
+        | "withdrawal_transferred"
+        | "withdrawal_confirmed"
+        | "withdrawal_rejected"
+        | "guild_quest_open"    // GM → all heroes: quest publik dibuka
+        | "guild_quest_claimed"; // hero → GM: hero mengambil quest publik
     title: string;
     message: string;
     isRead: boolean;
     createdAt: string;
 }
 
-// ─── TYPES PENCAIRAN DANA (WITHDRAWAL) ───
+// ─────────────────────────────────────────
+// GUILD QUEST (Public / Open Quest)
+// ─────────────────────────────────────────
+
+export type GuildQuestStatus = 'open' | 'closed';
+
+export interface GuildQuest {
+    id: string;
+    title: string;
+    description: string;
+    motivation?: string;
+    category: QuestCategory;
+    difficulty: QuestDifficulty;
+    expReward: number;
+    moneyReward?: number;
+    deadline: string;
+    createdBy: string;       // GM uid
+    createdByName: string;   // GM display name
+    maxClaims: number;       // Max hero yang bisa ambil
+    claimedBy: string[];     // Array hero uid yang sudah ambil
+    status: GuildQuestStatus;
+    createdAt: string;
+    updatedAt: string;
+}
+
+// ─────────────────────────────────────────
+// WITHDRAWAL
+// ─────────────────────────────────────────
+
 export type WithdrawalStatus = 'pending' | 'transfer_submitted' | 'completed';
 
 export interface Withdrawal {

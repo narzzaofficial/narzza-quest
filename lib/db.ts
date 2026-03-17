@@ -3,13 +3,14 @@ import {
     collection, addDoc, query, where,
     orderBy, getDocs, onSnapshot, limit,
     writeBatch, deleteField, arrayUnion,
-    increment
+    increment, runTransaction, arrayRemove
 } from "firebase/firestore";
 
 import { db } from "./firebase";
 import {
     UserProfile, Quest, JournalEntry, Notification,
-    QuestStatus, calculateLevel, LEVEL_TITLES, getExpToNextLevel
+    QuestStatus, calculateLevel, LEVEL_TITLES, getExpToNextLevel,
+    GuildQuest
 } from "@/types";
 
 // ─────────────────────────────────────────
@@ -101,7 +102,8 @@ export async function rejectPartnerRequest(receiverUid: string): Promise<void> {
 // ─────────────────────────────────────────
 
 export async function createQuest(
-    questData: Omit<Quest, "id" | "createdAt" | "updatedAt">
+    questData: Omit<Quest, "id" | "createdAt" | "updatedAt">,
+    gmProfile?: { uid: string; displayName: string }
 ): Promise<string> {
     const now = new Date().toISOString();
     const docRef = await addDoc(collection(db, "quests"), {
@@ -109,6 +111,19 @@ export async function createQuest(
         createdAt: now,
         updatedAt: now,
     });
+
+    // Kirim notifikasi ke hero/player bahwa ada quest baru
+    if (gmProfile && questData.assignedTo) {
+        await sendNotification({
+            toUid: questData.assignedTo,
+            fromUid: gmProfile.uid,
+            fromName: gmProfile.displayName,
+            type: 'quest_created',
+            title: '📜 Quest Baru Untukmu!',
+            message: `${gmProfile.displayName} memberikanmu misi baru: "${questData.title}". Yuk segera cek Quest Board-mu!`
+        });
+    }
+
     return docRef.id;
 }
 
@@ -181,6 +196,27 @@ export async function approveQuest(
 
     const moneyToAdd = quest.moneyReward || 0;
 
+    // ── Streak Calculation ─────────────────────────────────────────────────
+    const todayStr = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+    const lastActive = playerProfile.lastActiveDate || '';
+    let newStreak = playerProfile.streak || 0;
+
+    if (lastActive === todayStr) {
+        // Sudah aktif hari ini – streak tidak berubah
+    } else if (lastActive) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        if (lastActive === yesterdayStr) {
+            newStreak += 1; // Hari berturut-turut → naik
+        } else {
+            newStreak = 1; // Streak terputus → reset ke 1
+        }
+    } else {
+        newStreak = 1; // Pertama kali aktif
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     const batch = writeBatch(db);
 
     batch.update(doc(db, "quests", questId), {
@@ -199,11 +235,12 @@ export async function approveQuest(
         title,
         totalQuestsCompleted: playerProfile.totalQuestsCompleted + 1,
         totalHoursWorked: playerProfile.totalHoursWorked + (quest.timeWorkedSeconds || 0) / 3600,
+        streak: newStreak,
+        lastActiveDate: todayStr,
     };
 
-    // 💰 3. MAGIC TRICK: Jika ada uangnya, tambahkan ke Dompet khusus GM pemberi quest
+    // 💰 3. Jika ada uangnya, tambahkan ke Dompet khusus GM pemberi quest
     if (moneyToAdd > 0) {
-        // Ini akan otomatis membuat/menambah field "balances.UID_GM" dengan aman
         userUpdatePayload[`balances.${quest.createdBy}`] = increment(moneyToAdd);
     }
 
@@ -211,7 +248,7 @@ export async function approveQuest(
 
     await batch.commit();
 
-    // 4. Catat juga ke Journal sebagai "Struk / Bukti Transaksi"
+    // 4. Catat juga ke Journal
     await addDoc(collection(db, "journals"), {
         questId,
         questTitle: quest.title,
@@ -219,13 +256,14 @@ export async function approveQuest(
         imageUrl: quest.submissionImageUrl || null,
         timeWorkedSeconds: quest.timeWorkedSeconds || 0,
         expEarned: totalExpEarned,
-        moneyEarned: moneyToAdd, // 💰 Catat pemasukan di jurnal
+        moneyEarned: moneyToAdd,
         createdAt: new Date().toISOString(),
         authorId: playerProfile.uid,
     });
 
     return { level, exp, expToNextLevel, expEarned: totalExpEarned };
 }
+
 
 function getCumulativeExp(profile: UserProfile): number {
     let total = 0;
@@ -237,12 +275,25 @@ function getCumulativeExp(profile: UserProfile): number {
 
 export async function rejectQuest(
     questId: string,
-    reviewNote: string
+    reviewNote: string,
+    notifPayload?: { toUid: string; fromUid: string; fromName: string; questTitle: string }
 ): Promise<void> {
     await updateQuestStatus(questId, "rejected", {
         reviewedAt: new Date().toISOString(),
         reviewNote,
     });
+
+    // Kirim notifikasi ke hero bahwa quest ditolak
+    if (notifPayload) {
+        await sendNotification({
+            toUid: notifPayload.toUid,
+            fromUid: notifPayload.fromUid,
+            fromName: notifPayload.fromName,
+            type: 'quest_rejected',
+            title: '⚠️ Quest Ditolak',
+            message: `Quest "${notifPayload.questTitle}" ditolak. Alasan: ${reviewNote || 'Tidak ada catatan.'}`
+        });
+    }
 }
 
 // ─────────────────────────────────────────
@@ -258,6 +309,22 @@ export function subscribeToQuests(
         where("assignedTo", "==", playerUid),
         orderBy("createdAt", "desc"),
         limit(20)
+    );
+    return onSnapshot(q, (snap) => {
+        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Quest)));
+    });
+}
+
+// Untuk GM: subscribe ke quest yang DIBUAT olehnya (untuk kalender GM)
+export function subscribeToGMCreatedQuests(
+    gmUid: string,
+    callback: (quests: Quest[]) => void
+) {
+    const q = query(
+        collection(db, "quests"),
+        where("createdBy", "==", gmUid),
+        orderBy("createdAt", "desc"),
+        limit(50)
     );
     return onSnapshot(q, (snap) => {
         callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Quest)));
@@ -398,20 +465,37 @@ export async function createWithdrawalRequest(heroProfile: UserProfile, gmUid: s
     });
 }
 
-// 2. GM mengunggah bukti transfer
-export async function submitWithdrawalProof(withdrawalId: string, proofUrl: string) {
+// 2. GM mengunggah bukti transfer → notifikasi ke Hero
+export async function submitWithdrawalProof(
+    withdrawalId: string,
+    proofUrl: string,
+    notifPayload?: { heroUid: string; gmUid: string; gmName: string; amount: number }
+) {
     await updateDoc(doc(db, "withdrawals", withdrawalId), {
         status: 'transfer_submitted',
         proofUrl: proofUrl,
         updatedAt: new Date().toISOString(),
     });
+
+    // Beritahu Hero bahwa GM sudah mentransfer
+    if (notifPayload) {
+        await sendNotification({
+            toUid: notifPayload.heroUid,
+            fromUid: notifPayload.gmUid,
+            fromName: notifPayload.gmName,
+            type: 'withdrawal_transferred',
+            title: '💸 Transfer Dikirim!',
+            message: `${notifPayload.gmName} telah mentransfer Rp ${notifPayload.amount.toLocaleString('id-ID')}. Silakan cek dompetmu dan konfirmasi penerimaan dana.`
+        });
+    }
 }
 
-// 3. Hero menyetujui atau menolak bukti transfer
+// 3. Hero menyetujui atau menolak bukti transfer → notifikasi ke GM
 export async function resolveWithdrawal(
-    withdrawalId: string, 
-    action: 'approve' | 'reject', 
-    rejectNote: string = ""
+    withdrawalId: string,
+    action: 'approve' | 'reject',
+    rejectNote: string = "",
+    notifPayload?: { heroUid: string; heroName: string; gmUid: string; amount: number }
 ) {
     if (action === 'approve') {
         await updateDoc(doc(db, "withdrawals", withdrawalId), {
@@ -419,14 +503,38 @@ export async function resolveWithdrawal(
             updatedAt: new Date().toISOString(),
             note: "Terkonfirmasi oleh Hero."
         });
+
+        // Beritahu GM bahwa Hero sudah konfirmasi
+        if (notifPayload) {
+            await sendNotification({
+                toUid: notifPayload.gmUid,
+                fromUid: notifPayload.heroUid,
+                fromName: notifPayload.heroName,
+                type: 'withdrawal_confirmed',
+                title: '✅ Transfer Dikonfirmasi!',
+                message: `${notifPayload.heroName} telah mengkonfirmasi penerimaan dana Rp ${notifPayload.amount.toLocaleString('id-ID')}.`
+            });
+        }
     } else {
         // Kalau di-reject, status kembali ke pending agar GM bisa upload ulang
         await updateDoc(doc(db, "withdrawals", withdrawalId), {
             status: 'pending',
             updatedAt: new Date().toISOString(),
-            note: rejectNote, // Alasan kenapa ditolak (misal: "Gambar burem" atau "Uang belum masuk")
-            proofUrl: null // Hapus bukti yang salah
+            note: rejectNote,
+            proofUrl: null
         });
+
+        // Beritahu GM bahwa Hero menolak bukti transfer
+        if (notifPayload) {
+            await sendNotification({
+                toUid: notifPayload.gmUid,
+                fromUid: notifPayload.heroUid,
+                fromName: notifPayload.heroName,
+                type: 'withdrawal_rejected',
+                title: '❌ Bukti Transfer Ditolak',
+                message: `${notifPayload.heroName} menolak bukti transfer Rp ${notifPayload.amount.toLocaleString('id-ID')}. Alasan: "${rejectNote || 'Tidak ada catatan.'}". Mohon upload ulang bukti yang benar.`
+            });
+        }
     }
 }
 
@@ -445,3 +553,137 @@ export function subscribeToGMWithdrawals(gmUid: string, callback: (wds: any[]) =
         callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
 }
+
+// ─────────────────────────────────────────
+// GUILD QUEST (Public / Open Quest)
+// ─────────────────────────────────────────
+
+/**
+ * GM membuat Guild Quest (quest terbuka untuk semua hero-nya).
+ * Notifikasi dikirim ke semua hero yang terhubung.
+ */
+export async function createGuildQuest(
+    questData: Omit<GuildQuest, 'id' | 'createdAt' | 'updatedAt' | 'claimedBy' | 'status'>,
+    partnerIds: string[]
+): Promise<string> {
+    const now = new Date().toISOString();
+    const docRef = await addDoc(collection(db, 'guildQuests'), {
+        ...questData,
+        claimedBy: [],
+        status: 'open',
+        createdAt: now,
+        updatedAt: now,
+    });
+
+    // Kirim notifikasi ke semua hero yang terhubung
+    const notifications = partnerIds.map(heroUid =>
+        sendNotification({
+            toUid: heroUid,
+            fromUid: questData.createdBy,
+            fromName: questData.createdByName,
+            type: 'guild_quest_open',
+            title: '⚔️ Guild Quest Baru!',
+            message: `${questData.createdByName} membuka Guild Quest: "${questData.title}". Kuota ${questData.maxClaims} slot — rebutan cepat!`
+        })
+    );
+    await Promise.all(notifications);
+
+    return docRef.id;
+}
+
+/**
+ * Hero mengambil (claim) Guild Quest.
+ * Menggunakan Firestore Transaction untuk mencegah race condition.
+ * Returns: 'claimed' | 'already_claimed' | 'quota_full' | 'closed'
+ */
+export async function claimGuildQuest(
+    guildQuestId: string,
+    heroProfile: UserProfile,
+): Promise<'claimed' | 'already_claimed' | 'quota_full' | 'closed'> {
+    const guildQuestRef = doc(db, 'guildQuests', guildQuestId);
+
+    return await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(guildQuestRef);
+        if (!snap.exists()) throw new Error('Guild Quest tidak ditemukan');
+
+        const gq = { id: snap.id, ...snap.data() } as GuildQuest;
+
+        if (gq.status === 'closed') return 'closed';
+        if (gq.claimedBy.includes(heroProfile.uid)) return 'already_claimed';
+        if (gq.claimedBy.length >= gq.maxClaims) return 'quota_full';
+
+        const newClaimedBy = [...gq.claimedBy, heroProfile.uid];
+        const isFull = newClaimedBy.length >= gq.maxClaims;
+
+        // Update guild quest: tambah hero ke claimedBy, tutup jika kuota penuh
+        transaction.update(guildQuestRef, {
+            claimedBy: arrayUnion(heroProfile.uid),
+            status: isFull ? 'closed' : 'open',
+            updatedAt: new Date().toISOString(),
+        });
+
+        // Buat personal Quest doc untuk hero (agar masuk Quest Board-nya)
+        const questRef = doc(collection(db, 'quests'));
+        const now = new Date().toISOString();
+        transaction.set(questRef, {
+            title: gq.title,
+            description: gq.description,
+            motivation: gq.motivation || '',
+            category: gq.category,
+            difficulty: gq.difficulty,
+            expReward: gq.expReward,
+            moneyReward: gq.moneyReward || 0,
+            deadline: gq.deadline,
+            status: 'pending',
+            assignedTo: heroProfile.uid,
+            createdBy: gq.createdBy,
+            guildQuestId: guildQuestId, // Link back ke guild quest
+            createdAt: now,
+            updatedAt: now,
+        });
+
+        return 'claimed';
+    });
+}
+
+/**
+ * Subscribe realtime ke Guild Quests milik heroes dari satu GM.
+ * Hero version: hanya yang statusnya 'open' atau yang sudah dia claim.
+ */
+export function subscribeToOpenGuildQuests(
+    gmUids: string[],
+    callback: (quests: GuildQuest[]) => void
+) {
+    if (!gmUids.length) {
+        callback([]);
+        return () => {};
+    }
+
+    const q = query(
+        collection(db, 'guildQuests'),
+        where('createdBy', 'in', gmUids),
+        orderBy('createdAt', 'desc')
+    );
+
+    return onSnapshot(q, (snap) => {
+        callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as GuildQuest)));
+    });
+}
+
+/**
+ * Subscribe realtime ke Guild Quests yang dibuat oleh GM ini.
+ */
+export function subscribeToGMGuildQuests(
+    gmUid: string,
+    callback: (quests: GuildQuest[]) => void
+) {
+    const q = query(
+        collection(db, 'guildQuests'),
+        where('createdBy', '==', gmUid),
+        orderBy('createdAt', 'desc')
+    );
+
+    return onSnapshot(q, (snap) => {
+        callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as GuildQuest)));
+    });
+}

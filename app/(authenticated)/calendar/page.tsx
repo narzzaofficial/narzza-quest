@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { subscribeToQuests } from '@/lib/db';
+import { subscribeToQuests, subscribeToGMCreatedQuests, getLinkedProfiles } from '@/lib/db';
 import { Quest } from '@/types';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -24,21 +24,46 @@ export default function CalendarGridPage() {
     const { profile, loading } = useAuth();
     const [quests, setQuests] = useState<Quest[]>([]);
     const [isLoadingQuests, setIsLoadingQuests] = useState(true);
+    const [heroMap, setHeroMap] = useState<Record<string, string>>({}); // uid → name
 
     // State untuk kalender & Modal
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null); // State Pop-up
+    const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+
+    // Fetch hero names for GM
+    useEffect(() => {
+        if (profile?.role === 'gm' && profile.partnerIds && profile.partnerIds.length > 0) {
+            getLinkedProfiles(profile.partnerIds).then(heroes => {
+                const map: Record<string, string> = {};
+                heroes.forEach(h => { map[h.uid] = h.displayName; });
+                setHeroMap(map);
+            });
+        }
+    }, [profile]);
 
     useEffect(() => {
-        if (profile) {
-            const unsubscribe = subscribeToQuests(profile.uid, (fetchedQuests) => {
+        if (!profile) {
+            setIsLoadingQuests(false);
+            return;
+        }
+
+        let unsubscribe: () => void;
+
+        if (profile.role === 'gm') {
+            // GM: lihat semua quest yang DIA BUAT di kalendernya
+            unsubscribe = subscribeToGMCreatedQuests(profile.uid, (fetchedQuests) => {
                 setQuests(fetchedQuests);
                 setIsLoadingQuests(false);
             });
-            return () => unsubscribe();
         } else {
-            setIsLoadingQuests(false);
+            // Player: lihat quest yang DI-ASSIGN ke dia
+            unsubscribe = subscribeToQuests(profile.uid, (fetchedQuests) => {
+                setQuests(fetchedQuests);
+                setIsLoadingQuests(false);
+            });
         }
+
+        return () => unsubscribe();
     }, [profile]);
 
     // Mengelompokkan misi berdasarkan format YYYY-MM-DD
@@ -244,6 +269,15 @@ export default function CalendarGridPage() {
                                                     Rank {quest.difficulty} • +{quest.expReward} EXP
                                                 </span>
                                             </div>
+                                            {/* GM: tampilkan nama hero yang di-assign */}
+                                            {profile?.role === 'gm' && quest.assignedTo && (
+                                                <div className="mt-1 flex items-center gap-1.5 bg-purple-50 px-2.5 py-1.5 rounded-lg border border-purple-100">
+                                                    <span className="text-[10px] font-black text-purple-500 uppercase tracking-wide">Hero:</span>
+                                                    <span className="text-[10px] font-bold text-purple-800">
+                                                        {heroMap[quest.assignedTo] || quest.assignedTo}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

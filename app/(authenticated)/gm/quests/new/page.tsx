@@ -20,8 +20,8 @@ export default function CreateQuestPage() {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [motivation, setMotivation] = useState('');
-    const [expReward, setExpReward] = useState<number>(50);
-    const [moneyReward, setMoneyReward] = useState<number>(0); // NEW: State untuk Uang/Bounty
+    const [expReward, setExpReward] = useState<number | ''>(50);
+    const [moneyReward, setMoneyReward] = useState<number | ''>(''); // NEW: State untuk Uang/Bounty
     const [difficulty, setDifficulty] = useState<'E' | 'D' | 'C' | 'B' | 'A' | 'S'>('E');
     const [category, setCategory] = useState<'daily' | 'weekly' | 'main' | 'side'>('daily');
     const [deadline, setDeadline] = useState('');
@@ -55,6 +55,11 @@ export default function CreateQuestPage() {
             return;
         }
 
+        if (expReward === '' || expReward < 10) {
+            alert("EXP minimal 10.");
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             await createQuest({
@@ -62,14 +67,14 @@ export default function CreateQuestPage() {
                 description,
                 motivation,
                 expReward: Number(expReward),
-                moneyReward: Number(moneyReward), // NEW: Simpan uang ke DB
+                moneyReward: Number(moneyReward),
                 difficulty,
                 category,
                 deadline: new Date(deadline).toISOString(),
                 status: 'pending',
                 assignedTo: assignedTo,
                 createdBy: profile.uid,
-            });
+            }, { uid: profile.uid, displayName: profile.displayName }); // Pass gmProfile untuk notifikasi ke hero
 
             setShowToast(true);
             setTimeout(() => {
@@ -175,7 +180,7 @@ export default function CreateQuestPage() {
                                         type="number"
                                         required min={10} max={1000}
                                         value={expReward}
-                                        onChange={(e) => setExpReward(Number(e.target.value))}
+                                        onChange={(e) => setExpReward(e.target.value === '' ? '' : Number(e.target.value))}
                                         className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-black text-purple-600 focus:ring-2 focus:ring-purple-400 focus:outline-none"
                                     />
                                 </div>
@@ -187,7 +192,7 @@ export default function CreateQuestPage() {
                                             type="number"
                                             min={0}
                                             value={moneyReward}
-                                            onChange={(e) => setMoneyReward(Number(e.target.value))}
+                                            onChange={(e) => setMoneyReward(e.target.value === '' ? '' : Number(e.target.value))}
                                             placeholder="50000"
                                             className="w-full pl-10 pr-3 py-3 rounded-xl border border-emerald-200 bg-emerald-50 font-black text-emerald-700 focus:ring-2 focus:ring-emerald-400 focus:outline-none focus:bg-white transition-colors"
                                         />

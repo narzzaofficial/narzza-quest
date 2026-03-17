@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
+import { useBadges } from '@/hooks/useBadges';
 import {
     LayoutDashboard,
     ScrollText,
@@ -19,58 +18,52 @@ import {
     LogOut,
     Users,
     Settings,
-    CalendarDays, // <-- ICON ROADMAP
-    Trophy,        // <-- ICON LEADERBOARD
+    CalendarDays,
+    Trophy,
     Wallet,
     Receipt
 } from 'lucide-react';
+
+function NavBadge({ count }: { count: number }) {
+    if (count <= 0) return null;
+    return (
+        <span className="bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm min-w-[20px] text-center leading-5 animate-pulse">
+            {count > 99 ? '99+' : count}
+        </span>
+    );
+}
 
 export default function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
 
     const { profile, logout, loading } = useAuth();
-    const [unreadCount, setUnreadCount] = useState(0);
-
-    useEffect(() => {
-        if (profile?.uid) {
-            const q = query(
-                collection(db, 'notifications'),
-                where('toUid', '==', profile.uid),
-                where('isRead', '==', false)
-            );
-
-            const unsubscribe = onSnapshot(q, (snap) => {
-                setUnreadCount(snap.docs.length);
-            });
-
-            return () => unsubscribe();
-        }
-    }, [profile]);
+    const badges = useBadges();
 
     const heroLinks = [
-        { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-        { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" /> },
-        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" /> },
-        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" /> },
-        { name: 'War Room', href: '/journal', icon: <BookOpen className="w-5 h-5" /> },
-        { name: 'Arena', href: '/arena', icon: <Swords className="w-5 h-5" /> },
-        { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" /> },
-        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" /> },
-        { name: 'My Wallet', href: '/wallet', icon: <Wallet className="w-5 h-5" /> },
+        { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badgeKey: null as keyof typeof badges | null },
+        { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" />, badgeKey: 'questBoard' as keyof typeof badges },
+        { name: 'Guild Quest', href: '/guild-quest', icon: <Swords className="w-5 h-5" />, badgeKey: 'guildQuest' as keyof typeof badges },
+        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: null as keyof typeof badges | null },
+        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badgeKey: null as keyof typeof badges | null },
+        { name: 'War Room', href: '/journal', icon: <BookOpen className="w-5 h-5" />, badgeKey: 'warRoom' as keyof typeof badges },
+        { name: 'Arena', href: '/arena', icon: <Swords className="w-5 h-5" />, badgeKey: 'arena' as keyof typeof badges },
+        { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badgeKey: 'network' as keyof typeof badges },
+        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badgeKey: 'notifications' as keyof typeof badges },
+        { name: 'My Wallet', href: '/wallet', icon: <Wallet className="w-5 h-5" />, badgeKey: 'wallet' as keyof typeof badges },
     ];
 
     const gmLinks = [
-        { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-        { name: 'Hero Profile', href: '/gm/hero-profile', icon: <UserCircle className="w-5 h-5" /> },
-        { name: 'Manage Quests', href: '/gm/quests', icon: <ListTodo className="w-5 h-5" /> },
-        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" /> },
-        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" /> },
-        { name: 'Review Submissions', href: '/gm/review', icon: <ClipboardCheck className="w-5 h-5" /> },
-        { name: 'Payouts', href: '/gm/payouts', icon: <Receipt className="w-5 h-5" /> },
-        { name: 'Send Encouragement', href: '/gm/encourage', icon: <HeartHandshake className="w-5 h-5" /> },
-        { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" /> },
-        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" /> },
+        { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badgeKey: null as keyof typeof badges | null },
+        { name: 'Manage Quests', href: '/gm/quests', icon: <ListTodo className="w-5 h-5" />, badgeKey: 'manageQuests' as keyof typeof badges },
+        { name: 'Guild Quest', href: '/gm/guild-quest', icon: <Swords className="w-5 h-5" />, badgeKey: null as keyof typeof badges | null },
+        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: 'roadmap' as keyof typeof badges },
+        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badgeKey: null as keyof typeof badges | null },
+        { name: 'Review Submissions', href: '/gm/review', icon: <ClipboardCheck className="w-5 h-5" />, badgeKey: 'reviewSubmissions' as keyof typeof badges },
+        { name: 'Payouts', href: '/gm/payouts', icon: <Receipt className="w-5 h-5" />, badgeKey: 'questBoard' as keyof typeof badges },
+        { name: 'Send Encouragement', href: '/gm/encourage', icon: <HeartHandshake className="w-5 h-5" />, badgeKey: 'encourage' as keyof typeof badges },
+        { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badgeKey: 'network' as keyof typeof badges },
+        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badgeKey: 'notifications' as keyof typeof badges },
     ];
 
     const handleLogout = async () => {
@@ -139,7 +132,7 @@ export default function Sidebar() {
                 {links.map((link) => {
                     const isActive =
                         pathname === link.href || pathname?.startsWith(`${link.href}/`);
-                    const isNotif = link.name === 'Notifications';
+                    const badgeCount = link.badgeKey ? badges[link.badgeKey] : 0;
 
                     return (
                         <Link
@@ -162,11 +155,7 @@ export default function Sidebar() {
                                 <span className="text-sm">{link.name}</span>
                             </div>
 
-                            {isNotif && unreadCount > 0 && (
-                                <span className="bg-pink-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
-                                    {unreadCount}
-                                </span>
-                            )}
+                            <NavBadge count={badgeCount} />
                         </Link>
                     );
                 })}

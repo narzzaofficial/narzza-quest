@@ -65,7 +65,15 @@ export default function GMPayoutsPage() {
             const uploadedUrl = data.url;
 
             setUploadProgress('Menyimpan data transaksi...');
-            await submitWithdrawalProof(id, uploadedUrl);
+            
+            // Cari withdrawal data untuk dapatkan heroUid dan amount
+            const wd = withdrawals.find(w => w.id === id);
+            await submitWithdrawalProof(id, uploadedUrl, wd && profile ? {
+                heroUid: wd.heroUid,
+                gmUid: profile.uid,
+                gmName: profile.displayName,
+                amount: wd.amount
+            } : undefined);
             
             setToast({ show: true, msg: "Bukti transfer berhasil dikirim ke Hero!", type: 'success' });
             setUploadingId(null);

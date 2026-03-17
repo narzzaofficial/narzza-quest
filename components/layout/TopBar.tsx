@@ -3,16 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
+import { useBadges } from '@/hooks/useBadges';
+import type { BadgeCounts } from '@/hooks/useBadges';
 import {
     LayoutDashboard,
     ScrollText,
     BookOpen,
     Swords,
     Bell,
-    UserCircle,
     ListTodo,
     ClipboardCheck,
     HeartHandshake,
@@ -21,27 +20,27 @@ import {
     Settings,
     Menu,
     X,
-    CalendarDays, // <-- ICON ROADMAP
-    Trophy,        // <-- ICON LEADERBOARD
+    CalendarDays,
+    Trophy,
     Wallet,
     Receipt
 } from 'lucide-react';
 
-// Type definition untuk badge counts
-type BadgeKey = 'questBoard' | 'roadmap' | 'leaderboard' | 'warRoom' | 'arena' | 'network' | 'heroProfile' | 'manageQuests' | 'reviewSubmissions' | 'encourage' | 'notifications';
-
-interface BadgeCounts {
-    questBoard: number;
-    roadmap: number;
-    leaderboard: number;
-    warRoom: number;
-    arena: number;
-    network: number;
-    heroProfile: number;
-    manageQuests: number;
-    reviewSubmissions: number;
-    encourage: number;
+function NavBadge({ count }: { count: number }) {
+    if (count <= 0) return null;
+    return (
+        <span className="bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-md min-w-[22px] text-center">
+            {count > 99 ? '99+' : count}
+        </span>
+    );
 }
+
+type LinkItem = {
+    name: string;
+    href: string;
+    icon: React.ReactNode;
+    badgeKey: keyof BadgeCounts | null;
+};
 
 export default function TopBar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -49,150 +48,9 @@ export default function TopBar() {
     const router = useRouter();
 
     const { profile, logout } = useAuth();
-    const [unreadCount, setUnreadCount] = useState(0);
-
-    // Badge counts untuk setiap menu dengan proper typing
-    const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>({
-        questBoard: 0,
-        roadmap: 0,
-        leaderboard: 0,
-        warRoom: 0,
-        arena: 0,
-        network: 0,
-        heroProfile: 0,
-        manageQuests: 0,
-        reviewSubmissions: 0,
-        encourage: 0
-    });
+    const badges = useBadges();
 
     useEffect(() => {
-        if (profile?.uid) {
-            const q = query(
-                collection(db, 'notifications'),
-                where('toUid', '==', profile.uid),
-                where('isRead', '==', false)
-            );
-            const unsubscribe = onSnapshot(q, (snap) => {
-                setUnreadCount(snap.docs.length);
-            });
-            return () => unsubscribe();
-        }
-    }, [profile]);
-
-    // Track badge counts untuk semua menu
-    useEffect(() => {
-        if (!profile?.uid) return;
-
-        const unsubscribers: (() => void)[] = [];
-
-        // Quest Board - quest baru yang belum dilihat
-        const questQuery = query(
-            collection(db, 'quests'),
-            where('status', '==', 'active'),
-            where('createdAt', '>', new Date(profile.lastQuestCheck || 0))
-        );
-        unsubscribers.push(
-            onSnapshot(questQuery, (snap) => {
-                setBadgeCounts(prev => ({ ...prev, questBoard: snap.docs.length }));
-            })
-        );
-
-        // War Room - journal entries baru (dari GM atau self)
-        const journalQuery = query(
-            collection(db, 'journals'),
-            where('uid', '==', profile.uid),
-            where('createdAt', '>', new Date(profile.lastJournalCheck || 0))
-        );
-        unsubscribers.push(
-            onSnapshot(journalQuery, (snap) => {
-                setBadgeCounts(prev => ({ ...prev, warRoom: snap.docs.length }));
-            })
-        );
-
-        // Arena - challenge/battle baru
-        const arenaQuery = query(
-            collection(db, 'battles'),
-            where('participants', 'array-contains', profile.uid),
-            where('status', '==', 'pending')
-        );
-        unsubscribers.push(
-            onSnapshot(arenaQuery, (snap) => {
-                setBadgeCounts(prev => ({ ...prev, arena: snap.docs.length }));
-            })
-        );
-
-        // My Network - koneksi/request baru
-        const networkQuery = query(
-            collection(db, 'connections'),
-            where('toUid', '==', profile.uid),
-            where('status', '==', 'pending')
-        );
-        unsubscribers.push(
-            onSnapshot(networkQuery, (snap) => {
-                setBadgeCounts(prev => ({ ...prev, network: snap.docs.length }));
-            })
-        );
-
-        // GM ONLY: Hero Profile updates
-        if (profile.role === 'gm') {
-            const heroProfileQuery = query(
-                collection(db, 'users'),
-                where('role', '==', 'hero'),
-                where('updatedAt', '>', new Date(profile.lastHeroCheck || 0))
-            );
-            unsubscribers.push(
-                onSnapshot(heroProfileQuery, (snap) => {
-                    setBadgeCounts(prev => ({ ...prev, heroProfile: snap.docs.length }));
-                })
-            );
-
-            // GM: Manage Quests - quest yang perlu di-review/update
-            const gmQuestQuery = query(
-                collection(db, 'quests'),
-                where('needsReview', '==', true)
-            );
-            unsubscribers.push(
-                onSnapshot(gmQuestQuery, (snap) => {
-                    setBadgeCounts(prev => ({ ...prev, manageQuests: snap.docs.length }));
-                })
-            );
-
-            // GM: Review Submissions - submission baru
-            const submissionQuery = query(
-                collection(db, 'submissions'),
-                where('status', '==', 'pending')
-            );
-            unsubscribers.push(
-                onSnapshot(submissionQuery, (snap) => {
-                    setBadgeCounts(prev => ({ ...prev, reviewSubmissions: snap.docs.length }));
-                })
-            );
-
-            // GM: Encourage - heroes yang perlu encouragement
-            const encourageQuery = query(
-                collection(db, 'users'),
-                where('role', '==', 'hero'),
-                where('needsEncouragement', '==', true)
-            );
-            unsubscribers.push(
-                onSnapshot(encourageQuery, (snap) => {
-                    setBadgeCounts(prev => ({ ...prev, encourage: snap.docs.length }));
-                })
-            );
-        }
-
-        return () => {
-            unsubscribers.forEach(unsub => unsub());
-        };
-    }, [profile]);
-
-    useEffect(() => {
-        // Mencegah body agar tidak bisa discroll saat menu terbuka
-        if (isMenuOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'auto';
-        }
         setIsMenuOpen(false);
     }, [pathname]);
 
@@ -204,30 +62,30 @@ export default function TopBar() {
         }
     }, [isMenuOpen]);
 
-    const heroLinks = [
-        { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badge: null as BadgeKey | null },
-        { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" />, badge: 'questBoard' as BadgeKey },
-        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- KALENDER
-        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- LEADERBOARD
-        { name: 'My Wallet', href: '/wallet', icon: <Wallet className="w-5 h-5" />, badge: null as BadgeKey | null },
-        { name: 'War Room', href: '/journal', icon: <BookOpen className="w-5 h-5" />, badge: 'warRoom' as BadgeKey },
-        { name: 'Arena', href: '/arena', icon: <Swords className="w-5 h-5" />, badge: 'arena' as BadgeKey },
-        { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badge: 'network' as BadgeKey },
-        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badge: 'notifications' as BadgeKey },
-
+    const heroLinks: LinkItem[] = [
+        { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badgeKey: null },
+        { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" />, badgeKey: 'questBoard' },
+        { name: 'Guild Quest', href: '/guild-quest', icon: <Swords className="w-5 h-5" />, badgeKey: 'guildQuest' },
+        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: null },
+        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badgeKey: null },
+        { name: 'My Wallet', href: '/wallet', icon: <Wallet className="w-5 h-5" />, badgeKey: 'wallet' },
+        { name: 'War Room', href: '/journal', icon: <BookOpen className="w-5 h-5" />, badgeKey: 'warRoom' },
+        { name: 'Arena', href: '/arena', icon: <Swords className="w-5 h-5" />, badgeKey: 'arena' },
+        { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badgeKey: 'network' },
+        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badgeKey: 'notifications' },
     ];
 
-    const gmLinks = [
-        { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badge: null as BadgeKey | null },
-        { name: 'Hero Profile', href: '/gm/hero-profile', icon: <UserCircle className="w-5 h-5" />, badge: 'heroProfile' as BadgeKey },
-        { name: 'Manage Quests', href: '/gm/quests', icon: <ListTodo className="w-5 h-5" />, badge: 'manageQuests' as BadgeKey },
-        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- KALENDER GM
-        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badge: null as BadgeKey | null }, // <-- LEADERBOARD GM
-        { name: 'Review Submissions', href: '/gm/review', icon: <ClipboardCheck className="w-5 h-5" />, badge: 'reviewSubmissions' as BadgeKey },
-        { name: 'Send Encouragement', href: '/gm/encourage', icon: <HeartHandshake className="w-5 h-5" />, badge: 'encourage' as BadgeKey },
-        { name: 'Payouts', href: '/gm/payouts', icon: <Receipt className="w-5 h-5" />, badge: null as BadgeKey | null },
-        { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badge: 'network' as BadgeKey },
-        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badge: 'notifications' as BadgeKey },
+    const gmLinks: LinkItem[] = [
+        { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badgeKey: null },
+        { name: 'Manage Quests', href: '/gm/quests', icon: <ListTodo className="w-5 h-5" />, badgeKey: 'manageQuests' },
+        { name: 'Guild Quest', href: '/gm/guild-quest', icon: <Swords className="w-5 h-5" />, badgeKey: null },
+        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: 'roadmap' },
+        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badgeKey: null },
+        { name: 'Review Submissions', href: '/gm/review', icon: <ClipboardCheck className="w-5 h-5" />, badgeKey: 'reviewSubmissions' },
+        { name: 'Send Encouragement', href: '/gm/encourage', icon: <HeartHandshake className="w-5 h-5" />, badgeKey: 'encourage' },
+        { name: 'Payouts', href: '/gm/payouts', icon: <Receipt className="w-5 h-5" />, badgeKey: 'questBoard' },
+        { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badgeKey: 'network' },
+        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badgeKey: 'notifications' },
     ];
 
     const handleLogout = async () => {
@@ -245,6 +103,9 @@ export default function TopBar() {
     const links = profile.role === 'gm' ? gmLinks : heroLinks;
     const avatarUrl = profile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.displayName)}&background=fce7f3&color=db2777&bold=true`;
 
+    // Total badge count for the hamburger button indicator
+    const totalBadges = Object.values(badges).reduce((a, b) => a + b, 0);
+
     return (
         <>
             <header
@@ -256,12 +117,20 @@ export default function TopBar() {
                     borderColor: 'rgba(233, 213, 255, 0.6)',
                 }}
             >
-                <button
-                    onClick={() => setIsMenuOpen(true)}
-                    className="p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 active:scale-95 transition-transform"
-                >
-                    <Menu className="w-6 h-6" />
-                </button>
+                {/* Hamburger + total badge indicator */}
+                <div className="relative">
+                    <button
+                        onClick={() => setIsMenuOpen(true)}
+                        className="p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 active:scale-95 transition-transform"
+                    >
+                        <Menu className="w-6 h-6" />
+                    </button>
+                    {totalBadges > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-md animate-pulse">
+                            {totalBadges > 99 ? '99+' : totalBadges}
+                        </span>
+                    )}
+                </div>
 
                 <Link href="/dashboard">
                     <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-700 to-pink-500" style={{ fontFamily: 'var(--font-playfair), serif' }}>
@@ -280,10 +149,10 @@ export default function TopBar() {
                 onClick={() => setIsMenuOpen(false)}
             />
 
-            {/* ─── SLIDE PANEL FIX (Menggunakan inset-y-0 agar tidak goyang) ─── */}
+            {/* ─── SLIDE PANEL ─── */}
             <div
                 className={`fixed inset-y-0 left-0 w-[85%] max-w-sm bg-white z-50 md:hidden shadow-2xl flex flex-col transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
-                style={{ height: '100dvh' }} // Menggunakan Dynamic Viewport Height
+                style={{ height: '100dvh' }}
             >
                 {/* Header Menu */}
                 <div className="p-6 border-b border-purple-100 bg-gradient-to-br from-purple-50 via-white to-pink-50 relative flex-shrink-0">
@@ -312,17 +181,9 @@ export default function TopBar() {
                 {/* Navigasi Links - Scrollable Area */}
                 <nav className="flex-1 overflow-y-auto p-4 space-y-1 overscroll-contain custom-scrollbar">
                     {links.map((link) => {
-                        // FIX: Deteksi active state yang lebih akurat untuk nested routes
                         const isActive = pathname === link.href ||
                             (link.href !== '/dashboard' && pathname?.startsWith(`${link.href}/`));
-
-                        // Get badge count dengan type-safe approach
-                        let badgeCount = 0;
-                        if (link.badge === 'notifications') {
-                            badgeCount = unreadCount;
-                        } else if (link.badge && link.badge !== null && link.badge in badgeCounts) {
-                            badgeCount = badgeCounts[link.badge as keyof BadgeCounts];
-                        }
+                        const badgeCount = link.badgeKey ? badges[link.badgeKey] : 0;
 
                         return (
                             <Link
@@ -341,11 +202,7 @@ export default function TopBar() {
                                     <span className="text-sm">{link.name}</span>
                                 </div>
 
-                                {badgeCount > 0 && (
-                                    <span className="bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-md min-w-[22px] text-center">
-                                        {badgeCount > 99 ? '99+' : badgeCount}
-                                    </span>
-                                )}
+                                <NavBadge count={badgeCount} />
                             </Link>
                         );
                     })}

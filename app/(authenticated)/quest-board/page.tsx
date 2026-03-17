@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { subscribeToQuests } from '@/lib/db';
-import { Quest } from '@/types';
+import { subscribeToQuests, getLinkedProfiles } from '@/lib/db';
+import { Quest, UserProfile } from '@/types';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { Wallet } from 'lucide-react';
@@ -14,6 +14,7 @@ export default function QuestBoardPage() {
     const [quests, setQuests] = useState<Quest[]>([]);
     const [activeFilter, setActiveFilter] = useState('All');
     const [loading, setLoading] = useState(true);
+    const [gmMap, setGmMap] = useState<Record<string, string>>({}); // uid → displayName
 
     const filters = ['All', 'Available', 'Active', 'Completed'];
 
@@ -22,6 +23,16 @@ export default function QuestBoardPage() {
             const unsubscribe = subscribeToQuests(profile.uid, (fetchedQuests) => {
                 setQuests(fetchedQuests);
                 setLoading(false);
+
+                // Build GM name map from unique createdBy UIDs
+                const gmUids = [...new Set(fetchedQuests.map(q => q.createdBy).filter(Boolean))];
+                if (gmUids.length > 0) {
+                    getLinkedProfiles(gmUids).then(gms => {
+                        const map: Record<string, string> = {};
+                        gms.forEach(gm => { map[gm.uid] = gm.displayName; });
+                        setGmMap(map);
+                    });
+                }
             });
             return () => unsubscribe();
         }
@@ -54,11 +65,11 @@ export default function QuestBoardPage() {
                         Quest Board
                     </h1>
                     <p className="text-purple-700/80 text-lg font-medium max-w-2xl">
-                        Pilih dan selesaikan misi-misi di bawah ini untuk mendapatkan EXP. Buktikan pada GM Azizah bahwa kamu adalah Hero yang bisa diandalkan!
+                        Semua misi yang diberikan GM untukmu. Selesaikan dan raih EXP!
                     </p>
                 </header>
 
-                {/* Filter / Tabs - Diperbaiki menjadi seukuran konten (inline-flex) */}
+                {/* Filter / Tabs */}
                 <div className="inline-flex flex-wrap items-center gap-2 bg-white/60 p-2 rounded-2xl border border-purple-100 shadow-sm backdrop-blur-md">
                     {filters.map((filter) => (
                         <button
@@ -81,12 +92,13 @@ export default function QuestBoardPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredQuests.map((quest) => {
                             const isCompleted = ['submitted', 'approved'].includes(quest.status);
+                            const gmName = gmMap[quest.createdBy];
 
                             return (
                                 <Card
                                     key={quest.id}
                                     className={`flex flex-col group transition-all duration-300 relative overflow-hidden ${isCompleted
-                                            ? 'bg-slate-50/90 border-slate-200 shadow-sm' // Desain solid yang kalem, tidak transparan pucat
+                                            ? 'bg-slate-50/90 border-slate-200 shadow-sm'
                                             : 'bg-white hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(236,72,153,0.15)] hover:border-pink-300 shadow-md border-purple-100'
                                         }`}
                                 >
@@ -94,9 +106,7 @@ export default function QuestBoardPage() {
                                     <div className="flex justify-between items-start mb-4">
                                         <Badge variant={quest.difficulty}>Rank {quest.difficulty}</Badge>
 
-                                        {/* Container flex untuk menampung badge uang & EXP */}
                                         <div className="flex flex-wrap items-center gap-1.5 justify-end">
-                                            {/* Badge Uang (Tampil jika moneyReward > 0) */}
                                             {quest.moneyReward && quest.moneyReward > 0 ? (
                                                 <span className="text-emerald-700 font-black text-[10px] md:text-xs bg-emerald-100 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border border-emerald-200 flex items-center gap-1">
                                                     <Wallet className="w-3 h-3 md:w-3.5 md:h-3.5" />
@@ -104,12 +114,20 @@ export default function QuestBoardPage() {
                                                 </span>
                                             ) : null}
 
-                                            {/* Badge EXP */}
                                             <span className={`font-black text-[10px] md:text-xs px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border shadow-sm ${isCompleted ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-pink-50 text-pink-600 border-pink-100'}`}>
                                                 +{quest.expReward} EXP
                                             </span>
                                         </div>
                                     </div>
+
+                                    {/* GM Name Badge */}
+                                    {gmName && (
+                                        <div className="mb-3">
+                                            <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100 uppercase tracking-wide">
+                                                🎮 Dari: {gmName}
+                                            </span>
+                                        </div>
+                                    )}
 
                                     {/* Judul & Deskripsi */}
                                     <h3 className={`text-xl font-bold mb-2 leading-snug transition-colors ${isCompleted ? 'text-slate-700' : 'text-purple-950 group-hover:text-purple-700'
@@ -134,8 +152,8 @@ export default function QuestBoardPage() {
 
                                         <Link href={`/quest-board/${quest.id}`} className="block mt-2">
                                             <button className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-300 ${isCompleted
-                                                    ? 'bg-slate-200 text-slate-600 hover:bg-slate-300' // Tombol solid abu-abu yang jelas
-                                                    : 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-[0_4px_15px_rgba(168,85,247,0.3)] hover:shadow-[0_6px_20px_rgba(236,72,153,0.4)] hover:-translate-y-0.5' // Tombol utama yang menonjol
+                                                    ? 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                                                    : 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-[0_4px_15px_rgba(168,85,247,0.3)] hover:shadow-[0_6px_20px_rgba(236,72,153,0.4)] hover:-translate-y-0.5'
                                                 }`}>
                                                 {isCompleted ? 'Lihat Arsip' : 'Lihat Detail & Submit'}
                                             </button>
@@ -149,7 +167,7 @@ export default function QuestBoardPage() {
                             <div className="col-span-full py-20 text-center">
                                 <span className="text-6xl mb-4 block opacity-50">🍃</span>
                                 <h3 className="text-2xl font-bold text-purple-900 mb-2" style={{ fontFamily: 'var(--font-playfair), serif' }}>Tidak ada quest di kategori ini</h3>
-                                <p className="text-purple-600/70">Coba ubah filter atau minta GM Azizah untuk membuat quest baru.</p>
+                                <p className="text-purple-600/70">Coba ubah filter atau minta GM untuk membuat quest baru.</p>
                             </div>
                         )}
                     </div>

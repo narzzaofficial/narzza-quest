@@ -82,7 +82,7 @@ export default function GMReviewPage() {
     }
   };
 
-  const handleReject = async (questId: string) => {
+  const handleReject = async (quest: Quest) => {
     if (!reviewNote.trim()) {
       alert("Tuliskan alasan penolakan di catatan review agar Hero bisa memperbaikinya!");
       return;
@@ -90,7 +90,12 @@ export default function GMReviewPage() {
 
     setIsProcessing(true);
     try {
-      await rejectQuest(questId, reviewNote);
+      await rejectQuest(quest.id, reviewNote, profile ? {
+        toUid: quest.assignedTo,
+        fromUid: profile.uid,
+        fromName: profile.displayName,
+        questTitle: quest.title,
+      } : undefined);
       setToastMessage('Quest dikembalikan ke Hero untuk direvisi.');
       setShowToast(true);
       setReviewingId(null);
@@ -222,7 +227,7 @@ export default function GMReviewPage() {
                       <Button variant="ghost" size="sm" onClick={() => setReviewingId(null)} disabled={isProcessing} className="text-slate-500">
                         Batal
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleReject(sub.id)} isLoading={isProcessing} className="border-rose-300 text-rose-600 hover:bg-rose-100 flex items-center justify-center gap-1.5">
+                      <Button variant="outline" size="sm" onClick={() => handleReject(sub)} isLoading={isProcessing} className="border-rose-300 text-rose-600 hover:bg-rose-100 flex items-center justify-center gap-1.5">
                         <XCircle className="w-3.5 h-3.5" /> Tolak & Revisi
                       </Button>
                       <Button variant="primary" size="sm" onClick={() => handleApprove(sub)} isLoading={isProcessing} className="bg-gradient-to-r from-emerald-500 to-teal-500 shadow-sm border-none text-white flex items-center justify-center gap-1.5">
