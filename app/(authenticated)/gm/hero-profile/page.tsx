@@ -158,11 +158,7 @@ export default function GMHeroProfilePage() {
                                         Level {heroProfile.level || 1}
                                     </span>
                                 </div>
-                                <div className="text-right">
-                                    <span className="text-sm font-bold text-purple-600 bg-white px-3 py-1 rounded-lg border border-purple-100 shadow-sm">
-                                        {heroProfile.exp || 0} / {heroProfile.expToNextLevel || 100} EXP
-                                    </span>
-                                </div>
+
                             </div>
 
                             <div className="relative z-10">

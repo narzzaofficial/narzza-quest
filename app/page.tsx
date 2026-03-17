@@ -111,7 +111,7 @@ export default function LandingPage() {
       {/* ── Footer ── */}
       <footer className="relative z-10 border-t border-purple-100/50 bg-white/30 backdrop-blur-sm py-8 text-center mt-auto">
         <p className="text-sm font-bold text-purple-900/60 uppercase tracking-widest">
-          © {new Date().getFullYear()} NardiLabs. All rights reserved.
+          © {new Date().getFullYear()} Narzza. All rights reserved.
         </p>
       </footer>
     </div>

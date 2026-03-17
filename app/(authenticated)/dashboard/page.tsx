@@ -230,7 +230,7 @@ export default function DashboardPage() {
                             <p className="text-purple-500 text-[10px] uppercase tracking-widest font-bold mb-1">Misi Aktif</p>
                             <h3 className="text-purple-900 font-black text-xl mb-1">Quest Board</h3>
                             <p className="text-purple-600/70 text-xs">Lihat & submit semua misi dari GM</p>
-                            <div className="mt-4 text-purple-600 font-bold text-xs group-hover:text-purple-700 transition-colors">Buka Board →</div>
+                            <div className="mt-4 text-purple-600 font-bold text-xs group-hover:text-purple-700 transition-colors">Buka Board</div>
                         </button>
 
                         {/* Guild Quest */}
@@ -242,7 +242,7 @@ export default function DashboardPage() {
                             <p className="text-pink-500 text-[10px] uppercase tracking-widest font-bold mb-1">Kompetisi</p>
                             <h3 className="text-pink-900 font-black text-xl mb-1">Guild Quest</h3>
                             <p className="text-pink-600/70 text-xs">Quest terbuka — siapa cepat, dia dapat!</p>
-                            <div className="mt-4 text-pink-600 font-bold text-xs group-hover:text-pink-700 transition-colors">Ambil Quest →</div>
+                            <div className="mt-4 text-pink-600 font-bold text-xs group-hover:text-pink-700 transition-colors">Ambil Quest</div>
                         </button>
 
                         {/* Journal */}
@@ -254,7 +254,7 @@ export default function DashboardPage() {
                             <p className="text-cyan-500 text-[10px] uppercase tracking-widest font-bold mb-1">Catatan</p>
                             <h3 className="text-cyan-900 font-black text-xl mb-1">Jurnal</h3>
                             <p className="text-cyan-600/70 text-xs">Catat perjalananmu sebagai adventurer</p>
-                            <div className="mt-4 text-cyan-600 font-bold text-xs group-hover:text-cyan-700 transition-colors">Buka Jurnal →</div>
+                            <div className="mt-4 text-cyan-600 font-bold text-xs group-hover:text-cyan-700 transition-colors">Buka Jurnal</div>
                         </button>
                     </div>
                 </section>
@@ -266,7 +266,7 @@ export default function DashboardPage() {
                             <p className="text-purple-900 font-bold mb-1">Belum terhubung dengan Game Master</p>
                             <p className="text-purple-600/70 text-sm mb-4">Hubungkan akunmu dengan GM untuk mulai menerima quest.</p>
                             <button onClick={() => router.push('/network')} className="text-purple-600 hover:text-white font-bold text-sm border border-purple-200 hover:bg-purple-600 px-4 py-2 rounded-xl transition-all shadow-sm">
-                                Cari GM →
+                                Cari GM
                             </button>
                         </div>
                     </section>
