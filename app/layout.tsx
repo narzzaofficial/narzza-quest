@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Playfair_Display, Nunito, Noto_Serif } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
+import MusicPlayer from "@/components/ui/MusicPlayer";
 
 const notoSerif = Noto_Serif({
   subsets: ['latin'],
@@ -43,6 +44,7 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           {children}
+          <MusicPlayer />
         </AuthProvider>
       </body>
     </html>

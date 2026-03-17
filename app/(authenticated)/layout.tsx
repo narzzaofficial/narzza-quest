@@ -9,7 +9,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import Footer from '@/components/layout/Footer';
 import Toast from '@/components/ui/Toast';
-import Loading from './loading'; // <--- 1. IMPORT KOMPONEN LOADING BARU
+import Loading from './loading'; 
 
 export default function AuthenticatedLayout({
     children,
