@@ -6,7 +6,8 @@ import {
 import {
   onAuthStateChanged, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, signOut, User,
-  GoogleAuthProvider, signInWithPopup
+  GoogleAuthProvider, signInWithPopup,
+  browserLocalPersistence, indexedDBLocalPersistence, setPersistence
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getUserProfile, createUserProfile } from "@/lib/db";
@@ -48,17 +49,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      if (u) {
-        const p = await getUserProfile(u.uid);
-        setProfile(p);
-      } else {
-        setProfile(null);
+    let unsubscribe: (() => void) | null = null;
+
+    const initAuth = async () => {
+      try {
+        await setPersistence(auth, indexedDBLocalPersistence);
+      } catch (error) {
+        console.warn("Gagal pakai indexedDBLocalPersistence, fallback ke browserLocalPersistence:", error);
+        try {
+          await setPersistence(auth, browserLocalPersistence);
+        } catch (fallbackError) {
+          console.warn("Gagal set auth persistence fallback:", fallbackError);
+        }
       }
-      setLoading(false);
-    });
-    return () => unsubscribe();
+
+      unsubscribe = onAuthStateChanged(auth, async (u) => {
+        setUser(u);
+        if (u) {
+          const p = await getUserProfile(u.uid);
+          setProfile(p);
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
+      });
+    };
+
+    void initAuth();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const refreshProfile = async () => {

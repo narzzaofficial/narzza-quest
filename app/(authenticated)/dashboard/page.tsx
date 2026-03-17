@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useOfflineQueueStatus } from '@/hooks/useOfflineQueueStatus';
 import { getLinkedProfiles } from '@/lib/db';
 import { UserProfile } from '@/types';
 import Card from '@/components/ui/Card';
@@ -11,6 +12,7 @@ import Button from '@/components/ui/Button';
 
 export default function DashboardPage() {
     const { user, profile, loading } = useAuth();
+    const { pendingCount } = useOfflineQueueStatus();
     const router = useRouter();
 
     // GM specific
@@ -43,6 +45,11 @@ export default function DashboardPage() {
         return (
             <div className="min-h-screen p-4 md:p-8 text-slate-800 relative" style={{ background: 'linear-gradient(135deg, #E9D5FF 0%, #FBCFE8 100%)', fontFamily: 'var(--font-nunito), sans-serif' }}>
                 <div className="max-w-6xl mx-auto mt-2 md:mt-6 relative z-10 space-y-6 md:space-y-8">
+                    {pendingCount > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 text-sm font-bold shadow-sm">
+                            {pendingCount} tugas sedang menunggu sinkronisasi offline. Akan otomatis terkirim saat koneksi stabil.
+                        </div>
+                    )}
                     <header className="text-center md:text-left mb-6 md:mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="w-full md:w-auto">
                             <span className="text-4xl mb-2 block drop-shadow-md">👑</span>
@@ -121,6 +128,13 @@ export default function DashboardPage() {
             <div className="fixed inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMiIgaGVpZ2h0PSIyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIyIiBoZWlnaHQ9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] pointer-events-none opacity-50" />
 
             <div className="relative z-10 p-4 md:p-8 max-w-6xl mx-auto space-y-6 md:space-y-8">
+                {pendingCount > 0 && (
+                    <section>
+                        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 text-sm font-bold shadow-sm">
+                            {pendingCount} laporan/tugas sedang menunggu sinkronisasi offline. Nanti otomatis terkirim saat online.
+                        </div>
+                    </section>
+                )}
 
                 {/* ── TOP: Character Identity ── */}
                 <section>

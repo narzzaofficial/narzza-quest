@@ -4,8 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { getQuestById, submitQuest } from '@/lib/db';
+import { enqueueOfflineItem } from '@/lib/offlineQueue';
 import { Quest } from '@/types';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -24,8 +26,7 @@ import {
     MessageSquare,
     Heart,
     PlayCircle,
-    RefreshCcw,
-    AlertCircle
+    RefreshCcw
 } from 'lucide-react';
 
 export default function QuestDetailPage() {
@@ -66,7 +67,23 @@ export default function QuestDetailPage() {
             setQuest({ ...quest, status: 'in_progress' });
         } catch (error) {
             console.error("Gagal mengambil quest:", error);
-            alert("Gagal memulai quest.");
+            if (!navigator.onLine) {
+                const idToken = await auth.currentUser?.getIdToken();
+                if (!idToken) {
+                    alert("Sesi login tidak ditemukan. Silakan login ulang saat online.");
+                    return;
+                }
+                await enqueueOfflineItem({
+                    type: 'accept_quest',
+                    questId: quest.id,
+                    idToken,
+                    createdAt: Date.now(),
+                });
+                setQuest({ ...quest, status: 'in_progress' });
+                alert("Kamu sedang offline. Status 'mulai quest' disimpan dan akan disinkron saat online.");
+            } else {
+                alert("Gagal memulai quest.");
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -87,14 +104,46 @@ export default function QuestDetailPage() {
         e.preventDefault();
         if (!quest || !profile) return;
 
+        const queueSubmission = async () => {
+            const idToken = await auth.currentUser?.getIdToken();
+            if (!idToken) {
+                throw new Error('Sesi login tidak ditemukan. Silakan login ulang saat online.');
+            }
+            await enqueueOfflineItem({
+                type: 'submit_quest',
+                questId: quest.id,
+                idToken,
+                submissionNote,
+                files: selectedFiles.map((file) => ({
+                    name: file.name,
+                    type: file.type,
+                    lastModified: file.lastModified,
+                    blob: file,
+                })),
+                createdAt: Date.now(),
+            });
+        };
+
         setIsSubmitting(true);
         try {
+            if (!navigator.onLine) {
+                try {
+                    await queueSubmission();
+                    alert("Kamu offline. Laporan disimpan dan akan otomatis di-upload saat online.");
+                    router.push('/quest-board');
+                } catch (queueError) {
+                    alert(queueError instanceof Error ? queueError.message : 'Gagal menyimpan laporan offline.');
+                }
+                return;
+            }
+
             const uploadedUrls: string[] = [];
             for (let i = 0; i < selectedFiles.length; i++) {
                 setUploadProgress(`Mengunggah bukti ${i + 1} dari ${selectedFiles.length}...`);
                 const file = selectedFiles[i];
                 const formData = new FormData();
                 formData.append('file', file);
+                formData.append('questId', quest.id);
                 const res = await fetch('/api/upload', { method: 'POST', body: formData });
                 if (!res.ok) throw new Error(`Gagal upload file ${file.name}`);
                 const data = await res.json();
@@ -108,7 +157,17 @@ export default function QuestDetailPage() {
             router.push('/quest-board');
         } catch (error) {
             console.error("Gagal submit:", error);
-            alert("Terjadi kesalahan saat mengunggah laporan.");
+            if (!navigator.onLine) {
+                try {
+                    await queueSubmission();
+                    alert("Koneksi terputus. Laporan disimpan dan akan otomatis di-upload saat online.");
+                    router.push('/quest-board');
+                } catch (queueError) {
+                    alert(queueError instanceof Error ? queueError.message : 'Gagal menyimpan laporan offline.');
+                }
+            } else {
+                alert("Terjadi kesalahan saat mengunggah laporan.");
+            }
         } finally {
             setIsSubmitting(false);
             setUploadProgress('');

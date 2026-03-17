@@ -4,13 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { createQuest, getLinkedProfiles } from '@/lib/db';
-import { UserProfile } from '@/types';
+import { QuestCategory, QuestDifficulty, UserProfile } from '@/types';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 
-const VALID_DIFFICULTIES = new Set(['E', 'D', 'C', 'B', 'A', 'S']);
-const VALID_CATEGORIES = new Set(['daily', 'weekly', 'main', 'side']);
+const VALID_DIFFICULTIES: readonly QuestDifficulty[] = ['E', 'D', 'C', 'B', 'A', 'S'];
+const VALID_CATEGORIES: readonly QuestCategory[] = ['daily', 'weekly', 'main', 'side'];
 
 export default function CreateQuestJsonPage() {
     const { profile } = useAuth();
@@ -74,8 +74,14 @@ export default function CreateQuestJsonPage() {
             const motivation = typeof row.motivation === 'string' ? row.motivation : '';
             const expReward = typeof row.expReward === 'number' ? row.expReward : 50;
             const moneyReward = typeof row.moneyReward === 'number' ? row.moneyReward : 0;
-            const difficulty = typeof row.difficulty === 'string' && VALID_DIFFICULTIES.has(row.difficulty) ? row.difficulty : 'E';
-            const category = typeof row.category === 'string' && VALID_CATEGORIES.has(row.category) ? row.category : 'daily';
+            const difficulty: QuestDifficulty =
+                typeof row.difficulty === 'string' && VALID_DIFFICULTIES.includes(row.difficulty as QuestDifficulty)
+                    ? (row.difficulty as QuestDifficulty)
+                    : 'E';
+            const category: QuestCategory =
+                typeof row.category === 'string' && VALID_CATEGORIES.includes(row.category as QuestCategory)
+                    ? (row.category as QuestCategory)
+                    : 'daily';
             const deadlineText = typeof row.deadline === 'string' && row.deadline.trim() ? row.deadline : '';
             const itemAssignedTo = typeof row.assignedTo === 'string' && row.assignedTo.trim() ? row.assignedTo : assignedTo;
             const tasks = Array.isArray(row.tasks) ? row.tasks.filter((task) => typeof task === 'string') as string[] : [];
