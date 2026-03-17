@@ -110,6 +110,70 @@ export const getOfflineItems = async (): Promise<OfflineQueueItem[]> => {
     });
 };
 
+export const getQueuedSubmitForQuest = async (questId: string): Promise<(SubmitQuestQueueItem & { id: number }) | null> => {
+    const items = await getOfflineItems();
+    const found = items.find((item): item is SubmitQuestQueueItem & { id: number } =>
+        item.type === 'submit_quest' && item.questId === questId && typeof item.id === 'number'
+    );
+    return found || null;
+};
+
+export const upsertOfflineSubmitItem = async (item: Omit<SubmitQuestQueueItem, 'id'>): Promise<void> => {
+    const db = await openDb();
+    await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const getAllReq = store.getAll();
+
+        getAllReq.onsuccess = () => {
+            const allItems = (getAllReq.result as OfflineQueueItem[]) || [];
+            const existing = allItems.find((queueItem): queueItem is SubmitQuestQueueItem & { id: number } =>
+                queueItem.type === 'submit_quest' && queueItem.questId === item.questId && typeof queueItem.id === 'number'
+            );
+
+            if (existing) {
+                store.put({
+                    ...existing,
+                    ...item,
+                    retryCount: 0,
+                    nextRetryAt: 0,
+                });
+                return;
+            }
+
+            if (allItems.length >= MAX_QUEUE_ITEMS) {
+                const toDelete = allItems
+                    .filter((queueItem): queueItem is OfflineQueueItem & { id: number } => typeof queueItem.id === 'number')
+                    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+                    .slice(0, allItems.length - MAX_QUEUE_ITEMS + 1);
+                toDelete.forEach((queueItem) => store.delete(queueItem.id));
+            }
+
+            store.add({
+                ...item,
+                retryCount: 0,
+                nextRetryAt: 0,
+            });
+        };
+
+        getAllReq.onerror = () => reject(getAllReq.error);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+    notifyQueueChanged();
+
+    if ('serviceWorker' in navigator) {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            if ('sync' in registration) {
+                await registration.sync.register('lifequest-offline-sync');
+            }
+        } catch (error) {
+            console.warn('Gagal register background sync:', error);
+        }
+    }
+};
+
 export const removeOfflineItem = async (id: number): Promise<void> => {
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {

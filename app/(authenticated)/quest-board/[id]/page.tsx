@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { getQuestById, submitQuest } from '@/lib/db';
-import { enqueueOfflineItem } from '@/lib/offlineQueue';
+import { enqueueOfflineItem, getQueuedSubmitForQuest, upsertOfflineSubmitItem } from '@/lib/offlineQueue';
 import { Quest } from '@/types';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -44,6 +44,7 @@ export default function QuestDetailPage() {
     // Status State
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState('');
+    const [hasQueuedSubmission, setHasQueuedSubmission] = useState(false);
 
     useEffect(() => {
         if (id) {
@@ -58,8 +59,32 @@ export default function QuestDetailPage() {
         }
     }, [id]);
 
+    useEffect(() => {
+        const loadQueuedSubmission = async () => {
+            if (!id) return;
+            const queued = await getQueuedSubmitForQuest(id as string);
+            if (queued) {
+                setHasQueuedSubmission(true);
+                setSubmissionNote(queued.submissionNote || '');
+                setSelectedFiles([]);
+            } else {
+                setHasQueuedSubmission(false);
+            }
+        };
+
+        const onQueueUpdated = () => { void loadQueuedSubmission(); };
+        void loadQueuedSubmission();
+        window.addEventListener('offline-queue-updated', onQueueUpdated as EventListener);
+        return () => window.removeEventListener('offline-queue-updated', onQueueUpdated as EventListener);
+    }, [id]);
+
     const handleAcceptQuest = async () => {
         if (!quest) return;
+        if (new Date(quest.deadline).getTime() <= Date.now()) {
+            alert("Quest ini sudah melewati deadline dan tidak bisa diambil lagi.");
+            setQuest({ ...quest, status: 'missed' });
+            return;
+        }
         setIsSubmitting(true);
         try {
             const questRef = doc(db, 'quests', quest.id);
@@ -109,19 +134,29 @@ export default function QuestDetailPage() {
             if (!idToken) {
                 throw new Error('Sesi login tidak ditemukan. Silakan login ulang saat online.');
             }
-            await enqueueOfflineItem({
-                type: 'submit_quest',
-                questId: quest.id,
-                idToken,
-                submissionNote,
-                files: selectedFiles.map((file) => ({
+            const existingQueued = await getQueuedSubmitForQuest(quest.id);
+            const queuedFiles = selectedFiles.length > 0
+                ? selectedFiles.map((file) => ({
                     name: file.name,
                     type: file.type,
                     lastModified: file.lastModified,
                     blob: file,
-                })),
+                }))
+                : (existingQueued?.files || []);
+
+            if (queuedFiles.length === 0) {
+                throw new Error('Minimal ada 1 file bukti agar bisa disimpan offline.');
+            }
+
+            await upsertOfflineSubmitItem({
+                type: 'submit_quest',
+                questId: quest.id,
+                idToken,
+                submissionNote,
+                files: queuedFiles,
                 createdAt: Date.now(),
             });
+            setHasQueuedSubmission(true);
         };
 
         setIsSubmitting(true);
@@ -180,6 +215,7 @@ export default function QuestDetailPage() {
     // LOGIKA FORM: Muncul jika In Progress atau Rejected
     const isRevising = quest.status === 'rejected';
     const showUploadForm = (quest.status === 'in_progress' || isRevising) && profile?.role === 'player';
+    const canSubmitNow = navigator.onLine ? selectedFiles.length > 0 : (selectedFiles.length > 0 || hasQueuedSubmission);
 
     return (
         <div className="min-h-screen p-4 md:p-8 relative overflow-hidden text-slate-800" style={{ background: 'linear-gradient(135deg, #F8FAFC 0%, #F3E8FF 100%)', fontFamily: 'var(--font-nunito), sans-serif' }}>
@@ -259,6 +295,11 @@ export default function QuestDetailPage() {
 
                             <div className="mb-8">
                                 <label className="block text-sm font-extrabold text-slate-700 mb-2 uppercase tracking-widest">Bukti Penyelesaian</label>
+                                {hasQueuedSubmission && (
+                                    <p className="text-xs font-bold text-amber-700 mb-3">
+                                        Sudah ada submit offline untuk quest ini. Kamu tidak akan membuat submit baru; tombol kirim akan memperbarui draft submit sebelumnya.
+                                    </p>
+                                )}
                                 <div className="flex items-center justify-center w-full">
                                     <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-purple-200 border-dashed rounded-xl cursor-pointer bg-purple-50 hover:bg-purple-100 transition-colors">
                                         <div className="flex flex-col items-center justify-center pt-5 pb-6 text-purple-600">
@@ -285,8 +326,8 @@ export default function QuestDetailPage() {
                                 )}
                             </div>
 
-                            <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={selectedFiles.length === 0} className="w-full py-4 text-lg bg-gradient-to-r from-purple-600 to-pink-500 shadow-lg flex items-center justify-center gap-2">
-                                {isSubmitting ? uploadProgress : <><CheckCircle2 className="w-5 h-5" /> {isRevising ? 'Kirim Revisi' : 'Serahkan ke GM'}</>}
+                            <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={!canSubmitNow} className="w-full py-4 text-lg bg-gradient-to-r from-purple-600 to-pink-500 shadow-lg flex items-center justify-center gap-2">
+                                {isSubmitting ? uploadProgress : <><CheckCircle2 className="w-5 h-5" /> {hasQueuedSubmission ? 'Update Draft Submit Offline' : (isRevising ? 'Kirim Revisi' : 'Serahkan ke GM')}</>}
                             </Button>
                         </form>
                     </Card>

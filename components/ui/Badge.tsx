@@ -49,6 +49,9 @@ export default function Badge({ children, variant = 'default', className = '' }:
         case 'rejected':
             colorClasses = 'bg-rose-50 text-rose-600 border-rose-200';
             break;
+        case 'missed':
+            colorClasses = 'bg-slate-200 text-slate-700 border-slate-300';
+            break;
 
         // ─── KATEGORI (UPDATED!) ───
         case 'daily':

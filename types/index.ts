@@ -35,10 +35,15 @@ export interface UserProfile {
 
     // GM specific fields
     needsEncouragement?: boolean;
+
+    // Deadline discipline system
+    hearts?: number;
+    missStrikeCount?: number;
+    heartRecoveryStreak?: number;
 }
 
 export type QuestCategory = 'daily' | 'weekly' | 'main' | 'side';
-export type QuestStatus = "pending" | "in_progress" | "submitted" | "approved" | "rejected" | "active";
+export type QuestStatus = "pending" | "in_progress" | "submitted" | "approved" | "rejected" | "active" | "missed";
 export type QuestDifficulty = "E" | "D" | "C" | "B" | "A" | "S";
 
 export interface Quest {
@@ -65,6 +70,8 @@ export interface Quest {
     reviewNote?: string;
     bonusExp?: number;
     needsReview?: boolean; // GM flag untuk quest yang perlu review
+    missedAt?: string;
+    deadlinePenaltyExp?: number;
 }
 
 export interface JournalEntry {

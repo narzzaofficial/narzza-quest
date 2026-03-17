@@ -13,6 +13,11 @@ import {
     GuildQuest
 } from "@/types";
 
+const MAX_HEARTS = 5;
+const MISSES_PER_HEART_LOSS = 3;
+const COMPLETIONS_PER_HEART_RECOVERY = 3;
+const MIN_DEADLINE_PENALTY_EXP = 10;
+
 // ─────────────────────────────────────────
 // USER
 // ─────────────────────────────────────────
@@ -34,6 +39,9 @@ export async function createUserProfile(
         lastActiveDate: new Date().toISOString().split("T")[0],
         totalQuestsCompleted: 0,
         totalHoursWorked: 0,
+        hearts: MAX_HEARTS,
+        missStrikeCount: 0,
+        heartRecoveryStreak: 0,
         createdAt: new Date().toISOString(),
         ...data,
     };
@@ -149,6 +157,74 @@ export async function updateQuestStatus(
     });
 }
 
+function getDeadlinePenaltyExp(quest: Quest): number {
+    return Math.max(MIN_DEADLINE_PENALTY_EXP, Math.round((quest.expReward || 0) * 0.2));
+}
+
+export async function processExpiredQuestsForPlayer(playerProfile: UserProfile): Promise<{
+    missedCount: number;
+    totalExpPenalty: number;
+    heartsLost: number;
+}> {
+    const now = new Date();
+    const playerQuestQuery = query(
+        collection(db, "quests"),
+        where("assignedTo", "==", playerProfile.uid),
+        where("status", "in", ["pending", "in_progress"]),
+        limit(50)
+    );
+
+    const snap = await getDocs(playerQuestQuery);
+    const expired = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as Quest))
+        .filter((quest) => {
+            const deadlineMs = new Date(quest.deadline).getTime();
+            return Number.isFinite(deadlineMs) && deadlineMs < now.getTime();
+        });
+
+    if (expired.length === 0) {
+        return { missedCount: 0, totalExpPenalty: 0, heartsLost: 0 };
+    }
+
+    const totalExpPenalty = expired.reduce((sum, quest) => sum + getDeadlinePenaltyExp(quest), 0);
+    const currentCumulative = getCumulativeExp(playerProfile);
+    const newCumulative = Math.max(0, currentCumulative - totalExpPenalty);
+    const { level, exp, expToNextLevel } = calculateLevel(newCumulative);
+    const title = LEVEL_TITLES[Math.min(level, 10)] || "Mythic Legend";
+
+    const prevMissStrike = playerProfile.missStrikeCount || 0;
+    const newMissStrike = prevMissStrike + expired.length;
+    const prevHeartLossBuckets = Math.floor(prevMissStrike / MISSES_PER_HEART_LOSS);
+    const newHeartLossBuckets = Math.floor(newMissStrike / MISSES_PER_HEART_LOSS);
+    const heartsLost = Math.max(0, newHeartLossBuckets - prevHeartLossBuckets);
+    const currentHearts = playerProfile.hearts ?? MAX_HEARTS;
+    const nextHearts = Math.max(0, currentHearts - heartsLost);
+
+    const batch = writeBatch(db);
+    const nowIso = now.toISOString();
+    for (const quest of expired) {
+        batch.update(doc(db, "quests", quest.id), {
+            status: "missed",
+            missedAt: nowIso,
+            deadlinePenaltyExp: getDeadlinePenaltyExp(quest),
+            updatedAt: nowIso,
+        });
+    }
+
+    batch.update(doc(db, "users", playerProfile.uid), {
+        level,
+        exp,
+        expToNextLevel,
+        title,
+        hearts: nextHearts,
+        missStrikeCount: newMissStrike,
+        heartRecoveryStreak: 0,
+    });
+
+    await batch.commit();
+    return { missedCount: expired.length, totalExpPenalty, heartsLost };
+}
+
 export const submitQuest = async (questId: string, note: string, urls: string[] = []) => {
     try {
         const questRef = doc(db, 'quests', questId);
@@ -228,6 +304,18 @@ export async function approveQuest(
     });
 
     // 2. Siapkan data yang akan di-update ke profil Hero
+    const currentHearts = playerProfile.hearts ?? MAX_HEARTS;
+    let nextHearts = currentHearts;
+    let nextRecoveryStreak = playerProfile.heartRecoveryStreak || 0;
+    const completedOnTime = !!quest.submittedAt && new Date(quest.submittedAt).getTime() <= new Date(quest.deadline).getTime();
+    if (completedOnTime) {
+        nextRecoveryStreak += 1;
+        if (nextHearts < MAX_HEARTS && nextRecoveryStreak >= COMPLETIONS_PER_HEART_RECOVERY) {
+            nextHearts += 1;
+            nextRecoveryStreak = 0;
+        }
+    }
+
     const userUpdatePayload: any = {
         level,
         exp,
@@ -237,6 +325,9 @@ export async function approveQuest(
         totalHoursWorked: playerProfile.totalHoursWorked + (quest.timeWorkedSeconds || 0) / 3600,
         streak: newStreak,
         lastActiveDate: todayStr,
+        hearts: nextHearts,
+        heartRecoveryStreak: nextRecoveryStreak,
+        missStrikeCount: completedOnTime ? 0 : (playerProfile.missStrikeCount || 0),
     };
 
     // 💰 3. Jika ada uangnya, tambahkan ke Dompet khusus GM pemberi quest
