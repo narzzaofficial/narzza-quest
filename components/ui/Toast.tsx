@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { CheckCircle2, AlertTriangle, Bell, X } from 'lucide-react';
 
 interface ToastProps {
     isVisible: boolean;
@@ -10,35 +11,30 @@ interface ToastProps {
 }
 
 export default function Toast({ isVisible, onClose, message, type = 'success' }: ToastProps) {
-
-    // Auto-hide setelah 4 detik
     useEffect(() => {
         if (isVisible) {
-            const timer = setTimeout(() => {
-                onClose();
-            }, 4000);
+            const timer = setTimeout(onClose, 4000);
             return () => clearTimeout(timer);
         }
     }, [isVisible, onClose]);
 
+    const meta = {
+        success: { soft: 'bg-success-soft', color: 'var(--color-success)', Icon: CheckCircle2 },
+        error: { soft: 'bg-danger-soft', color: 'var(--color-danger)', Icon: AlertTriangle },
+        info: { soft: 'bg-brand-soft', color: 'var(--color-brand)', Icon: Bell },
+    }[type];
+
     return (
         <div
-            // PERUBAHAN DI SINI: top-20 untuk mobile, md:top-8 untuk desktop. 
-            // Posisinya sekarang fix di Kanan Atas!
-            className={`fixed top-20 right-4 md:top-8 md:right-8 z-[9999] transition-all duration-500 ease-out transform ${isVisible ? 'translate-x-0 opacity-100 visible' : 'translate-x-full opacity-0 invisible'
-                }`}
+            className={`fixed top-20 right-4 md:top-8 md:right-8 z-[9999] transition-all duration-500 ease-out transform ${isVisible ? 'translate-x-0 opacity-100 visible' : 'translate-x-full opacity-0 invisible'}`}
         >
-            <div className={`px-6 py-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-2 flex items-center gap-3 font-bold text-sm max-w-sm backdrop-blur-md ${type === 'success' ? 'bg-emerald-50/90 text-emerald-700 border-emerald-200' :
-                    type === 'error' ? 'bg-rose-50/90 text-rose-700 border-rose-200' :
-                        'bg-white/90 text-purple-700 border-purple-200'
-                }`}>
-                <span className="text-2xl drop-shadow-sm">
-                    {type === 'success' ? '✨' : type === 'error' ? '⚠️' : '🔔'}
-                </span>
-                <p className="leading-snug text-slate-700 font-extrabold">{message}</p>
-
-                <button onClick={onClose} className="ml-3 text-slate-400 hover:text-rose-500 text-2xl transition-colors font-black leading-none pb-1">
-                    ×
+            <div className="glass px-5 py-4 rounded-card shadow-pop flex items-center gap-3 font-bold text-sm max-w-sm">
+                <div className={`${meta.soft} w-9 h-9 rounded-xl flex items-center justify-center shrink-0`}>
+                    <meta.Icon className="w-5 h-5" style={{ color: meta.color }} />
+                </div>
+                <p className="leading-snug text-ink font-bold flex-1">{message}</p>
+                <button onClick={onClose} className="text-ink-muted hover:text-danger transition-colors shrink-0" aria-label="Tutup">
+                    <X className="w-4 h-4" />
                 </button>
             </div>
         </div>

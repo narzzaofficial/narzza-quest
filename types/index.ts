@@ -187,47 +187,32 @@ export interface Submission {
     note?: string;
 }
 
-export const LEVEL_TITLES: Record<number, string> = {
-    1: "Rookie Adventurer",
-    2: "Apprentice",
-    3: "Journeyman",
-    4: "Skilled Fighter",
-    5: "Elite Warrior",
-    6: "Expert Strategist",
-    7: "Master Tactician",
-    8: "Grand Champion",
-    9: "Legendary Hero",
-    10: "Mythic Legend",
-};
+// ─────────────────────────────────────────
+// Re-exports (moved to constants/ and lib/ for separation of concerns).
+// Kept here so existing `@/types` imports keep working.
+// ─────────────────────────────────────────
+export { LEVEL_TITLES, DIFFICULTY_EXP, MAX_LEVEL } from "@/constants/game";
+export { getExpToNextLevel, calculateLevel, getCumulativeExp } from "@/lib/leveling";
 
-export const DIFFICULTY_EXP: Record<QuestDifficulty, number> = {
-    E: 50,
-    D: 100,
-    C: 200,
-    B: 350,
-    A: 500,
-    S: 1000,
-};
+// ─────────────────────────────────────────
+// AI GAME MASTER (memory + daily review)
+// ─────────────────────────────────────────
 
-export function getExpToNextLevel(level: number): number {
-    return Math.floor(100 * Math.pow(1.5, level - 1));
+export interface AIMemory {
+    uid: string;
+    summary: string;       // short narrative the AI keeps about the user
+    insights: string[];    // bullet facts/patterns
+    updatedAt: string;
 }
 
-export function calculateLevel(totalExp: number): {
-    level: number;
-    exp: number;
-    expToNextLevel: number;
-} {
-    let level = 1;
-    let remainingExp = totalExp;
-    while (remainingExp >= getExpToNextLevel(level)) {
-        remainingExp -= getExpToNextLevel(level);
-        level++;
-        if (level >= 10) break;
-    }
-    return {
-        level,
-        exp: remainingExp,
-        expToNextLevel: getExpToNextLevel(level),
-    };
+export interface DailyReview {
+    uid: string;
+    date: string;          // YYYY-MM-DD
+    summary: string;
+    wins: string[];
+    focus: string[];       // suggestions for tomorrow
+    encouragement: string;
+    questsCompleted: number;
+    expEarned: number;
+    createdAt: string;
 }

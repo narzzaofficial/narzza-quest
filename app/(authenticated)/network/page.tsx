@@ -1,249 +1,134 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import {
-    sendPartnerRequest,
-    acceptPartnerRequest,
-    rejectPartnerRequest,
-    getLinkedProfiles
-} from '@/lib/db';
-import { UserProfile } from '@/types';
-import Card from '@/components/ui/Card';
+import React from 'react';
+import { Users, UserPlus, Mail, Crown, Shield, Loader2 } from 'lucide-react';
+import { useNetwork } from '@/hooks/useNetwork';
+import PageHeader from '@/components/ui/PageHeader';
+import GlassCard from '@/components/ui/GlassCard';
 import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
+import SectionLabel from '@/components/ui/SectionLabel';
 import Toast from '@/components/ui/Toast';
-import {
-    Users,
-    UserPlus,
-    Mail,
-    UserCircle2,
-    ShieldAlert,
-    Crown,
-    Shield
-} from 'lucide-react';
+import type { UserProfile } from '@/types';
+
+function avatarFor(name: string, bg = 'e9f1ff', color = '3b82f6') {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${bg}&color=${color}&bold=true`;
+}
 
 export default function NetworkPage() {
-    const { profile, loading, refreshProfile } = useAuth();
+    const n = useNetwork();
 
-    const [partnerEmail, setPartnerEmail] = useState('');
-    const [linkedPartners, setLinkedPartners] = useState<UserProfile[]>([]);
-
-    const [isLinking, setIsLinking] = useState(false);
-    const [loadingPartners, setLoadingPartners] = useState(true);
-
-    const [showToast, setShowToast] = useState(false);
-    const [toastMessage, setToastMessage] = useState('');
-
-    // 1. Tarik Data Relasi (Anggota Guild)
-    useEffect(() => {
-        if (profile?.partnerIds && profile.partnerIds.length > 0) {
-            getLinkedProfiles(profile.partnerIds).then(partners => {
-                setLinkedPartners(partners);
-                setLoadingPartners(false);
-            });
-        } else {
-            setLoadingPartners(false);
-        }
-    }, [profile]);
-
-    // 2. Fungsi Kirim Undangan
-    const handleSendRequest = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!profile || !partnerEmail.trim()) return;
-
-        if (partnerEmail === profile.email) {
-            alert('Tidak bisa mengirim request ke diri sendiri!');
-            return;
-        }
-
-        setIsLinking(true);
-        try {
-            const successId = await sendPartnerRequest(profile.uid, partnerEmail);
-            if (successId) {
-                setToastMessage('Undangan berhasil dikirim! Menunggu konfirmasi.');
-                setShowToast(true);
-                setPartnerEmail('');
-            } else {
-                alert('Email tidak ditemukan di sistem. Pastikan dia sudah mendaftar.');
-            }
-        } catch (error) {
-            console.error("Gagal mengirim request:", error);
-            alert('Terjadi kesalahan. Coba lagi nanti.');
-        } finally {
-            setIsLinking(false);
-        }
-    };
-
-    // 3. Fungsi Terima/Tolak Undangan
-    const handleAccept = async () => {
-        if (!profile?.pendingPartnerRequest) return;
-        setIsLinking(true);
-        try {
-            await acceptPartnerRequest(profile.uid, profile.pendingPartnerRequest.uid);
-            setToastMessage('🎉 Berhasil terhubung dengan anggota baru!');
-            setShowToast(true);
-            await refreshProfile();
-        } catch (error) {
-            console.error("Gagal menerima:", error);
-        } finally {
-            setIsLinking(false);
-        }
-    };
-
-    const handleReject = async () => {
-        if (!profile?.pendingPartnerRequest) return;
-        setIsLinking(true);
-        try {
-            await rejectPartnerRequest(profile.uid);
-            await refreshProfile();
-        } catch (error) {
-            console.error("Gagal menolak:", error);
-        } finally {
-            setIsLinking(false);
-        }
-    };
-
-    if (loading) {
-        return <div className="min-h-screen flex items-center justify-center font-bold text-purple-600">Memuat data jaringan...</div>;
+    if (n.loading) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-brand animate-spin" />
+            </div>
+        );
     }
 
     return (
-        <div
-            className="min-h-screen p-4 md:p-8 relative overflow-hidden text-slate-800"
-            style={{
-                background: 'linear-gradient(135deg, #F8FAFC 0%, #F3E8FF 100%)',
-                fontFamily: 'var(--font-nunito), sans-serif'
-            }}
-        >
-            <div className="max-w-6xl mx-auto space-y-8 relative z-10 pt-4">
+        <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+            <PageHeader
+                icon={<Users className="w-6 h-6 text-white" />}
+                title="Jaringan"
+                subtitle="Kelola undangan & lihat siapa yang terhubung dengan akunmu."
+            />
 
-                <header className="mb-8">
-                    <p className="text-purple-600 text-sm tracking-widest uppercase mb-1 font-bold">Koneksi Sosial</p>
-                    <h1 className="text-3xl md:text-4xl font-bold text-purple-950 flex items-center gap-3" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                        <Users className="w-8 h-8 text-purple-500" /> Jaringan Guild
-                    </h1>
-                    <p className="text-slate-500 font-medium mt-2 text-sm md:text-base">
-                        Kelola undangan dan lihat siapa saja yang terhubung dengan akunmu.
-                    </p>
-                </header>
-
-                {/* ─── 1. KOTAK PERMINTAAN MASUK ─── */}
-                {profile?.pendingPartnerRequest && (
-                    <Card className="border-emerald-200 bg-emerald-50 shadow-sm relative overflow-hidden">
-                        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 justify-between">
-                            <div className="flex items-center gap-4">
-                                {/* PP Pengirim di Request */}
-                                <div className="w-14 h-14 rounded-2xl border-2 border-white overflow-hidden shadow-sm bg-white">
-                                    <img
-                                        src={profile.pendingPartnerRequest.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.pendingPartnerRequest.displayName)}&background=10b981&color=fff&bold=true`}
-                                        alt="Avatar"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <div>
-                                    <h2 className="text-lg font-bold text-emerald-900 mb-0.5">Ada Permintaan Baru!</h2>
-                                    <p className="text-emerald-700 text-sm font-medium">
-                                        <strong className="text-emerald-900">{profile.pendingPartnerRequest.displayName}</strong> ingin bergabung ke Guild-mu.
-                                    </p>
-                                </div>
+            {/* Incoming request */}
+            {n.profile?.pendingPartnerRequest && (
+                <GlassCard className="p-5 border border-success/20 bg-success-soft">
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-success/20 bg-surface shrink-0">
+                                <img src={n.profile.pendingPartnerRequest.avatar || avatarFor(n.profile.pendingPartnerRequest.displayName, 'e7f6ef', '18a06b')} alt="Avatar" className="w-full h-full object-cover" />
                             </div>
-                            <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
-                                <Button variant="outline" onClick={handleReject} disabled={isLinking} className="flex-1 md:flex-none border-emerald-300 text-emerald-700 hover:bg-emerald-100">
-                                    Tolak
-                                </Button>
-                                <Button variant="primary" onClick={handleAccept} isLoading={isLinking} className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 border-none shadow-emerald-200">
-                                    Terima
-                                </Button>
+                            <div>
+                                <h2 className="text-lg font-bold text-ink mb-0.5">Ada Permintaan Baru!</h2>
+                                <p className="text-ink-soft text-sm">
+                                    <strong className="text-ink">{n.profile.pendingPartnerRequest.displayName}</strong> ingin terhubung denganmu.
+                                </p>
                             </div>
                         </div>
-                    </Card>
-                )}
-
-                {/* ─── 2. FORM UNDANG ANGGOTA ─── */}
-                <Card className="bg-white shadow-[0_10px_30px_rgba(168,85,247,0.06)] border-purple-100 p-6">
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-                        <div className="flex-1 text-center md:text-left">
-                            <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
-                                <UserPlus className="w-5 h-5 text-purple-600" />
-                                <h2 className="text-xl font-bold text-purple-900" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                                    Undang Anggota Baru
-                                </h2>
-                            </div>
-                            <p className="text-slate-500 font-medium text-sm">
-                                Masukkan email rekanmu untuk mengirimkan undangan aliansi Guild.
-                            </p>
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <Button variant="outline" onClick={n.reject} disabled={n.isLinking} className="flex-1 md:flex-none">Tolak</Button>
+                            <button onClick={n.accept} disabled={n.isLinking} className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 rounded-xl bg-success text-white px-5 py-2.5 font-bold text-sm hover:brightness-95 disabled:opacity-60">
+                                {n.isLinking ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Terima'}
+                            </button>
                         </div>
-
-                        <form onSubmit={handleSendRequest} className="w-full md:w-auto flex flex-col sm:flex-row gap-3">
-                            <div className="relative w-full md:w-72">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <input
-                                    type="email"
-                                    placeholder="Masukkan Email..."
-                                    required
-                                    value={partnerEmail}
-                                    onChange={(e) => setPartnerEmail(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:ring-2 focus:ring-purple-400 focus:bg-white transition-all font-bold text-sm"
-                                />
-                            </div>
-                            <Button type="submit" variant="primary" isLoading={isLinking} className="shrink-0 bg-purple-600 shadow-purple-200">
-                                Kirim Undangan
-                            </Button>
-                        </form>
                     </div>
-                </Card>
+                </GlassCard>
+            )}
 
-                {/* ─── 3. DAFTAR RELASI / ANGGOTA ─── */}
-                <div>
-                    <h2 className="text-xl font-bold text-purple-900 mb-6 flex items-center gap-2" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                        <Users className="w-5 h-5 text-purple-500" /> Daftar Relasi Aktif
-                    </h2>
-
-                    {loadingPartners ? (
-                        <div className="text-center py-10 text-purple-400 font-medium">Memuat daftar anggota...</div>
-                    ) : linkedPartners.length === 0 ? (
-                        <div className="text-center py-16 bg-white/50 border border-slate-200 rounded-3xl border-dashed">
-                            <Users className="w-12 h-12 text-slate-300 mx-auto mb-3 opacity-50" />
-                            <p className="text-slate-500 font-bold">Belum ada anggota di jaringanmu.</p>
-                            <p className="text-slate-400 text-sm mt-1 font-medium">Aliansi membuat perjalananmu lebih bermakna!</p>
+            {/* Invite form */}
+            <GlassCard className="p-5 md:p-6">
+                <div className="flex flex-col md:flex-row items-center gap-5">
+                    <div className="flex-1 text-center md:text-left">
+                        <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+                            <UserPlus className="w-5 h-5 text-brand" />
+                            <h2 className="text-lg font-extrabold text-ink">Undang Anggota Baru</h2>
                         </div>
+                        <p className="text-ink-soft text-sm">Masukkan email rekanmu untuk mengirim undangan.</p>
+                    </div>
+                    <form onSubmit={(e) => { e.preventDefault(); n.sendRequest(); }} className="w-full md:w-auto flex flex-col sm:flex-row gap-3">
+                        <div className="relative w-full md:w-72">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" />
+                            <input
+                                type="email"
+                                placeholder="Masukkan email…"
+                                required
+                                value={n.partnerEmail}
+                                onChange={(e) => n.setPartnerEmail(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 rounded-xl bg-surface border border-line text-ink outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 transition font-bold text-sm"
+                            />
+                        </div>
+                        <Button type="submit" variant="primary" isLoading={n.isLinking} className="shrink-0">Kirim Undangan</Button>
+                    </form>
+                </div>
+            </GlassCard>
+
+            {/* Members */}
+            <section className="space-y-3">
+                <SectionLabel className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Relasi Aktif</SectionLabel>
+                {n.loadingPartners ? (
+                    <div className="text-center py-10 text-ink-muted font-medium">Memuat daftar anggota…</div>
+                ) : n.linkedPartners.length === 0 ? (
+                    <EmptyState icon={Users} title="Belum ada anggota di jaringanmu" desc="Aliansi membuat perjalananmu lebih bermakna!" />
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {n.linkedPartners.map((member) => (
+                            <MemberCard key={member.uid} member={member} />
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            <Toast isVisible={n.toast.show} onClose={() => n.setToast({ ...n.toast, show: false })} message={n.toast.message} type="success" />
+        </div>
+    );
+}
+
+function MemberCard({ member }: { member: UserProfile }) {
+    const isGm = member.role === 'gm';
+    return (
+        <GlassCard className="flex items-center gap-4 p-4">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-line bg-surface shrink-0">
+                <img src={member.avatar || avatarFor(member.displayName)} alt={member.displayName} className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-ink truncate leading-snug">{member.displayName}</h3>
+                <p className="text-xs text-ink-muted truncate">{member.email}</p>
+                <div className="mt-1.5">
+                    {isGm ? (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-xp-soft text-xp">
+                            <Crown className="w-2.5 h-2.5" /> Game Master
+                        </span>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {linkedPartners.map((member) => (
-                                <div key={member.uid} className="flex items-center gap-4 p-4 bg-white border border-purple-50 rounded-2xl shadow-sm hover:shadow-md hover:border-purple-200 transition-all group">
-
-                                    {/* PHOTO PROFIL (Avatar) */}
-                                    <div className="w-14 h-14 rounded-2xl border-2 border-purple-100 overflow-hidden shadow-sm flex-shrink-0 group-hover:border-purple-300 transition-colors bg-slate-50">
-                                        <img
-                                            src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.displayName)}&background=f3e8ff&color=9333ea&bold=true`}
-                                            alt={member.displayName}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-800 truncate leading-snug">{member.displayName}</h3>
-                                        <p className="text-xs text-slate-500 truncate font-medium">{member.email}</p>
-                                        <div className="flex items-center gap-1 mt-1.5">
-                                            {member.role === 'gm' ? (
-                                                <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-100">
-                                                    <Crown className="w-2.5 h-2.5" /> Game Master
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-50 text-purple-600 border border-purple-100">
-                                                    <Shield className="w-2.5 h-2.5" /> Lv. {member.level || 1} Hero
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-brand-soft text-brand">
+                            <Shield className="w-2.5 h-2.5" /> Lv. {member.level || 1} Hero
+                        </span>
                     )}
                 </div>
-
             </div>
-            <Toast isVisible={showToast} onClose={() => setShowToast(false)} message={toastMessage} type="success" />
-        </div>
+        </GlassCard>
     );
 }

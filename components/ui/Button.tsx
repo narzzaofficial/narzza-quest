@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -21,8 +19,8 @@ export default function Button({
     disabled,
     ...props
 }: ButtonProps) {
-    // Ubah rounded-full menjadi rounded-xl agar senada dengan input box
-    const baseClasses = 'inline-flex items-center justify-center rounded-xl font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border';
+    const baseClasses =
+        'inline-flex items-center justify-center rounded-xl font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border';
 
     const sizeClasses = {
         sm: 'px-4 py-2 text-sm',
@@ -30,30 +28,16 @@ export default function Button({
         lg: 'px-8 py-3.5 text-lg',
     };
 
-    let variantClasses = '';
-    switch (variant) {
-        case 'primary':
-            // Gradasi ungu ke pink
-            variantClasses = 'bg-gradient-to-r from-purple-600 to-pink-500 text-white border-transparent hover:shadow-[0_8px_25px_rgba(168,85,247,0.3)] hover:-translate-y-0.5';
-            break;
-        case 'secondary':
-            // Ungu pastel
-            variantClasses = 'bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100 hover:border-purple-200';
-            break;
-        case 'outline':
-            // Garis luar ungu
-            variantClasses = 'bg-transparent text-purple-600 border-purple-200 hover:border-purple-400 hover:bg-purple-50';
-            break;
-        case 'ghost':
-            // Transparan
-            variantClasses = 'bg-transparent text-slate-500 border-transparent hover:text-purple-600 hover:bg-purple-50';
-            break;
-    }
+    const variantClasses = {
+        primary: 'bg-brand text-white border-transparent shadow-card hover:bg-brand-hover hover:-translate-y-0.5',
+        secondary: 'bg-brand-soft text-brand border-transparent hover:brightness-95',
+        outline: 'bg-surface text-brand border-line hover:border-brand/40 hover:bg-brand-soft',
+        ghost: 'bg-transparent text-ink-soft border-transparent hover:text-brand hover:bg-surface-2',
+    }[variant];
 
     return (
         <button
             className={`${baseClasses} ${sizeClasses[size]} ${variantClasses} ${className}`}
-            style={{ fontFamily: 'var(--font-nunito), sans-serif', ...props.style }}
             disabled={disabled || isLoading}
             {...props}
         >
@@ -64,10 +48,7 @@ export default function Button({
                 </svg>
             )}
             {!isLoading && leftIcon && <span className="mr-2">{leftIcon}</span>}
-
-            {/* KUNCI PERBAIKAN: Hapus tag <span> pembungkus agar Flexbox bekerja sempurna */}
             {children}
-
             {!isLoading && rightIcon && <span className="ml-2">{rightIcon}</span>}
         </button>
     );

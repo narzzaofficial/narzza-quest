@@ -25,12 +25,12 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Life Quest — Your Personal RPG Life System",
+  title: "Narzza Quest — Your Personal RPG Life System",
   description: "Turn your life into an epic RPG adventure",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: "LifeQuest",
+    title: "NarzzaQuest",
     statusBarStyle: "default",
   },
 };

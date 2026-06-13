@@ -3,15 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import {
-    Mail,
-    Lock,
-    User as UserIcon,
-    Compass,
-    Shield,
-    Crown,
-    Sparkles
-} from "lucide-react";
+import { Mail, Lock, User as UserIcon, Loader2, Shield, Crown, Sparkles } from "lucide-react";
+
+const field =
+    "w-full pl-11 pr-4 py-3 bg-surface border border-line rounded-xl text-ink font-bold placeholder:font-medium placeholder:text-ink-muted outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 transition";
 
 export default function LoginPage() {
     const { signIn, signUp, signInWithGoogle } = useAuth();
@@ -25,23 +20,20 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    const isRegister = mode === "register";
+
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!email || !password) return setError("Email dan password wajib diisi.");
-        if (mode === "register" && !displayName) return setError("Nama wajib diisi.");
-
+        if (isRegister && !displayName) return setError("Nama wajib diisi.");
         setLoading(true);
         setError("");
-
         try {
-            if (mode === "login") {
-                await signIn(email, password);
-            } else {
-                await signUp(email, password, displayName, role);
-            }
+            if (!isRegister) await signIn(email, password);
+            else await signUp(email, password, displayName, role);
             router.push("/dashboard");
-        } catch (e: any) {
-            setError(e.message || "Terjadi kesalahan sihir pada sistem.");
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Terjadi kesalahan pada sistem.");
         } finally {
             setLoading(false);
         }
@@ -53,184 +45,84 @@ export default function LoginPage() {
         try {
             await signInWithGoogle(role);
             router.push("/dashboard");
-        } catch (e: any) {
-            setError(e.message || "Gagal masuk menggunakan Google.");
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Gagal masuk dengan Google.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div
-            className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden p-4 text-slate-800"
-            style={{
-                background: "linear-gradient(135deg, #E9D5FF 0%, #F3E8FF 40%, #FBCFE8 100%)",
-                fontFamily: "var(--font-nunito), sans-serif"
-            }}
-        >
-            {/* ── Decorative Background Blobs ── */}
-            <div className="absolute top-[-10%] right-[-10%] w-[40rem] h-[40rem] bg-purple-400/30 rounded-full blur-[100px] pointer-events-none animate-pulse" style={{ animationDuration: '4s' }} />
-            <div className="absolute bottom-[-10%] left-[-10%] w-[35rem] h-[35rem] bg-pink-400/30 rounded-full blur-[100px] pointer-events-none animate-pulse" style={{ animationDuration: '5s' }} />
+        <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-4">
+            <div className="absolute top-[-10%] right-[-10%] w-160 h-160 rounded-full blur-[120px] pointer-events-none" style={{ background: "rgba(79,124,255,0.18)" }} />
+            <div className="absolute bottom-[-10%] left-[-10%] w-140 h-140 rounded-full blur-[120px] pointer-events-none" style={{ background: "rgba(56,189,248,0.16)" }} />
 
-            {/* ── Main Auth Card ── */}
-            <div className="relative z-10 w-full max-w-[420px] bg-white rounded-3xl shadow-[0_20px_60px_rgba(168,85,247,0.15)] border border-purple-100 overflow-hidden animate-in fade-in zoom-in duration-500">
-
-                {/* Header Area */}
-                <div className="text-center pt-10 pb-6 px-8 bg-gradient-to-b from-purple-50/50 to-white">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-[0_10px_20px_rgba(168,85,247,0.1)] border border-purple-100 mb-4 rotate-3 hover:rotate-0 transition-transform">
-                        <Sparkles className="w-8 h-8 text-purple-500" />
+            <div className="relative z-10 w-full max-w-md glass rounded-card shadow-pop p-7 md:p-9">
+                {/* Brand */}
+                <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl shadow-card mb-3" style={{ backgroundImage: "linear-gradient(135deg, #4f7cff 0%, #38bdf8 100%)" }}>
+                        <Sparkles className="w-7 h-7 text-white" />
                     </div>
-                    <h1
-                        className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-700 to-pink-500 mb-2"
-                        style={{ fontFamily: "var(--font-playfair), serif" }}
-                    >
-                        LIFE QUEST
-                    </h1>
-                    <p className="text-purple-600/80 font-medium text-sm">
-                        {mode === "login" ? "Selamat datang kembali di Guild." : "Mulai perjalanan epikmu sekarang."}
-                    </p>
+                    <h1 className="text-2xl font-extrabold !text-brand">Narzza Quest</h1>
+                    <p className="text-ink-soft text-sm mt-1">{isRegister ? "Mulai perjalanan epikmu sekarang." : "Masuk untuk lanjut bertualang."}</p>
                 </div>
 
                 {/* Tabs */}
-                <div className="grid grid-cols-2 border-y border-purple-50">
+                <div className="relative grid grid-cols-2 p-1 bg-surface-2 rounded-xl mb-5">
+                    <span className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-lg bg-surface shadow-sm transition-transform duration-300 ease-out ${isRegister ? "translate-x-[calc(100%+0.5rem)]" : "translate-x-0"}`} />
                     {(["login", "register"] as const).map((m) => (
-                        <button
-                            key={m}
-                            onClick={() => setMode(m)}
-                            className={`py-4 text-sm font-bold tracking-widest uppercase transition-all duration-300 ${mode === m
-                                ? "text-purple-700 bg-purple-50/50 border-b-2 border-purple-500"
-                                : "text-slate-400 hover:bg-slate-50 hover:text-purple-400 border-b-2 border-transparent"
-                                }`}
-                        >
+                        <button key={m} type="button" onClick={() => setMode(m)} className={`relative z-10 py-2 text-sm font-bold rounded-lg transition-colors ${mode === m ? "text-brand" : "text-ink-muted hover:text-brand"}`}>
                             {m === "login" ? "Masuk" : "Daftar"}
                         </button>
                     ))}
                 </div>
 
-                {/* Form Content */}
-                <form
-                    className="p-8 space-y-5"
-                    onSubmit={handleSubmit}
-                >
-                    {mode === "register" && (
-                        <div className="space-y-5 animate-in slide-in-from-left-4 duration-300">
-                            {/* Display Name */}
-                            <div>
-                                <label className="block text-[10px] font-black text-purple-500 uppercase tracking-widest mb-1.5 ml-1">Nama Karakter</label>
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                    {/* Animated register-only fields */}
+                    <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isRegister ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                        <div className="overflow-hidden min-h-0">
+                            <div className="space-y-4 pb-4">
                                 <div className="relative">
-                                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-300" />
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="Misal: Nardi / Azizah"
-                                        value={displayName}
-                                        onChange={(e) => setDisplayName(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-purple-100 rounded-2xl text-purple-900 focus:ring-2 focus:ring-purple-400 focus:bg-white focus:outline-none transition-all font-bold placeholder:font-medium placeholder:text-slate-400"
-                                    />
+                                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-muted" />
+                                    <input type="text" required={isRegister} placeholder="Nama karakter" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={field} />
                                 </div>
-                            </div>
-
-                            {/* Role Selection */}
-                            <div>
-                                <label className="block text-[10px] font-black text-purple-500 uppercase tracking-widest mb-1.5 ml-1">Pilih Class</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     {[
-                                        { value: "player", icon: <Shield className="w-6 h-6 mb-1" />, title: "Hero", desc: "Jalani misi & raih EXP" },
-                                        { value: "gm", icon: <Crown className="w-6 h-6 mb-1" />, title: "Game Master", desc: "Pandu para Hero" },
-                                    ].map((r) => (
-                                        <div
-                                            key={r.value}
-                                            onClick={() => setRole(r.value as "player" | "gm")}
-                                            className={`cursor-pointer p-3 rounded-2xl border-2 flex flex-col items-center text-center transition-all ${role === r.value
-                                                ? "border-pink-400 bg-pink-50 text-pink-600 shadow-sm transform scale-[1.02]"
-                                                : "border-slate-100 bg-slate-50 text-slate-400 hover:border-purple-200 hover:bg-purple-50 hover:text-purple-500"
-                                                }`}
-                                        >
-                                            {r.icon}
-                                            <span className="font-bold text-sm">{r.title}</span>
-                                            <span className="text-[9px] font-medium leading-tight opacity-80 mt-0.5">{r.desc}</span>
-                                        </div>
-                                    ))}
+                                        { value: "player", icon: Shield, title: "Hero" },
+                                        { value: "gm", icon: Crown, title: "Game Master" },
+                                    ].map((r) => {
+                                        const active = role === r.value;
+                                        return (
+                                            <button type="button" key={r.value} onClick={() => setRole(r.value as "player" | "gm")} className={`p-2.5 rounded-xl border-2 flex items-center justify-center gap-2 font-bold text-sm transition-all ${active ? "border-brand/30 bg-brand-soft text-brand" : "border-line bg-surface text-ink-muted hover:bg-surface-2"}`}>
+                                                <r.icon className="w-4 h-4" /> {r.title}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
-                    )}
-
-                    {/* Email */}
-                    <div>
-                        <label className="block text-[10px] font-black text-purple-500 uppercase tracking-widest mb-1.5 ml-1">Email</label>
-                        <div className="relative">
-                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-300" />
-                            <input
-                                type="email"
-                                required
-                                placeholder="hero@lifequest.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-purple-100 rounded-2xl text-purple-900 focus:ring-2 focus:ring-purple-400 focus:bg-white focus:outline-none transition-all font-bold placeholder:font-medium placeholder:text-slate-400"
-                            />
-                        </div>
                     </div>
 
-                    {/* Password */}
-                    <div>
-                        <label className="block text-[10px] font-black text-purple-500 uppercase tracking-widest mb-1.5 ml-1">Password</label>
-                        <div className="relative">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-300" />
-                            <input
-                                type="password"
-                                required
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-purple-100 rounded-2xl text-purple-900 focus:ring-2 focus:ring-purple-400 focus:bg-white focus:outline-none transition-all font-bold placeholder:font-medium placeholder:text-slate-400"
-                            />
-                        </div>
+                    <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-muted" />
+                        <input type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={field} />
+                    </div>
+                    <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-muted" />
+                        <input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={field} />
                     </div>
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className="bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold p-3 rounded-xl flex items-center gap-2 animate-in slide-in-from-top-2">
-                            <span>⚠️</span> {error}
-                        </div>
-                    )}
+                    {error && <div className="bg-danger-soft text-danger text-xs font-bold p-3 rounded-xl flex items-center gap-2">⚠ {error}</div>}
 
-                    {/* Submit Button */}
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-4 mt-2 rounded-2xl text-white font-black tracking-widest uppercase transition-all duration-300 shadow-[0_10px_30px_rgba(168,85,247,0.3)] hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(236,72,153,0.4)] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 relative overflow-hidden group"
-                        style={{ background: "linear-gradient(to right, #9333EA, #EC4899)" }}
-                    >
-                        {/* Shimmer effect */}
-                        <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-[shimmer_1.5s_infinite]" />
-
-                        {loading ? (
-                            <div className="flex items-center justify-center gap-2">
-                                <Compass className="w-5 h-5 animate-spin" />
-                                <span>Memuat...</span>
-                            </div>
-                        ) : mode === "login" ? (
-                            "Mulai Petualangan"
-                        ) : (
-                            "Buat Karakter"
-                        )}
+                    <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl text-white font-black tracking-wide uppercase shadow-card hover:bg-brand-hover transition-colors bg-brand disabled:opacity-70 disabled:cursor-not-allowed">
+                        {loading ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Memuat…</span> : isRegister ? "Buat Karakter" : "Mulai Petualangan"}
                     </button>
 
-                    {/* Divider */}
-                    <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest font-black text-slate-300 py-2">
-                        <div className="flex-1 h-px bg-slate-100" />
-                        <span>Atau</span>
-                        <div className="flex-1 h-px bg-slate-100" />
+                    <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest font-black text-ink-muted">
+                        <div className="flex-1 h-px bg-line" /> Atau <div className="flex-1 h-px bg-line" />
                     </div>
 
-                    {/* Google Button */}
-                    <button
-                        type="button"
-                        onClick={handleGoogle}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-white border-2 border-slate-100 text-slate-600 font-bold hover:bg-slate-50 hover:border-purple-200 hover:text-purple-700 transition-all duration-300 disabled:opacity-50"
-                    >
+                    <button type="button" onClick={handleGoogle} disabled={loading} className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-surface border border-line text-ink-soft font-bold hover:bg-surface-2 hover:text-brand transition disabled:opacity-50">
                         <svg width="18" height="18" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -241,11 +133,6 @@ export default function LoginPage() {
                     </button>
                 </form>
             </div>
-
-            {/* Footer Text */}
-            <p className="relative z-10 mt-8 text-[10px] font-black uppercase tracking-widest text-purple-500/60">
-                Life Quest • Narzza HQ
-            </p>
         </div>
     );
 }

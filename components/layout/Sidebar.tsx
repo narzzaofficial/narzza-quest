@@ -7,11 +7,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useBadges } from '@/hooks/useBadges';
 import {
     LayoutDashboard,
+    Bot,
     ScrollText,
     BookOpen,
     Swords,
     Bell,
-    UserCircle,
     ListTodo,
     ClipboardCheck,
     HeartHandshake,
@@ -27,7 +27,7 @@ import {
 function NavBadge({ count }: { count: number }) {
     if (count <= 0) return null;
     return (
-        <span className="bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm min-w-[20px] text-center leading-5 animate-pulse">
+        <span className="bg-danger text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm min-w-[20px] text-center leading-5">
             {count > 99 ? '99+' : count}
         </span>
     );
@@ -42,11 +42,12 @@ export default function Sidebar() {
 
     const heroLinks = [
         { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badgeKey: null as keyof typeof badges | null },
+        { name: 'AI Game Master', href: '/ai-gm', icon: <Bot className="w-5 h-5" />, badgeKey: null as keyof typeof badges | null },
         { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" />, badgeKey: 'questBoard' as keyof typeof badges },
         { name: 'Guild Quest', href: '/guild-quest', icon: <Swords className="w-5 h-5" />, badgeKey: 'guildQuest' as keyof typeof badges },
         { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: null as keyof typeof badges | null },
         { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badgeKey: null as keyof typeof badges | null },
-        { name: 'War Room', href: '/journal', icon: <BookOpen className="w-5 h-5" />, badgeKey: 'warRoom' as keyof typeof badges },
+        { name: 'Jurnal', href: '/journal', icon: <BookOpen className="w-5 h-5" />, badgeKey: 'warRoom' as keyof typeof badges },
         { name: 'Arena', href: '/arena', icon: <Swords className="w-5 h-5" />, badgeKey: 'arena' as keyof typeof badges },
         { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badgeKey: 'network' as keyof typeof badges },
         { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badgeKey: 'notifications' as keyof typeof badges },
@@ -97,38 +98,30 @@ export default function Sidebar() {
         )}&background=fce7f3&color=db2777&bold=true`;
 
     return (
-        <aside
-            className="hidden md:flex flex-col w-64 h-screen p-4 border-r"
-            style={{
-                background:
-                    'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(243,232,255,0.5) 100%)',
-                borderColor: 'rgba(233,213,255,0.5)',
-            }}
-        >
+        <aside className="hidden md:flex flex-col w-64 h-screen p-4 border-r border-line glass-soft">
             {/* PROFILE HEADER */}
             <Link
                 href="/dashboard"
-                className="flex items-center gap-3 px-2 pt-4 pb-6 mb-6 border-b border-purple-100 hover:bg-purple-50/50 transition-colors rounded-xl cursor-pointer group"
+                className="flex items-center gap-3 px-2 pt-4 pb-6 mb-6 border-b border-line hover:bg-surface-2 transition-colors rounded-xl cursor-pointer group"
             >
                 {/* Foto Profil */}
-                <div className="w-12 h-12 rounded-full flex-shrink-0 border-2 border-pink-200 overflow-hidden shadow-sm bg-white group-hover:border-pink-400 transition-colors relative">
+                <div className="w-12 h-12 rounded-2xl shrink-0 border border-line overflow-hidden shadow-sm bg-surface group-hover:border-brand/40 transition-colors relative">
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </div>
 
                 {/* Nama & Title */}
                 <div className="flex flex-col overflow-hidden">
-                    <h2 className="text-base font-bold text-purple-950 truncate group-hover:text-purple-700 transition-colors" style={{ fontFamily: 'var(--font-playfair), serif' }}>
+                    <h2 className="text-base font-bold text-ink truncate group-hover:text-brand transition-colors">
                         {profile.displayName}
                     </h2>
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-pink-500 truncate mt-0.5" style={{ fontFamily: 'var(--font-nunito), sans-serif' }}>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand truncate mt-0.5">
                         {profile.role === 'gm' ? 'Game Master' : profile.title || `Lv. ${profile.level || 1} Hero`}
                     </span>
                 </div>
             </Link>
 
             {/* NAVIGATION */}
-            <nav className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
+            <nav className="flex-1 space-y-1.5 overflow-y-auto pr-2 custom-scrollbar">
                 {links.map((link) => {
                     const isActive =
                         pathname === link.href || pathname?.startsWith(`${link.href}/`);
@@ -138,17 +131,14 @@ export default function Sidebar() {
                         <Link
                             key={link.name}
                             href={link.href}
-                            className={`flex items-center justify-between px-4 py-3 rounded-2xl
-              border border-transparent
-              transition-colors duration-200 font-bold
+                            className={`flex items-center justify-between px-4 py-2.5 rounded-xl border transition-colors duration-200 font-bold
               ${isActive
-                                    ? 'bg-purple-50 text-purple-700 border-purple-100 shadow-sm'
-                                    : 'text-slate-500 hover:bg-slate-50 hover:text-purple-600'
+                                    ? 'bg-brand-soft text-brand border-brand/15 shadow-sm'
+                                    : 'text-ink-soft border-transparent hover:bg-surface-2 hover:text-brand'
                                 }`}
-                            style={{ fontFamily: 'var(--font-nunito), sans-serif' }}
                         >
                             <div className="flex items-center gap-3">
-                                <span className={isActive ? 'text-purple-600' : 'text-slate-400'}>
+                                <span className={isActive ? 'text-brand' : 'text-ink-muted'}>
                                     {link.icon}
                                 </span>
 
@@ -162,13 +152,12 @@ export default function Sidebar() {
             </nav>
 
             {/* ─── BOTTOM ACTIONS (LOGOUT & SETTINGS) ─── */}
-            <div className="mt-auto pt-4 border-t border-purple-100 flex items-center gap-2">
+            <div className="mt-auto pt-4 border-t border-line flex items-center gap-2">
 
                 {/* Tombol Logout */}
                 <button
                     onClick={handleLogout}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-colors font-bold text-sm"
-                    style={{ fontFamily: 'var(--font-nunito), sans-serif' }}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-danger/80 hover:bg-danger-soft hover:text-danger transition-colors font-bold text-sm"
                 >
                     <LogOut className="w-5 h-5" />
                     <span>Keluar</span>
@@ -177,15 +166,15 @@ export default function Sidebar() {
                 {/* Tombol Settings dengan Pop-up Tooltip */}
                 <Link
                     href="/profile"
-                    className="relative group flex items-center justify-center p-3 rounded-2xl text-slate-400 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                    className="relative group flex items-center justify-center p-3 rounded-xl text-ink-muted hover:bg-brand-soft hover:text-brand transition-colors"
                 >
                     <Settings className="w-5 h-5 transition-transform duration-300 group-hover:rotate-90" />
 
                     {/* Tooltip Pop-up (Muncul saat di-hover) */}
-                    <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-xl pointer-events-none whitespace-nowrap">
+                    <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-ink text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-xl pointer-events-none whitespace-nowrap">
                         Settings
                         {/* Segitiga panah ke bawah */}
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></div>
                     </div>
                 </Link>
 

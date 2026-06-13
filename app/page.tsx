@@ -1,118 +1,116 @@
 import Link from "next/link";
 import Button from "@/components/ui/Button";
+import { FiArrowRight, FiCheck } from "react-icons/fi";
+import { PiScrollLight, PiCrownSimpleLight, PiSwordLight, PiSparkleLight } from "react-icons/pi";
+
+const features = [
+  { icon: PiScrollLight, title: "Sistem Quest Harian", desc: "Ubah tugas menumpuk jadi misi berperingkat E–S. Kumpulkan EXP dan capai level tertinggimu.", accent: "#3b82f6", tint: "rgba(59,130,246,0.10)" },
+  { icon: PiCrownSimpleLight, title: "Game Master Mode", desc: "Undang pasangan/teman sebagai GM untuk memberi misi, memvalidasi laporan, dan mengirim semangat.", accent: "#06b6d4", tint: "rgba(6,182,212,0.10)" },
+  { icon: PiSwordLight, title: "Arena Pelatihan", desc: "Asah otak di waktu luang. Selesaikan mini-game seperti Speed Math & tebak Vocab untuk EXP tambahan.", accent: "#18a06b", tint: "rgba(24,160,107,0.10)" },
+];
+
+const highlights = ["Gratis untuk memulai", "Tanpa iklan", "Sinkron offline", "Ditenagai AI"];
 
 export default function LandingPage() {
   return (
-    <div
-      className="min-h-screen flex flex-col relative overflow-hidden text-slate-800 selection:bg-purple-200"
-      style={{
-        background: "linear-gradient(135deg, #FFF5F7 0%, #F3E8FF 50%, #E0F2FE 100%)",
-        fontFamily: "var(--font-nunito), sans-serif"
-      }}
-    >
-      {/* ── Background Ornaments ── */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50rem] h-[50rem] bg-purple-400/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40rem] h-[40rem] bg-pink-400/20 rounded-full blur-[100px] pointer-events-none" />
+    <div className="relative flex min-h-screen flex-col overflow-hidden text-ink-soft">
+      <div className="pointer-events-none absolute -left-[12%] -top-[14%] h-[42rem] w-[42rem] rounded-full bg-brand/15 blur-[140px]" />
+      <div className="pointer-events-none absolute -right-[10%] top-[20%] h-[34rem] w-[34rem] rounded-full bg-sky/15 blur-[130px]" />
 
-      {/* ── Navbar ── */}
-      <nav className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <span className="text-3xl">🌟</span>
-          <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-700 to-pink-500 tracking-wide" style={{ fontFamily: "var(--font-playfair), serif" }}>
-            Life Quest
+      {/* Navbar */}
+      <nav className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-card" style={{ backgroundImage: "linear-gradient(135deg, #4f7cff 0%, #38bdf8 100%)" }}>
+            <PiSparkleLight className="h-5 w-5" />
           </span>
+          <span className="text-xl font-extrabold tracking-tight text-ink">Narzza Quest</span>
         </div>
-        <div className="flex gap-4 items-center">
-          <Link href="/login" className="text-purple-600 font-bold hover:text-pink-500 transition-colors hidden md:block">
-            Sign In
-          </Link>
-          <Link href="/login">
-            <Button variant="primary" className="shadow-lg shadow-purple-500/20">
-              Mulai Petualangan
-            </Button>
-          </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/login" className="hidden font-bold text-ink-soft transition-colors hover:text-brand md:block">Sign In</Link>
+          <Link href="/login"><Button variant="primary">Mulai Petualangan</Button></Link>
         </div>
       </nav>
 
-      {/* ── Hero Section ── */}
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-6 relative z-10 mt-10 md:mt-0">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/60 border border-purple-100 shadow-sm backdrop-blur-md mb-8 animate-[bounce_3s_ease-in-out_infinite]">
-          <span className="text-xs font-extrabold uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">
-            v1.0 is Live 🎉
-          </span>
+      {/* Hero */}
+      <main className="relative z-10 mt-8 flex flex-1 flex-col items-center px-6 text-center md:mt-4">
+        <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-line glass px-4 py-1.5 shadow-card">
+          <span className="flex h-2 w-2 rounded-full bg-brand shadow-[0_0_8px_2px_rgba(59,130,246,0.5)]" />
+          <span className="text-xs font-bold uppercase tracking-[0.18em] text-brand">v1.0 is Live</span>
         </div>
 
-        <h1
-          className="text-5xl md:text-7xl font-bold text-purple-950 max-w-4xl leading-tight mb-6"
-          style={{ fontFamily: "var(--font-playfair), serif" }}
-        >
-          Ubah Hidupmu Menjadi <br className="hidden md:block" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">
-            Petualangan RPG Epik
-          </span>
+        <h1 className="max-w-4xl text-5xl font-extrabold leading-[1.08] tracking-tight text-ink md:text-7xl">
+          Ubah Hidupmu Menjadi{" "}
+          <span className="relative inline-block whitespace-nowrap">
+            <span aria-hidden className="stabilo absolute inset-x-[-2px] bottom-[0.08em] -z-0 h-[0.42em] rounded-sm" style={{ background: "linear-gradient(90deg, rgba(147,197,253,0.85), rgba(125,211,252,0.85))" }} />
+            <span className="relative z-10">Petualangan</span>
+          </span>{" "}
+          <span className="bg-gradient-to-r from-brand to-sky bg-clip-text text-transparent">RPG Epik</span>
         </h1>
 
-        <p className="text-lg md:text-xl text-purple-700/80 max-w-2xl mb-10 font-medium leading-relaxed">
-          Tingkatkan produktivitas, selesaikan misi harian, dan kumpulkan EXP bersama *accountability partner*-mu. Jadilah Hero di dunia nyatamu sendiri.
+        <p className="mt-7 max-w-2xl text-lg font-medium leading-relaxed text-ink-soft md:text-xl">
+          Tingkatkan produktivitas, selesaikan misi harian, dan kumpulkan EXP bersama AI Game Master atau accountability partner-mu. Jadilah Hero di dunia nyatamu.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Link href="/login">
-            <Button variant="primary" size="lg" className="w-full sm:w-auto text-lg px-10 shadow-[0_15px_40px_rgba(168,85,247,0.3)] hover:-translate-y-1">
-              Buat Karakter Sekarang
-            </Button>
-          </Link>
-          <Link href="#features">
-            <Button variant="outline" size="lg" className="w-full sm:w-auto text-lg px-10 bg-white/50 backdrop-blur-md hover:bg-white/80">
-              Pelajari Lebih Lanjut
-            </Button>
-          </Link>
+        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+          <Link href="/login"><Button variant="primary" size="lg" rightIcon={<FiArrowRight className="h-5 w-5" />} className="w-full px-9 text-lg sm:w-auto">Buat Karakter Sekarang</Button></Link>
+          <Link href="#features"><Button variant="outline" size="lg" className="w-full px-9 text-lg sm:w-auto">Pelajari Lebih Lanjut</Button></Link>
+        </div>
+
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+          {highlights.map((h) => (
+            <span key={h} className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-muted">
+              <FiCheck className="h-4 w-4 text-brand" /> {h}
+            </span>
+          ))}
         </div>
       </main>
 
-      {/* ── Feature Highlights ── */}
-      <section id="features" className="relative z-10 max-w-7xl mx-auto px-6 py-24 w-full">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Feature 1 */}
-          <div className="bg-white/80 backdrop-blur-xl border border-purple-100 rounded-3xl p-8 shadow-[0_10px_40px_rgba(168,85,247,0.08)] hover:-translate-y-2 transition-transform duration-300">
-            <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-3xl mb-6 border border-purple-100">
-              📜
-            </div>
-            <h3 className="text-2xl font-bold text-purple-950 mb-3" style={{ fontFamily: "var(--font-playfair), serif" }}>Sistem Quest Harian</h3>
-            <p className="text-slate-500 font-medium leading-relaxed">
-              Ubah tugas menumpuk menjadi misi dengan rank E sampai S. Kumpulkan EXP dan capai level tertinggi.
-            </p>
-          </div>
+      {/* Features */}
+      <section id="features" className="relative z-10 mx-auto w-full max-w-6xl px-6 py-24">
+        <div className="mb-14 text-center">
+          <span className="text-sm font-bold uppercase tracking-[0.2em] text-brand">Fitur Utama</span>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink md:text-4xl">
+            Semua yang kamu butuh untuk{" "}
+            <span className="relative inline-block">
+              <span aria-hidden className="stabilo absolute inset-x-[-2px] bottom-[0.1em] -z-0 h-[0.4em] rounded-sm bg-brand/20" style={{ "--stabilo-delay": "0.2s" } as React.CSSProperties} />
+              <span className="relative z-10">naik level</span>
+            </span>
+          </h2>
+        </div>
 
-          {/* Feature 2 */}
-          <div className="bg-white/80 backdrop-blur-xl border border-pink-100 rounded-3xl p-8 shadow-[0_10px_40px_rgba(236,72,153,0.08)] hover:-translate-y-2 transition-transform duration-300 md:-translate-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center text-3xl mb-6 border border-pink-100">
-              👑
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {features.map(({ icon: Icon, title, desc, accent, tint }) => (
+            <div key={title} className="group glass rounded-card p-8 shadow-card transition-all duration-300 hover:-translate-y-2 hover:shadow-pop">
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110" style={{ background: tint, color: accent }}>
+                <Icon className="h-7 w-7" />
+              </div>
+              <h3 className="mb-3 text-xl font-extrabold tracking-tight text-ink">{title}</h3>
+              <p className="font-medium leading-relaxed text-ink-soft">{desc}</p>
             </div>
-            <h3 className="text-2xl font-bold text-pink-950 mb-3" style={{ fontFamily: "var(--font-playfair), serif" }}>Game Master Mode</h3>
-            <p className="text-slate-500 font-medium leading-relaxed">
-              Undang pasangan atau temanmu sebagai GM untuk memberikan misi, memvalidasi laporan, dan mengirim semangat.
-            </p>
-          </div>
-
-          {/* Feature 3 */}
-          <div className="bg-white/80 backdrop-blur-xl border border-emerald-100 rounded-3xl p-8 shadow-[0_10px_40px_rgba(16,185,129,0.05)] hover:-translate-y-2 transition-transform duration-300">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-3xl mb-6 border border-emerald-100">
-              ⚔️
-            </div>
-            <h3 className="text-2xl font-bold text-emerald-950 mb-3" style={{ fontFamily: "var(--font-playfair), serif" }}>Arena Pelatihan</h3>
-            <p className="text-slate-500 font-medium leading-relaxed">
-              Asah otak di waktu luang. Selesaikan mini-games seperti Speed Math dan tebak Vocab untuk EXP tambahan.
-            </p>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="relative z-10 border-t border-purple-100/50 bg-white/30 backdrop-blur-sm py-8 text-center mt-auto">
-        <p className="text-sm font-bold text-purple-900/60 uppercase tracking-widest">
-          © {new Date().getFullYear()} Narzza. All rights reserved.
-        </p>
+      {/* CTA */}
+      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-24">
+        <div className="relative overflow-hidden rounded-card px-8 py-14 text-center text-white shadow-pop" style={{ backgroundImage: "linear-gradient(135deg, #4f7cff 0%, #38bdf8 100%)" }}>
+          <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/15 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-12 -left-8 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
+          <h2 className="relative text-3xl font-extrabold tracking-tight md:text-4xl">Siap memulai petualanganmu?</h2>
+          <p className="relative mx-auto mt-4 max-w-xl font-medium text-white/85">Buat karaktermu hari ini dan ubah daftar tugas membosankan jadi misi yang seru.</p>
+          <Link href="/login" className="relative mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-9 py-3.5 text-lg font-bold text-brand shadow-card hover:bg-white/90 transition">
+            Buat Karakter Sekarang <FiArrowRight className="h-5 w-5" />
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-10 mt-auto border-t border-line py-8 text-center">
+        <div className="mb-2 flex items-center justify-center gap-2">
+          <PiSparkleLight className="h-4 w-4 text-brand" />
+          <span className="font-extrabold tracking-tight text-ink">Narzza Quest</span>
+        </div>
+        <p className="text-sm font-semibold uppercase tracking-[0.15em] text-ink-muted">© {new Date().getFullYear()} Narzza. All rights reserved.</p>
       </footer>
     </div>
   );

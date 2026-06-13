@@ -1,236 +1,154 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { subscribeToGMWithdrawals, submitWithdrawalProof } from '@/lib/db';
-import { Withdrawal } from '@/types';
-import Card from '@/components/ui/Card';
+import React from 'react';
+import {
+    Receipt,
+    CheckCircle2,
+    Clock,
+    FileText,
+    Upload,
+    AlertCircle,
+    ExternalLink,
+    X,
+    Image as ImageIcon,
+    UploadCloud,
+    Loader2,
+} from 'lucide-react';
+import { useGMPayouts } from '@/hooks/useGMPayouts';
+import PageHeader from '@/components/ui/PageHeader';
+import GlassCard from '@/components/ui/GlassCard';
+import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
-import {
-    Banknote, Receipt, CheckCircle2, Clock, FileText,
-    Upload, AlertCircle, ExternalLink, X, Image as ImageIcon, UploadCloud
-} from 'lucide-react';
+import type { Withdrawal } from '@/types';
+
+const STATUS_UI: Record<string, { soft: string; color: string; icon: React.ElementType; text: string }> = {
+    pending: { soft: 'bg-danger-soft', color: 'var(--color-danger)', icon: AlertCircle, text: 'Butuh Pembayaran' },
+    transfer_submitted: { soft: 'bg-brand-soft', color: 'var(--color-brand)', icon: Clock, text: 'Menunggu Konfirmasi Hero' },
+    completed: { soft: 'bg-success-soft', color: 'var(--color-success)', icon: CheckCircle2, text: 'Pembayaran Selesai' },
+};
 
 export default function GMPayoutsPage() {
-    const { profile } = useAuth();
-    const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
-    const [loading, setLoading] = useState(true);
+    const p = useGMPayouts();
 
-    // State untuk form upload bukti
-    const [uploadingId, setUploadingId] = useState<string | null>(null);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [uploadProgress, setUploadProgress] = useState('');
-    const [isProcessing, setIsProcessing] = useState(false);
-
-    const [toast, setToast] = useState({ show: false, msg: '', type: 'success' as 'success' | 'info' | 'error' });
-
-    useEffect(() => {
-        if (!profile || profile.role !== 'gm') return;
-
-        const unsubscribe = subscribeToGMWithdrawals(profile.uid, (data) => {
-            setWithdrawals(data);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [profile]);
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            setSelectedFile(e.target.files[0]);
-        }
-    };
-
-    const removeFile = () => {
-        setSelectedFile(null);
-    };
-
-    const handleSubmitProof = async (id: string) => {
-        if (!selectedFile) {
-            alert("Harap pilih gambar bukti transfer!");
-            return;
-        }
-
-        setIsProcessing(true);
-        try {
-            setUploadProgress('Mengunggah bukti transfer...');
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            
-            const res = await fetch('/api/upload', { method: 'POST', body: formData });
-            if (!res.ok) throw new Error(`Gagal upload file ${selectedFile.name}`);
-            
-            const data = await res.json();
-            const uploadedUrl = data.url;
-
-            setUploadProgress('Menyimpan data transaksi...');
-            
-            // Cari withdrawal data untuk dapatkan heroUid dan amount
-            const wd = withdrawals.find(w => w.id === id);
-            await submitWithdrawalProof(id, uploadedUrl, wd && profile ? {
-                heroUid: wd.heroUid,
-                gmUid: profile.uid,
-                gmName: profile.displayName,
-                amount: wd.amount
-            } : undefined);
-            
-            setToast({ show: true, msg: "Bukti transfer berhasil dikirim ke Hero!", type: 'success' });
-            setUploadingId(null);
-            setSelectedFile(null);
-        } catch (error) {
-            console.error(error);
-            setToast({ show: true, msg: "Gagal mengirim bukti transfer.", type: 'error' });
-        } finally {
-            setIsProcessing(false);
-            setUploadProgress('');
-        }
-    };
-
-    const getStatusUI = (status: string) => {
-        switch (status) {
-            case 'pending': return { color: 'text-rose-600 bg-rose-50 border-rose-200', icon: <AlertCircle className="w-3.5 h-3.5" />, text: 'Butuh Pembayaran' };
-            case 'transfer_submitted': return { color: 'text-blue-600 bg-blue-50 border-blue-200', icon: <Clock className="w-3.5 h-3.5" />, text: 'Menunggu Konfirmasi Hero' };
-            case 'completed': return { color: 'text-emerald-600 bg-emerald-50 border-emerald-200', icon: <CheckCircle2 className="w-3.5 h-3.5" />, text: 'Pembayaran Selesai' };
-            default: return { color: 'text-slate-600 bg-slate-50 border-slate-200', icon: <FileText className="w-3.5 h-3.5" />, text: status };
-        }
-    };
-
-    if (profile?.role !== 'gm') {
-        return <div className="min-h-screen flex items-center justify-center text-slate-500 font-bold">Akses Ditolak. Halaman ini khusus Game Master.</div>;
+    if (p.profile && p.profile.role !== 'gm') {
+        return <div className="min-h-[60vh] flex items-center justify-center text-ink-soft font-bold">Akses ditolak. Khusus Game Master.</div>;
     }
-
-    if (loading) {
-        return <div className="min-h-screen flex items-center justify-center font-bold text-purple-600">Membuka brankas Guild...</div>;
+    if (p.loading) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-brand animate-spin" />
+            </div>
+        );
     }
-
-    // Hitung total tagihan yang belum dibayar (pending)
-    const pendingTotal = withdrawals
-        .filter(w => w.status === 'pending')
-        .reduce((acc, curr) => acc + curr.amount, 0);
 
     return (
-        <div
-            className="min-h-screen p-4 md:p-6 lg:p-8 relative overflow-hidden text-slate-800"
-            style={{
-                background: 'linear-gradient(135deg, #F8FAFC 0%, #F3E8FF 100%)',
-                fontFamily: 'var(--font-nunito), sans-serif'
-            }}
-        >
-            <div className="max-w-4xl mx-auto relative z-10 pt-4 space-y-8">
-
-                <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-white/70 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-white shadow-sm">
-                    <div>
-                        <p className="text-purple-600 font-extrabold text-[10px] tracking-widest uppercase mb-1 flex items-center gap-1.5">
-                            <Banknote className="w-3.5 h-3.5" /> Finance & Payroll
-                        </p>
-                        <h1 className="text-3xl lg:text-4xl font-bold text-purple-950 mb-2" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                            Daftar Tagihan Hero
-                        </h1>
-                        <p className="text-slate-500 text-sm font-medium">Proses pencairan dana dari quest yang telah diselesaikan.</p>
+        <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+            <PageHeader
+                grad="green"
+                icon={<Receipt className="w-6 h-6 text-white" />}
+                title="Payouts"
+                subtitle="Proses pencairan dana dari quest yang diselesaikan hero."
+                badge="Finance"
+                actions={
+                    <div className="bg-white/15 ring-1 ring-white/25 px-5 py-3 rounded-xl text-center">
+                        <p className="text-white/70 text-[10px] font-black uppercase tracking-widest mb-0.5">Harus Dibayar</p>
+                        <p className="text-2xl font-black text-white">Rp {p.pendingTotal.toLocaleString('id-ID')}</p>
                     </div>
-                    <div className="bg-rose-50 border border-rose-100 px-6 py-4 rounded-2xl w-full md:w-auto flex flex-col items-center justify-center">
-                        <p className="text-rose-500 text-[10px] md:text-xs font-black uppercase tracking-widest mb-1 text-center">Total Harus Dibayar</p>
-                        <p className="text-2xl md:text-3xl font-black text-rose-600 text-center">Rp {pendingTotal.toLocaleString('id-ID')}</p>
-                    </div>
-                </header>
+                }
+            />
 
-                {withdrawals.length === 0 ? (
-                    <Card className="text-center py-16 bg-white/50 border-dashed border-purple-200">
-                        <Receipt className="w-12 h-12 text-purple-300 mx-auto mb-3" />
-                        <p className="text-purple-900 font-bold text-lg">Tidak Ada Tagihan</p>
-                        <p className="text-purple-600/70 text-sm mt-1">Keuangan Guild sedang aman dan tenang.</p>
-                    </Card>
-                ) : (
-                    <div className="space-y-4">
-                        {withdrawals.map((wd) => {
-                            const statusUI = getStatusUI(wd.status);
-                            const isPending = wd.status === 'pending';
+            {p.withdrawals.length === 0 ? (
+                <EmptyState icon={Receipt} title="Tidak ada tagihan" desc="Keuangan Guild sedang aman dan tenang." />
+            ) : (
+                <div className="space-y-4">
+                    {p.withdrawals.map((wd) => (
+                        <PayoutRow key={wd.id} wd={wd} p={p} />
+                    ))}
+                </div>
+            )}
 
-                            return (
-                                <Card key={wd.id} className={`p-5 md:p-6 transition-all bg-white border-l-4 ${isPending ? 'border-l-rose-500 shadow-md' : wd.status === 'completed' ? 'border-l-emerald-400 opacity-70' : 'border-l-blue-400'}`}>
-                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                                        <div>
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider mb-3 ${statusUI.color}`}>
-                                                {statusUI.icon} {statusUI.text}
-                                            </span>
-                                            <h3 className="text-2xl font-black text-slate-800 mb-1">Rp {wd.amount.toLocaleString('id-ID')}</h3>
-                                            <p className="text-sm text-slate-500 font-medium">Pemohon: <span className="font-bold text-purple-700">{wd.heroName}</span></p>
-                                        </div>
-                                        <p className="text-[10px] font-bold text-slate-400 whitespace-nowrap bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
-                                            {new Date(wd.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                        </p>
-                                    </div>
-
-                                    {/* Jika ditolak oleh Hero, tampilkan alasannya */}
-                                    {isPending && wd.note && (
-                                        <div className="bg-rose-50/80 p-3.5 rounded-xl border border-rose-200 mb-4 flex gap-3 items-start">
-                                            <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
-                                            <div>
-                                                <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1">Penolakan dari Hero</p>
-                                                <p className="text-sm font-bold text-rose-900">"{wd.note}"</p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Jika bukti sudah diupload tapi belum di-approve Hero */}
-                                    {wd.proofUrl && wd.status !== 'pending' && (
-                                        <a href={wd.proofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2.5 rounded-xl border border-blue-200 hover:bg-blue-100 transition-colors mb-2">
-                                            <ExternalLink className="w-4 h-4" /> Buka Bukti Transfer Tersimpan
-                                        </a>
-                                    )}
-
-                                    {/* Tombol & Form Upload Bukti (Khusus Status Pending) */}
-                                    {isPending && (
-                                        <div className="pt-4 border-t border-slate-100 mt-2">
-                                            {uploadingId === wd.id ? (
-                                                <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100 animate-in slide-in-from-top-2">
-                                                    <label className="block text-[10px] font-black text-purple-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                                        <ExternalLink className="w-3.5 h-3.5" /> Bukti Transfer (Upload Gambar)
-                                                    </label>
-                                                    
-                                                    {!selectedFile ? (
-                                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-purple-200 border-dashed rounded-xl cursor-pointer bg-white hover:bg-purple-50 transition-colors mb-4">
-                                                            <div className="flex flex-col items-center justify-center pt-5 pb-6 text-purple-500">
-                                                                <UploadCloud className="w-8 h-8 mb-2 opacity-70" />
-                                                                <p className="mb-1 text-sm font-bold">Pilih gambar bukti transfer</p>
-                                                                <p className="text-xs font-medium opacity-70">PNG, JPG (Maks. 5MB)</p>
-                                                            </div>
-                                                            <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-                                                        </label>
-                                                    ) : (
-                                                        <div className="flex items-center justify-between p-3 bg-white border border-purple-200 rounded-xl shadow-sm mb-4">
-                                                            <div className="flex items-center gap-3 overflow-hidden text-slate-600">
-                                                                <ImageIcon className="w-5 h-5 shrink-0 text-purple-500" />
-                                                                <span className="text-sm font-bold truncate">{selectedFile.name}</span>
-                                                            </div>
-                                                            <button type="button" onClick={removeFile} className="text-rose-400 hover:text-rose-600">
-                                                                <X className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="flex justify-end gap-2">
-                                                        <Button size="sm" variant="ghost" onClick={() => { setUploadingId(null); setSelectedFile(null); }} className="text-slate-500">Batal</Button>
-                                                        <Button size="sm" variant="primary" className="bg-purple-600 text-white shadow-md flex items-center justify-center min-w-[140px]" onClick={() => handleSubmitProof(wd.id)} isLoading={isProcessing} disabled={!selectedFile}>
-                                                            {isProcessing ? uploadProgress || 'Memproses...' : <><Upload className="w-3.5 h-3.5 mr-1.5" /> Kirim Bukti</>}
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <Button variant="primary" onClick={() => setUploadingId(wd.id)} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white shadow-md">
-                                                    <Upload className="w-4 h-4" /> Proses Pembayaran & Upload Bukti
-                                                </Button>
-                                            )}
-                                        </div>
-                                    )}
-                                </Card>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-            <Toast isVisible={toast.show} onClose={() => setToast({ ...toast, show: false })} message={toast.msg} type={toast.type as any} />
+            <Toast isVisible={p.toast.show} onClose={() => p.setToast({ ...p.toast, show: false })} message={p.toast.msg} type={p.toast.type} />
         </div>
+    );
+}
+
+type PayoutData = ReturnType<typeof useGMPayouts>;
+
+function PayoutRow({ wd, p }: { wd: Withdrawal; p: PayoutData }) {
+    const status = STATUS_UI[wd.status] ?? { soft: 'bg-surface-2', color: 'var(--color-ink-soft)', icon: FileText, text: wd.status };
+    const isPending = wd.status === 'pending';
+
+    return (
+        <GlassCard className="p-5 md:p-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+                <div>
+                    <span className={`${status.soft} inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-2`} style={{ color: status.color }}>
+                        <status.icon className="w-3.5 h-3.5" /> {status.text}
+                    </span>
+                    <h3 className="text-2xl font-black text-ink mb-0.5">Rp {wd.amount.toLocaleString('id-ID')}</h3>
+                    <p className="text-sm text-ink-soft">Pemohon: <span className="font-bold text-ink">{wd.heroName}</span></p>
+                </div>
+                <p className="text-[10px] font-bold text-ink-muted whitespace-nowrap bg-surface-2 px-3 py-2 rounded-xl">
+                    {new Date(wd.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+            </div>
+
+            {isPending && wd.note && (
+                <div className="bg-danger-soft p-3.5 rounded-xl mb-4 flex gap-3 items-start">
+                    <AlertCircle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-[10px] font-black text-danger uppercase tracking-widest mb-1">Penolakan dari Hero</p>
+                        <p className="text-sm font-bold text-ink">&ldquo;{wd.note}&rdquo;</p>
+                    </div>
+                </div>
+            )}
+
+            {wd.proofUrl && wd.status !== 'pending' && (
+                <a href={wd.proofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-brand bg-brand-soft px-4 py-2.5 rounded-xl hover:brightness-95 transition mb-2">
+                    <ExternalLink className="w-4 h-4" /> Buka Bukti Transfer
+                </a>
+            )}
+
+            {isPending && (
+                <div className="pt-4 border-t border-line mt-2">
+                    {p.uploadingId === wd.id ? (
+                        <div className="bg-brand-soft p-4 rounded-xl">
+                            <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                <UploadCloud className="w-3.5 h-3.5" /> Bukti Transfer
+                            </p>
+                            {!p.selectedFile ? (
+                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-line rounded-xl cursor-pointer bg-surface hover:bg-surface-2 transition-colors mb-4">
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6 text-ink-soft">
+                                        <UploadCloud className="w-8 h-8 mb-2 text-brand" />
+                                        <p className="mb-1 text-sm font-bold">Pilih gambar bukti</p>
+                                        <p className="text-xs opacity-70">PNG, JPG (maks. 5MB)</p>
+                                    </div>
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && p.setSelectedFile(e.target.files[0])} />
+                                </label>
+                            ) : (
+                                <div className="flex items-center justify-between p-3 bg-surface border border-line rounded-xl mb-4">
+                                    <div className="flex items-center gap-3 overflow-hidden text-ink-soft">
+                                        <ImageIcon className="w-5 h-5 shrink-0 text-brand" />
+                                        <span className="text-sm font-bold truncate">{p.selectedFile.name}</span>
+                                    </div>
+                                    <button type="button" onClick={() => p.setSelectedFile(null)} className="text-ink-muted hover:text-danger"><X className="w-4 h-4" /></button>
+                                </div>
+                            )}
+                            <div className="flex justify-end gap-2">
+                                <Button size="sm" variant="ghost" onClick={() => { p.setUploadingId(null); p.setSelectedFile(null); }}>Batal</Button>
+                                <button onClick={() => p.submitProof(wd.id)} disabled={!p.selectedFile || p.isProcessing} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand text-white px-4 py-2 text-sm font-bold hover:bg-brand-hover disabled:opacity-60 min-w-[140px]">
+                                    {p.isProcessing ? p.uploadProgress || 'Memproses…' : <><Upload className="w-3.5 h-3.5" /> Kirim Bukti</>}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => p.setUploadingId(wd.id)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand text-white px-5 py-3 font-bold text-sm hover:bg-brand-hover transition-colors">
+                            <Upload className="w-4 h-4" /> Proses Pembayaran & Upload Bukti
+                        </button>
+                    )}
+                </div>
+            )}
+        </GlassCard>
     );
 }

@@ -10,7 +10,7 @@ import { db } from "./firebase";
 import {
     UserProfile, Quest, JournalEntry, Notification,
     QuestStatus, calculateLevel, LEVEL_TITLES, getExpToNextLevel,
-    GuildQuest
+    GuildQuest, AIMemory, DailyReview
 } from "@/types";
 
 const MAX_HEARTS = 5;
@@ -777,4 +777,41 @@ export function subscribeToGMGuildQuests(
     return onSnapshot(q, (snap) => {
         callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as GuildQuest)));
     });
+}
+
+// ─────────────────────────────────────────
+// AI MEMORY & DAILY REVIEW (solo AI Game Master)
+// ─────────────────────────────────────────
+
+export async function getAIMemory(uid: string): Promise<AIMemory | null> {
+    const snap = await getDoc(doc(db, "aiMemory", uid));
+    return snap.exists() ? (snap.data() as AIMemory) : null;
+}
+
+export async function saveAIMemory(
+    uid: string,
+    data: { summary: string; insights: string[] }
+): Promise<void> {
+    await setDoc(
+        doc(db, "aiMemory", uid),
+        { uid, summary: data.summary, insights: data.insights, updatedAt: new Date().toISOString() },
+        { merge: true }
+    );
+}
+
+export async function getDailyReview(uid: string, date: string): Promise<DailyReview | null> {
+    const snap = await getDoc(doc(db, "dailyReviews", `${uid}_${date}`));
+    return snap.exists() ? (snap.data() as DailyReview) : null;
+}
+
+export async function saveDailyReview(
+    uid: string,
+    date: string,
+    data: Omit<DailyReview, "uid" | "date" | "createdAt">
+): Promise<void> {
+    await setDoc(
+        doc(db, "dailyReviews", `${uid}_${date}`),
+        { uid, date, ...data, createdAt: new Date().toISOString() },
+        { merge: true }
+    );
 }

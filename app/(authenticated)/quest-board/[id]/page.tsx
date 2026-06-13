@@ -3,15 +3,18 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { getQuestById, submitQuest } from '@/lib/db';
+import { runAIReview } from '@/hooks/useAIReview';
 import { enqueueOfflineItem, getQueuedSubmitForQuest, upsertOfflineSubmitItem } from '@/lib/offlineQueue';
+import { isAIQuest, AI_GM } from '@/constants/ai';
+import { CATEGORY_LABEL } from '@/constants/ui';
 import { Quest } from '@/types';
-import Card from '@/components/ui/Card';
-import Badge from '@/components/ui/Badge';
+import GlassCard from '@/components/ui/GlassCard';
 import Button from '@/components/ui/Button';
+import DifficultyBadge from '@/components/ui/DifficultyBadge';
+import StatusBadge from '@/components/ui/StatusBadge';
 import {
     ArrowLeft,
     Calendar,
@@ -24,36 +27,32 @@ import {
     CheckCircle2,
     ExternalLink,
     MessageSquare,
-    Heart,
     PlayCircle,
-    RefreshCcw
+    RefreshCcw,
+    Bot,
+    Loader2,
 } from 'lucide-react';
 
 export default function QuestDetailPage() {
     const { id } = useParams();
     const router = useRouter();
-    const { profile } = useAuth();
+    const { profile, refreshProfile } = useAuth();
 
     const [quest, setQuest] = useState<Quest | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Form State
     const [submissionNote, setSubmissionNote] = useState('');
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-    // Status State
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState('');
     const [hasQueuedSubmission, setHasQueuedSubmission] = useState(false);
 
     useEffect(() => {
         if (id) {
-            getQuestById(id as string).then(data => {
+            getQuestById(id as string).then((data) => {
                 setQuest(data);
-                // Jika statusnya rejected, isi otomatis catatan lama untuk mempermudah revisi
-                if (data?.status === 'rejected') {
-                    setSubmissionNote(data.submissionNote || '');
-                }
+                if (data?.status === 'rejected') setSubmissionNote(data.submissionNote || '');
                 setLoading(false);
             });
         }
@@ -71,7 +70,6 @@ export default function QuestDetailPage() {
                 setHasQueuedSubmission(false);
             }
         };
-
         const onQueueUpdated = () => { void loadQueuedSubmission(); };
         void loadQueuedSubmission();
         window.addEventListener('offline-queue-updated', onQueueUpdated as EventListener);
@@ -81,33 +79,27 @@ export default function QuestDetailPage() {
     const handleAcceptQuest = async () => {
         if (!quest) return;
         if (new Date(quest.deadline).getTime() <= Date.now()) {
-            alert("Quest ini sudah melewati deadline dan tidak bisa diambil lagi.");
+            alert('Quest ini sudah melewati deadline dan tidak bisa diambil lagi.');
             setQuest({ ...quest, status: 'missed' });
             return;
         }
         setIsSubmitting(true);
         try {
-            const questRef = doc(db, 'quests', quest.id);
-            await updateDoc(questRef, { status: 'in_progress' });
+            await updateDoc(doc(db, 'quests', quest.id), { status: 'in_progress' });
             setQuest({ ...quest, status: 'in_progress' });
         } catch (error) {
-            console.error("Gagal mengambil quest:", error);
+            console.error('Gagal mengambil quest:', error);
             if (!navigator.onLine) {
                 const idToken = await auth.currentUser?.getIdToken();
                 if (!idToken) {
-                    alert("Sesi login tidak ditemukan. Silakan login ulang saat online.");
+                    alert('Sesi login tidak ditemukan. Silakan login ulang saat online.');
                     return;
                 }
-                await enqueueOfflineItem({
-                    type: 'accept_quest',
-                    questId: quest.id,
-                    idToken,
-                    createdAt: Date.now(),
-                });
+                await enqueueOfflineItem({ type: 'accept_quest', questId: quest.id, idToken, createdAt: Date.now() });
                 setQuest({ ...quest, status: 'in_progress' });
                 alert("Kamu sedang offline. Status 'mulai quest' disimpan dan akan disinkron saat online.");
             } else {
-                alert("Gagal memulai quest.");
+                alert('Gagal memulai quest.');
             }
         } finally {
             setIsSubmitting(false);
@@ -115,14 +107,11 @@ export default function QuestDetailPage() {
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const newFiles = Array.from(e.target.files);
-            setSelectedFiles(prev => [...prev, ...newFiles]);
-        }
+        if (e.target.files) setSelectedFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
     };
 
     const removeFile = (indexToRemove: number) => {
-        setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+        setSelectedFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -131,31 +120,14 @@ export default function QuestDetailPage() {
 
         const queueSubmission = async () => {
             const idToken = await auth.currentUser?.getIdToken();
-            if (!idToken) {
-                throw new Error('Sesi login tidak ditemukan. Silakan login ulang saat online.');
-            }
+            if (!idToken) throw new Error('Sesi login tidak ditemukan. Silakan login ulang saat online.');
             const existingQueued = await getQueuedSubmitForQuest(quest.id);
-            const queuedFiles = selectedFiles.length > 0
-                ? selectedFiles.map((file) => ({
-                    name: file.name,
-                    type: file.type,
-                    lastModified: file.lastModified,
-                    blob: file,
-                }))
-                : (existingQueued?.files || []);
-
-            if (queuedFiles.length === 0) {
-                throw new Error('Minimal ada 1 file bukti agar bisa disimpan offline.');
-            }
-
-            await upsertOfflineSubmitItem({
-                type: 'submit_quest',
-                questId: quest.id,
-                idToken,
-                submissionNote,
-                files: queuedFiles,
-                createdAt: Date.now(),
-            });
+            const queuedFiles =
+                selectedFiles.length > 0
+                    ? selectedFiles.map((file) => ({ name: file.name, type: file.type, lastModified: file.lastModified, blob: file }))
+                    : existingQueued?.files || [];
+            if (queuedFiles.length === 0) throw new Error('Minimal ada 1 file bukti agar bisa disimpan offline.');
+            await upsertOfflineSubmitItem({ type: 'submit_quest', questId: quest.id, idToken, submissionNote, files: queuedFiles, createdAt: Date.now() });
             setHasQueuedSubmission(true);
         };
 
@@ -164,7 +136,7 @@ export default function QuestDetailPage() {
             if (!navigator.onLine) {
                 try {
                     await queueSubmission();
-                    alert("Kamu offline. Laporan disimpan dan akan otomatis di-upload saat online.");
+                    alert('Kamu offline. Laporan disimpan dan akan otomatis di-upload saat online.');
                     router.push('/quest-board');
                 } catch (queueError) {
                     alert(queueError instanceof Error ? queueError.message : 'Gagal menyimpan laporan offline.');
@@ -185,23 +157,46 @@ export default function QuestDetailPage() {
                 uploadedUrls.push(data.url);
             }
 
-            setUploadProgress('Menyimpan laporan ke markas...');
+            setUploadProgress('Menyimpan laporan…');
             await submitQuest(quest.id, submissionNote, uploadedUrls);
 
-            alert("Laporan berhasil dikirim ke GM!");
+            // ── Solo auto-review: AI quests get reviewed instantly ──
+            if (isAIQuest(quest.createdBy)) {
+                setUploadProgress('AI Game Master sedang me-review…');
+                try {
+                    const outcome = await runAIReview(
+                        { ...quest, submissionUrls: uploadedUrls },
+                        submissionNote,
+                        profile,
+                        uploadedUrls.length > 0
+                    );
+                    await refreshProfile?.();
+                    if (outcome.decision === 'approve') {
+                        alert(`✅ AI Game Master menyetujui!\n+${outcome.expEarned} EXP\n\n"${outcome.feedback}"`);
+                    } else {
+                        alert(`📝 AI Game Master minta revisi:\n\n"${outcome.feedback}"`);
+                    }
+                } catch (reviewErr) {
+                    alert('Quest tersubmit, tapi auto-review AI gagal: ' + (reviewErr instanceof Error ? reviewErr.message : 'error'));
+                }
+                router.push('/quest-board');
+                return;
+            }
+
+            alert('Laporan berhasil dikirim ke GM!');
             router.push('/quest-board');
         } catch (error) {
-            console.error("Gagal submit:", error);
+            console.error('Gagal submit:', error);
             if (!navigator.onLine) {
                 try {
                     await queueSubmission();
-                    alert("Koneksi terputus. Laporan disimpan dan akan otomatis di-upload saat online.");
+                    alert('Koneksi terputus. Laporan disimpan dan akan otomatis di-upload saat online.');
                     router.push('/quest-board');
                 } catch (queueError) {
                     alert(queueError instanceof Error ? queueError.message : 'Gagal menyimpan laporan offline.');
                 }
             } else {
-                alert("Terjadi kesalahan saat mengunggah laporan.");
+                alert('Terjadi kesalahan saat mengunggah laporan.');
             }
         } finally {
             setIsSubmitting(false);
@@ -209,163 +204,179 @@ export default function QuestDetailPage() {
         }
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-purple-600">Mengambil detail quest...</div>;
-    if (!quest) return <div className="min-h-screen flex items-center justify-center font-bold text-rose-500">Quest tidak ditemukan.</div>;
+    if (loading)
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-brand animate-spin" />
+            </div>
+        );
+    if (!quest)
+        return <div className="min-h-[60vh] flex items-center justify-center font-bold text-danger">Quest tidak ditemukan.</div>;
 
-    // LOGIKA FORM: Muncul jika In Progress atau Rejected
+    const fromAI = isAIQuest(quest.createdBy);
     const isRevising = quest.status === 'rejected';
     const showUploadForm = (quest.status === 'in_progress' || isRevising) && profile?.role === 'player';
-    const canSubmitNow = navigator.onLine ? selectedFiles.length > 0 : (selectedFiles.length > 0 || hasQueuedSubmission);
+    const canSubmitNow = navigator.onLine ? selectedFiles.length > 0 : selectedFiles.length > 0 || hasQueuedSubmission;
 
     return (
-        <div className="min-h-screen p-4 md:p-8 relative overflow-hidden text-slate-800" style={{ background: 'linear-gradient(135deg, #F8FAFC 0%, #F3E8FF 100%)', fontFamily: 'var(--font-nunito), sans-serif' }}>
-            <div className="max-w-3xl mx-auto relative z-10 pt-4">
+        <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
+            <button onClick={() => router.back()} className="flex items-center gap-2 text-brand font-bold hover:text-brand-hover transition-colors">
+                <ArrowLeft className="w-5 h-5" /> Kembali ke Quest Board
+            </button>
 
-                <button onClick={() => router.back()} className="flex items-center gap-2 text-purple-600 font-bold mb-6 hover:text-purple-800 transition-colors">
-                    <ArrowLeft className="w-5 h-5" /> Kembali ke Papan Quest
-                </button>
+            {/* ── Detail card ── */}
+            <GlassCard className="p-6 md:p-8">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <DifficultyBadge difficulty={quest.difficulty} className="px-2.5 py-1 text-sm" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-surface-2 text-ink-soft">
+                        {CATEGORY_LABEL[quest.category]}
+                    </span>
+                    <StatusBadge status={quest.status} />
+                    {fromAI && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-brand-soft text-brand">
+                            <Bot className="w-3 h-3" /> {AI_GM.name}
+                        </span>
+                    )}
+                </div>
 
-                {/* ─── KARTU DETAIL QUEST UTAMA (DESAIN AWAL) ─── */}
-                <Card className="p-6 md:p-8 bg-white border-purple-100 shadow-[0_10px_40px_rgba(168,85,247,0.08)] mb-8">
-                    <div className="flex flex-wrap items-center gap-3 mb-4">
-                        <Badge variant={quest.difficulty}>Rank {quest.difficulty}</Badge>
-                        <Badge variant={quest.category}>{quest.category}</Badge>
-                        <Badge variant={quest.status}>{quest.status.replace('_', ' ').toUpperCase()}</Badge>
+                <h1 className="text-2xl md:text-3xl font-extrabold text-ink mb-4 leading-snug">{quest.title}</h1>
+
+                <div className="flex flex-wrap gap-5 mb-6 text-sm font-bold text-ink-soft border-b border-line pb-6">
+                    <div className="flex items-center gap-2"><Award className="w-5 h-5 text-brand" /><span className="text-brand">+{quest.expReward} EXP</span></div>
+                    <div className="flex items-center gap-2"><Calendar className="w-5 h-5 text-ink-muted" /><span>{new Date(quest.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
+                    <div className="flex items-center gap-2"><Clock className="w-5 h-5 text-ink-muted" /><span>{new Date(quest.deadline).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span></div>
+                </div>
+
+                <div className="text-ink-soft leading-relaxed mb-6">
+                    <h3 className="text-lg font-bold text-ink mb-2 flex items-center gap-2"><FileText className="w-5 h-5" /> Deskripsi Misi</h3>
+                    <p className="whitespace-pre-wrap">{quest.description}</p>
+                </div>
+
+                {quest.motivation && (
+                    <div className="bg-brand-soft border border-brand/15 rounded-card p-5">
+                        <h4 className="text-sm font-extrabold text-brand uppercase tracking-widest mb-2 flex items-center gap-2">
+                            {fromAI ? <Bot className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+                            {fromAI ? 'Pesan AI Game Master' : 'Pesan Khusus GM'}
+                        </h4>
+                        <p className="text-ink font-semibold italic">&ldquo;{quest.motivation}&rdquo;</p>
                     </div>
+                )}
+            </GlassCard>
 
-                    <h1 className="text-3xl md:text-4xl font-bold text-purple-950 mb-4 leading-snug" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                        {quest.title}
-                    </h1>
+            {/* ── Accept (pending) ── */}
+            {quest.status === 'pending' && profile?.role === 'player' && (
+                <GlassCard className="p-8 text-center">
+                    <h3 className="text-xl font-extrabold text-ink mb-2">Misi Ini Menunggumu!</h3>
+                    <p className="text-ink-soft mb-6">Terima misi ini untuk mulai mengumpulkan bukti penyelesaian.</p>
+                    <Button onClick={handleAcceptQuest} isLoading={isSubmitting} size="lg" className="w-full md:w-auto">
+                        <PlayCircle className="w-5 h-5 mr-2" /> Mulai Petualangan
+                    </Button>
+                </GlassCard>
+            )}
 
-                    <div className="flex flex-wrap gap-6 mb-8 text-sm font-bold text-slate-500 border-b border-slate-100 pb-6">
-                        <div className="flex items-center gap-2"><Award className="w-5 h-5 text-pink-500" /><span className="text-pink-600">Reward: +{quest.expReward} EXP</span></div>
-                        <div className="flex items-center gap-2"><Calendar className="w-5 h-5 text-purple-400" /><span>Deadline: {new Date(quest.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
-                        <div className="flex items-center gap-2"><Clock className="w-5 h-5 text-purple-400" /><span>{new Date(quest.deadline).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span></div>
-                    </div>
-
-                    <div className="prose prose-purple max-w-none text-slate-700 font-medium leading-relaxed mb-6">
-                        <h3 className="text-lg font-bold text-purple-900 mb-2 flex items-center gap-2" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                            <FileText className="w-5 h-5" /> Deskripsi Misi
-                        </h3>
-                        <p className="whitespace-pre-wrap">{quest.description}</p>
-                    </div>
-
-                    {quest.motivation && (
-                        <div className="bg-pink-50 border border-pink-200 rounded-2xl p-5 mt-6 relative overflow-hidden">
-                            <Heart className="absolute -right-2 -bottom-2 w-16 h-16 text-pink-200 opacity-50" />
-                            <h4 className="text-sm font-extrabold text-pink-600 uppercase tracking-widest mb-2 flex items-center gap-2 relative z-10">
-                                <MessageSquare className="w-4 h-4" /> Pesan Khusus GM
-                            </h4>
-                            <p className="text-pink-900 font-bold italic relative z-10">"{quest.motivation}"</p>
+            {/* ── Upload / re-submit ── */}
+            {showUploadForm && (
+                <GlassCard className="p-6 md:p-8">
+                    {isRevising && (
+                        <div className="mb-6 p-4 bg-danger-soft border-l-4 border-danger rounded-r-xl">
+                            <p className="text-danger font-black flex items-center gap-2 text-sm uppercase mb-1"><X className="w-4 h-4" /> Alasan Perbaikan:</p>
+                            <p className="text-ink font-semibold italic">&ldquo;{quest.reviewNote || 'Silakan perbaiki bukti laporanmu.'}&rdquo;</p>
                         </div>
                     )}
-                </Card>
 
-                {/* ─── TOMBOL MULAI (JIKA PENDING) ─── */}
-                {quest.status === 'pending' && profile?.role === 'player' && (
-                    <div className="text-center bg-purple-50 p-8 rounded-3xl border border-purple-200 shadow-sm animate-[fadeIn_0.5s_ease-out]">
-                        <h3 className="text-xl font-bold text-purple-900 mb-2" style={{ fontFamily: 'var(--font-playfair), serif' }}>Misi Ini Menunggumu!</h3>
-                        <p className="text-slate-600 font-medium mb-6">Terima misi ini untuk mulai mengumpulkan bukti penyelesaian.</p>
-                        <Button onClick={handleAcceptQuest} isLoading={isSubmitting} className="bg-purple-600 text-white px-8 py-4 text-lg w-full md:w-auto">
-                            <PlayCircle className="w-5 h-5 mr-2" /> Mulai Petualangan
-                        </Button>
-                    </div>
-                )}
+                    <h2 className="text-2xl font-extrabold text-ink mb-2 flex items-center gap-2">
+                        {isRevising ? <RefreshCcw className="w-6 h-6 text-warn" /> : <UploadCloud className="w-6 h-6 text-brand" />}
+                        {isRevising ? 'Kirim Ulang Bukti' : 'Laporkan Penyelesaian'}
+                    </h2>
+                    {fromAI && (
+                        <p className="text-ink-soft text-sm mb-6 flex items-center gap-1.5">
+                            <Bot className="w-4 h-4 text-brand" /> AI Game Master akan otomatis me-review begitu kamu submit.
+                        </p>
+                    )}
 
-                {/* ─── FORM UPLOAD / RE-SUBMIT (DESAIN MEWAH) ─── */}
-                {showUploadForm && (
-                    <Card className="p-6 md:p-8 bg-white border-pink-100 shadow-lg animate-[fadeIn_0.5s_ease-out]">
-                        {isRevising && (
-                            <div className="mb-6 p-4 bg-rose-50 border-l-4 border-rose-400 rounded-r-xl">
-                                <p className="text-rose-700 font-black flex items-center gap-2 text-sm uppercase mb-1"><X className="w-4 h-4" /> Alasan Perbaikan:</p>
-                                <p className="text-rose-900 font-bold italic">"{quest.reviewNote || 'Silakan perbaiki bukti laporanmu.'}"</p>
-                            </div>
-                        )}
+                    <form onSubmit={handleSubmit} className={fromAI ? '' : 'mt-4'}>
+                        <div className="mb-6">
+                            <label className="block text-sm font-extrabold text-ink-soft mb-2 uppercase tracking-widest">Catatan Penyelesaian</label>
+                            <textarea
+                                required
+                                rows={4}
+                                value={submissionNote}
+                                onChange={(e) => setSubmissionNote(e.target.value)}
+                                placeholder="Ceritakan progresmu…"
+                                className="w-full p-4 rounded-xl border border-line bg-surface text-ink placeholder:text-ink-muted outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 font-medium resize-none transition"
+                            />
+                        </div>
 
-                        <h2 className="text-2xl font-bold text-purple-950 mb-6 flex items-center gap-2" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                            {isRevising ? <RefreshCcw className="w-6 h-6 text-amber-500" /> : <UploadCloud className="w-6 h-6 text-pink-500" />}
-                            {isRevising ? 'Kirim Ulang Bukti' : 'Laporkan Penyelesaian'}
-                        </h2>
-
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-6">
-                                <label className="block text-sm font-extrabold text-slate-700 mb-2 uppercase tracking-widest">Jurnal Petualangan (Catatan)</label>
-                                <textarea required rows={4} value={submissionNote} onChange={(e) => setSubmissionNote(e.target.value)} placeholder="Ceritakan progresmu..." className="w-full p-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-purple-400 font-bold text-slate-700 resize-none" />
-                            </div>
-
-                            <div className="mb-8">
-                                <label className="block text-sm font-extrabold text-slate-700 mb-2 uppercase tracking-widest">Bukti Penyelesaian</label>
-                                {hasQueuedSubmission && (
-                                    <p className="text-xs font-bold text-amber-700 mb-3">
-                                        Sudah ada submit offline untuk quest ini. Kamu tidak akan membuat submit baru; tombol kirim akan memperbarui draft submit sebelumnya.
-                                    </p>
-                                )}
-                                <div className="flex items-center justify-center w-full">
-                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-purple-200 border-dashed rounded-xl cursor-pointer bg-purple-50 hover:bg-purple-100 transition-colors">
-                                        <div className="flex flex-col items-center justify-center pt-5 pb-6 text-purple-600">
-                                            <UploadCloud className="w-10 h-10 mb-2" />
-                                            <p className="mb-1 text-sm font-bold">Pilih beberapa file bukti baru</p>
-                                            <p className="text-xs font-medium opacity-70">PNG, JPG, PDF, ZIP (Maks. 5MB/file)</p>
-                                        </div>
-                                        <input type="file" multiple className="hidden" onChange={handleFileSelect} />
-                                    </label>
+                        <div className="mb-8">
+                            <label className="block text-sm font-extrabold text-ink-soft mb-2 uppercase tracking-widest">Bukti Penyelesaian</label>
+                            {hasQueuedSubmission && (
+                                <p className="text-xs font-bold text-warn mb-3">
+                                    Sudah ada submit offline untuk quest ini — tombol kirim akan memperbarui draft sebelumnya.
+                                </p>
+                            )}
+                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-line rounded-xl cursor-pointer bg-surface-2 hover:bg-brand-soft transition-colors">
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-ink-soft">
+                                    <UploadCloud className="w-10 h-10 mb-2 text-brand" />
+                                    <p className="mb-1 text-sm font-bold">Pilih file bukti</p>
+                                    <p className="text-xs opacity-70">PNG, JPG, PDF, ZIP (maks. 5MB/file)</p>
                                 </div>
+                                <input type="file" multiple className="hidden" onChange={handleFileSelect} />
+                            </label>
 
-                                {selectedFiles.length > 0 && (
-                                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {selectedFiles.map((file, index) => (
-                                            <div key={index} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
-                                                <div className="flex items-center gap-3 overflow-hidden text-slate-600">
-                                                    {file.type.includes('image') ? <ImageIcon className="w-5 h-5 shrink-0" /> : <FileText className="w-5 h-5 shrink-0" />}
-                                                    <span className="text-sm font-bold truncate">{file.name}</span>
-                                                </div>
-                                                <button type="button" onClick={() => removeFile(index)} className="text-rose-400 hover:text-rose-600"><X className="w-4 h-4" /></button>
+                            {selectedFiles.length > 0 && (
+                                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {selectedFiles.map((file, index) => (
+                                        <div key={index} className="flex items-center justify-between p-3 bg-surface border border-line rounded-xl">
+                                            <div className="flex items-center gap-3 overflow-hidden text-ink-soft">
+                                                {file.type.includes('image') ? <ImageIcon className="w-5 h-5 shrink-0" /> : <FileText className="w-5 h-5 shrink-0" />}
+                                                <span className="text-sm font-bold truncate">{file.name}</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={!canSubmitNow} className="w-full py-4 text-lg bg-gradient-to-r from-purple-600 to-pink-500 shadow-lg flex items-center justify-center gap-2">
-                                {isSubmitting ? uploadProgress : <><CheckCircle2 className="w-5 h-5" /> {hasQueuedSubmission ? 'Update Draft Submit Offline' : (isRevising ? 'Kirim Revisi' : 'Serahkan ke GM')}</>}
-                            </Button>
-                        </form>
-                    </Card>
-                )}
-
-                {/* ─── HISTORY & BALASAN SURAT GM (DESAIN AWAL DENGAN IKON HATI) ─── */}
-                {quest.status !== 'in_progress' && quest.status !== 'pending' && quest.status !== 'rejected' && (
-                    <div className="space-y-6 mt-8 animate-[fadeIn_0.5s_ease-out]">
-                        <Card className="p-6 bg-slate-50 border border-slate-200 shadow-sm relative overflow-hidden">
-                            <h3 className="text-sm font-extrabold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText className="w-4 h-4" /> Laporanmu</h3>
-                            <p className="text-slate-700 font-bold mb-6 italic">"{quest.submissionNote || 'Tidak ada catatan.'}"</p>
-                            {quest.submissionUrls && (
-                                <div className="border-t border-slate-200 pt-4 flex flex-wrap gap-3">
-                                    {quest.submissionUrls.map((url, idx) => (
-                                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-xl text-sm font-bold text-slate-700 border border-slate-200 hover:text-purple-600 transition-colors shadow-sm">
-                                            <ExternalLink className="w-4 h-4" /> File {idx + 1}
-                                        </a>
+                                            <button type="button" onClick={() => removeFile(index)} className="text-ink-muted hover:text-danger"><X className="w-4 h-4" /></button>
+                                        </div>
                                     ))}
                                 </div>
                             )}
-                        </Card>
+                        </div>
 
-                        {quest.reviewNote && quest.status === 'approved' && (
-                            <Card className="p-6 md:p-8 bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-200 shadow-md relative overflow-hidden">
-                                <div className="absolute -right-4 -top-4 opacity-10 text-rose-500">
-                                    <Heart className="w-32 h-32 fill-current" />
-                                </div>
-                                <h3 className="text-lg font-extrabold text-pink-600 mb-3 flex items-center gap-2 relative z-10" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                                    <MessageSquare className="w-5 h-5" /> Balasan dari Game Master 💌
-                                </h3>
-                                <div className="bg-white/60 backdrop-blur-sm p-4 rounded-xl border border-pink-100 relative z-10">
-                                    <p className="text-purple-900 font-bold leading-relaxed text-lg italic">"{quest.reviewNote}"</p>
-                                </div>
-                            </Card>
+                        <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={!canSubmitNow} size="lg" className="w-full">
+                            {isSubmitting ? uploadProgress || 'Memproses…' : (
+                                <><CheckCircle2 className="w-5 h-5 mr-2" /> {hasQueuedSubmission ? 'Update Draft Offline' : isRevising ? 'Kirim Revisi' : fromAI ? 'Submit & Review AI' : 'Serahkan ke GM'}</>
+                            )}
+                        </Button>
+                    </form>
+                </GlassCard>
+            )}
+
+            {/* ── Archive / history ── */}
+            {quest.status !== 'in_progress' && quest.status !== 'pending' && quest.status !== 'rejected' && (
+                <div className="space-y-5">
+                    <GlassCard className="p-6">
+                        <h3 className="text-sm font-extrabold text-ink-muted uppercase tracking-widest mb-3 flex items-center gap-2"><FileText className="w-4 h-4" /> Laporanmu</h3>
+                        <p className="text-ink-soft font-semibold mb-4 italic">&ldquo;{quest.submissionNote || 'Tidak ada catatan.'}&rdquo;</p>
+                        {quest.submissionUrls && quest.submissionUrls.length > 0 && (
+                            <div className="border-t border-line pt-4 flex flex-wrap gap-3">
+                                {quest.submissionUrls.map((url, idx) => (
+                                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-surface px-4 py-2 rounded-xl text-sm font-bold text-ink-soft border border-line hover:text-brand transition-colors">
+                                        <ExternalLink className="w-4 h-4" /> File {idx + 1}
+                                    </a>
+                                ))}
+                            </div>
                         )}
-                    </div>
-                )}
-            </div>
+                    </GlassCard>
+
+                    {quest.reviewNote && quest.status === 'approved' && (
+                        <GlassCard className="p-6 md:p-8">
+                            <h3 className="text-lg font-extrabold text-brand mb-3 flex items-center gap-2">
+                                {fromAI ? <Bot className="w-5 h-5" /> : <MessageSquare className="w-5 h-5" />}
+                                {fromAI ? 'Catatan AI Game Master' : 'Balasan dari Game Master'}
+                            </h3>
+                            <div className="bg-brand-soft p-4 rounded-xl border border-brand/15">
+                                <p className="text-ink font-semibold leading-relaxed text-lg italic">&ldquo;{quest.reviewNote}&rdquo;</p>
+                            </div>
+                        </GlassCard>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

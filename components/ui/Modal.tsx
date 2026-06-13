@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -21,39 +22,26 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-purple-950/20 transition-opacity"
+      <div
+        className="absolute inset-0 bg-ink/30 transition-opacity"
         style={{ backdropFilter: 'blur(8px)' }}
         onClick={onClose}
       />
-      
-      {/* Modal Content */}
-      <div 
-        className="relative w-full max-w-lg rounded-3xl bg-white border border-purple-100 p-6 md:p-8 shadow-[0_20px_60px_rgba(168,85,247,0.2)] transition-all scale-100"
-        style={{ fontFamily: 'var(--font-nunito), sans-serif' }}
-      >
-        {/* Header */}
-        <div className="flex justify-between items-center mb-5 pb-4 border-b border-purple-50">
-          {title && (
-            <h3 
-              className="text-2xl font-bold text-purple-950"
-              style={{ fontFamily: 'var(--font-playfair), serif' }}
-            >
-              {title}
-            </h3>
-          )}
-          <button 
+
+      {/* Content */}
+      <div className="relative w-full max-w-lg rounded-card bg-surface border border-line p-6 md:p-8 shadow-pop">
+        <div className="flex justify-between items-center mb-5 pb-4 border-b border-line">
+          {title && <h3 className="text-2xl font-extrabold text-ink">{title}</h3>}
+          <button
             onClick={onClose}
-            className="p-2 rounded-full text-purple-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+            className="ml-auto p-2 rounded-full text-ink-muted hover:text-brand hover:bg-brand-soft transition-colors"
+            aria-label="Tutup"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
-        
-        {/* Body */}
-        <div className="text-slate-600">
-          {children}
-        </div>
+
+        <div className="text-ink-soft">{children}</div>
       </div>
     </div>
   );
