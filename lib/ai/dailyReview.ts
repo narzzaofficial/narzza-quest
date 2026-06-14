@@ -10,6 +10,7 @@ export interface DailyReviewContext {
     expEarnedToday: number;
     completedTitles?: string[];
     memorySummary?: string;
+    goalSummary?: string;
 }
 
 export interface DailyReviewResult {
@@ -34,6 +35,7 @@ export async function generateDailyReview(ctx: DailyReviewContext): Promise<Dail
         `User: ${ctx.displayName}, Level ${ctx.level}, streak ${ctx.streak}.`,
         `Hari ini: ${ctx.questsCompletedToday} quest selesai, +${ctx.expEarnedToday} EXP.`,
     ];
+    if (ctx.goalSummary) lines.push(`Tujuan utama user (North Star): ${ctx.goalSummary}`);
     if (ctx.completedTitles?.length) lines.push(`Quest yang selesai hari ini: ${ctx.completedTitles.join(', ')}.`);
     if (ctx.memorySummary) lines.push(`Konteks user: ${ctx.memorySummary}`);
     lines.push('Buat review harian sebagai JSON.');

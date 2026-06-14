@@ -35,6 +35,8 @@ export interface AIProvider {
     readonly name: string;
     /** Free-form text completion. */
     generateText(opts: GenerateTextOptions): Promise<string>;
+    /** Streaming text — yields chunks as they arrive. */
+    streamText(opts: GenerateTextOptions): AsyncIterable<string>;
     /** JSON completion, parsed into T. */
     generateJSON<T = unknown>(opts: GenerateJSONOptions): Promise<T>;
 }

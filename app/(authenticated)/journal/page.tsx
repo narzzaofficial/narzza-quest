@@ -123,8 +123,8 @@ function JournalEntry({ quest }: { quest: Quest }) {
                         <Feather className="w-3.5 h-3.5" />
                         <p className="text-[10px] font-bold uppercase tracking-wider">Catatanmu</p>
                     </div>
-                    <p className="text-ink-soft font-medium text-sm leading-relaxed italic">
-                        &ldquo;{quest.submissionNote || 'Tidak ada catatan.'}&rdquo;
+                    <p className="text-ink-soft font-medium text-sm leading-relaxed whitespace-pre-line">
+                        {quest.submissionNote || 'Tidak ada catatan.'}
                     </p>
                 </div>
 
@@ -135,8 +135,8 @@ function JournalEntry({ quest }: { quest: Quest }) {
                             {quest.createdBy === 'ai-gm' ? 'Catatan AI' : 'Review GM'}
                         </p>
                     </div>
-                    <p className="text-ink font-semibold text-sm leading-relaxed italic">
-                        &ldquo;{quest.reviewNote || 'Kerja bagus!'}&rdquo;
+                    <p className="text-ink font-medium text-sm leading-relaxed whitespace-pre-line">
+                        {quest.reviewNote || 'Kerja bagus!'}
                     </p>
                 </div>
             </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
     Receipt,
     CheckCircle2,
@@ -30,6 +31,17 @@ const STATUS_UI: Record<string, { soft: string; color: string; icon: React.Eleme
 
 export default function GMPayoutsPage() {
     const p = useGMPayouts();
+    const searchParams = useSearchParams();
+    const highlightId = searchParams.get('highlight');
+    const highlightRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!highlightId || p.loading) return;
+        const timer = setTimeout(() => {
+            highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [highlightId, p.loading]);
 
     if (p.profile && p.profile.role !== 'gm') {
         return <div className="min-h-[60vh] flex items-center justify-center text-ink-soft font-bold">Akses ditolak. Khusus Game Master.</div>;
@@ -62,9 +74,14 @@ export default function GMPayoutsPage() {
                 <EmptyState icon={Receipt} title="Tidak ada tagihan" desc="Keuangan Guild sedang aman dan tenang." />
             ) : (
                 <div className="space-y-4">
-                    {p.withdrawals.map((wd) => (
-                        <PayoutRow key={wd.id} wd={wd} p={p} />
-                    ))}
+                    {p.withdrawals.map((wd) => {
+                        const isHighlighted = wd.id === highlightId;
+                        return (
+                            <div key={wd.id} ref={isHighlighted ? highlightRef : undefined}>
+                                <PayoutRow wd={wd} p={p} highlighted={isHighlighted} />
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
@@ -75,12 +92,12 @@ export default function GMPayoutsPage() {
 
 type PayoutData = ReturnType<typeof useGMPayouts>;
 
-function PayoutRow({ wd, p }: { wd: Withdrawal; p: PayoutData }) {
+function PayoutRow({ wd, p, highlighted }: { wd: Withdrawal; p: PayoutData; highlighted?: boolean }) {
     const status = STATUS_UI[wd.status] ?? { soft: 'bg-surface-2', color: 'var(--color-ink-soft)', icon: FileText, text: wd.status };
     const isPending = wd.status === 'pending';
 
     return (
-        <GlassCard className="p-5 md:p-6">
+        <GlassCard className={`p-5 md:p-6 transition-all duration-500 ${highlighted ? 'ring-2 ring-brand shadow-pop' : ''}`}>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
                 <div>
                     <span className={`${status.soft} inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-2`} style={{ color: status.color }}>

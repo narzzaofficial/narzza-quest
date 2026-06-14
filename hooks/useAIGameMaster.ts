@@ -1,8 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAIQuests } from '@/hooks/useAIQuests';
+import { useStoryArc } from '@/hooks/useStoryArc';
+import { useSituation } from '@/hooks/useSituation';
+import { useWorkTasks } from '@/hooks/useWorkTasks';
+import { useActivityLog } from '@/hooks/useActivityLog';
 import {
     subscribeToQuests,
     getJournals,
@@ -12,6 +16,7 @@ import {
     saveDailyReview,
 } from '@/lib/db';
 import { isAIQuest } from '@/constants/ai';
+import { formatGoal } from '@/constants/goal';
 import type { AIMemory, DailyReview, JournalEntry, Quest } from '@/types';
 
 const ACTIVE_STATUSES: Quest['status'][] = ['pending', 'in_progress', 'submitted', 'active'];
@@ -27,6 +32,9 @@ function todayKey(): string {
 export function useAIGameMaster() {
     const { profile } = useAuth();
     const aiq = useAIQuests(profile);
+    const situation = useSituation(profile?.uid);
+    const workTasks = useWorkTasks(profile?.uid);
+    const activityLog = useActivityLog(profile?.uid);
 
     const [allQuests, setAllQuests] = useState<Quest[]>([]);
     const [journals, setJournals] = useState<JournalEntry[]>([]);
@@ -40,12 +48,24 @@ export function useAIGameMaster() {
     const [reviewLoading, setReviewLoading] = useState(false);
     const [reviewError, setReviewError] = useState<string | null>(null);
 
+    // Track whether initial async fetches are done — auto-review must wait for both
+    const [reviewFetching, setReviewFetching] = useState(true);
+    const [journalsFetching, setJournalsFetching] = useState(true);
+
     useEffect(() => {
         if (!profile?.uid) return;
         const unsub = subscribeToQuests(profile.uid, setAllQuests);
-        getJournals(profile.uid).then(setJournals).catch(() => {});
+        setJournalsFetching(true);
+        getJournals(profile.uid)
+            .then(setJournals)
+            .catch(() => {})
+            .finally(() => setJournalsFetching(false));
         getAIMemory(profile.uid).then(setMemory).catch(() => {});
-        getDailyReview(profile.uid, todayKey()).then(setReview).catch(() => {});
+        setReviewFetching(true);
+        getDailyReview(profile.uid, todayKey())
+            .then(setReview)
+            .catch(() => {})
+            .finally(() => setReviewFetching(false));
         return () => unsub();
     }, [profile?.uid]);
 
@@ -53,8 +73,58 @@ export function useAIGameMaster() {
     const active = useMemo(() => aiQuests.filter((q) => ACTIVE_STATUSES.includes(q.status)), [aiQuests]);
     const completed = useMemo(() => aiQuests.filter((q) => q.status === 'approved'), [aiQuests]);
 
-    // Memory-aware generation
-    const generate = useCallback((g?: string) => aiq.generate(g, memory?.summary), [aiq, memory?.summary]);
+    // Phase 4 — completion rate last 7 days
+    const completionRate7d = useMemo(() => {
+        const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+        const recent = aiQuests.filter((q) => (q.createdAt || '') >= sevenDaysAgo);
+        if (recent.length === 0) return undefined;
+        const approvedRecent = recent.filter((q) => q.status === 'approved').length;
+        return approvedRecent / recent.length;
+    }, [aiQuests]);
+
+    // Phase 3 — Story Arc (filters by arc.startDate internally)
+    const storyArc = useStoryArc({ profile: profile ?? null, memory, approvedQuests: completed });
+
+    // Build life context snapshot for quest generation
+    const lifeContext = useMemo(() => {
+        const s = situation.situation;
+        const activeTasks = workTasks.tasks
+            .filter(t => t.status !== 'done')
+            .slice(0, 5)
+            .map(t => `${t.title} [${t.priority}]`);
+
+        const activityMins = activityLog.entries.reduce((acc, e) => {
+            const mins = activityLog.getDurationMinutes(e);
+            acc[e.category] = (acc[e.category] ?? 0) + mins;
+            return acc;
+        }, {} as Record<string, number>);
+        const todayActivitiesSummary = Object.entries(activityMins)
+            .map(([cat, mins]) => `${cat} ${Math.round(mins)}m`)
+            .join(', ') || undefined;
+
+        return {
+            situationStatus: s?.currentStatus,
+            workload: s?.workload,
+            weekFocus: s?.weekFocus || undefined,
+            activeWorkTasks: activeTasks.length > 0 ? activeTasks : undefined,
+            todayActivitiesSummary,
+        };
+    }, [situation.situation, workTasks.tasks, activityLog.entries, activityLog.getDurationMinutes]);
+
+    // Arc-driven generation — North Star is captured in the arc, not passed directly
+    const generate = useCallback(
+        () => {
+            return aiq.generate(
+                memory?.summary,
+                completionRate7d,
+                storyArc.arc?.theme,
+                storyArc.arc?.narrative,
+                storyArc.arc?.weeklyGoals,
+                lifeContext,
+            );
+        },
+        [aiq, memory?.summary, completionRate7d, storyArc.arc, lifeContext]
+    );
 
     const refreshMemory = useCallback(async () => {
         if (!profile) return;
@@ -73,7 +143,7 @@ export function useAIGameMaster() {
                     totalHoursWorked: profile.totalHoursWorked,
                     recentQuestTitles: allQuests.slice(0, 8).map((q) => q.title),
                     recentJournalTitles: journals.slice(0, 8).map((j) => j.questTitle || '').filter(Boolean),
-                    goals: goals || undefined,
+                    goals: [formatGoal(profile.goal), goals].filter(Boolean).join(' — ') || undefined,
                     previousSummary: memory?.summary,
                 }),
             });
@@ -109,6 +179,7 @@ export function useAIGameMaster() {
                     expEarnedToday,
                     completedTitles: todays.map((j) => j.questTitle || '').filter(Boolean),
                     memorySummary: memory?.summary,
+                    goalSummary: formatGoal(profile.goal) || undefined,
                 }),
             });
             const data = await res.json();
@@ -130,6 +201,16 @@ export function useAIGameMaster() {
             setReviewLoading(false);
         }
     }, [profile, journals, memory?.summary]);
+
+    // Auto daily review: only run after journals AND existing review are fully loaded
+    const autoReviewRef = useRef(false);
+    useEffect(() => {
+        if (reviewFetching || journalsFetching) return; // wait for initial loads
+        if (review || reviewLoading || autoReviewRef.current || !profile || completed.length === 0) return;
+        autoReviewRef.current = true;
+        runDailyReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [review, reviewLoading, reviewFetching, journalsFetching, profile, completed.length]);
 
     return {
         profile,
@@ -153,5 +234,9 @@ export function useAIGameMaster() {
         reviewLoading,
         reviewError,
         runDailyReview,
+        // phase 3 — story arc
+        storyArc,
+        // phase 4 — dynamic difficulty
+        completionRate7d,
     };
 }

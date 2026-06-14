@@ -8,10 +8,14 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  turbopack: {
-    // empty config to suppress the warning/error
-  }
+  turbopack: {},
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'ui-avatars.com' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
+    ],
+  },
 };
 
 export default withSerwist(nextConfig);

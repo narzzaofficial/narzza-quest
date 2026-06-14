@@ -25,6 +25,9 @@ export interface UserProfile {
     totalHoursWorked: number;
     createdAt: string;
 
+    // North Star — user's long-term goal, primary anchor for the AI
+    goal?: GoalProfile;
+
     // Badge tracking timestamps
     lastQuestCheck?: Date | null;
     lastJournalCheck?: Date | null;
@@ -40,6 +43,13 @@ export interface UserProfile {
     hearts?: number;
     missStrikeCount?: number;
     heartRecoveryStreak?: number;
+}
+
+export interface GoalProfile {
+    aspiration: string;     // free text: "mau jadi apa & kenapa"
+    focusAreas: string[];   // tags: coding, bahasa, fitness…
+    timeframe?: string;     // e.g. "6 bulan"
+    updatedAt: string;
 }
 
 export type QuestCategory = 'daily' | 'weekly' | 'main' | 'side';
@@ -109,6 +119,7 @@ export interface Notification {
     message: string;
     isRead: boolean;
     createdAt: string;
+    refId?: string; // optional reference ID (e.g. withdrawalId, questId)
 }
 
 // ─────────────────────────────────────────
@@ -198,6 +209,47 @@ export { getExpToNextLevel, calculateLevel, getCumulativeExp } from "@/lib/level
 // AI GAME MASTER (memory + daily review)
 // ─────────────────────────────────────────
 
+// ─────────────────────────────────────────
+// GM PROACTIVE MESSAGES
+// ─────────────────────────────────────────
+
+// ─────────────────────────────────────────
+// STORY ARC
+// ─────────────────────────────────────────
+
+export interface StoryArc {
+    id: string;
+    uid: string;
+    arcNumber: number;          // 1, 2, 3…
+    title: string;              // "Arc I: Fondasi Petualang"
+    theme: string;              // tema singkat, dipakai di quest generator
+    narrative: string;          // GM opening narration
+    weeklyGoals: string[];      // 2 weekly goals
+    startDate: string;          // YYYY-MM-DD
+    endDate: string;            // YYYY-MM-DD (startDate + 14 hari)
+    status: 'active' | 'completed';
+    questsCompleted: number;    // approved quests during arc
+    completedAt?: string;
+}
+
+export type GMMessageType =
+    | 'streak_warning'
+    | 'idle_warning'
+    | 'quest_deadline'
+    | 'welcome_back'
+    | 'level_up'
+    | 'daily_check';
+
+export interface GMMessage {
+    id: string;
+    uid: string;
+    type: GMMessageType;
+    content: string;          // AI-generated message text
+    createdAt: string;
+    isRead: boolean;
+    priority: 'high' | 'normal';
+}
+
 export interface AIMemory {
     uid: string;
     summary: string;       // short narrative the AI keeps about the user
@@ -214,5 +266,97 @@ export interface DailyReview {
     encouragement: string;
     questsCompleted: number;
     expEarned: number;
+    createdAt: string;
+}
+
+// ─────────────────────────────────────────
+// LIFE LOG — Activity Tracker
+// ─────────────────────────────────────────
+
+export type ActivityCategory =
+    | 'work'
+    | 'learning'
+    | 'health'
+    | 'social'
+    | 'personal'
+    | 'rest'
+    | 'commute';
+
+export interface ActivityEntry {
+    id: string;
+    uid: string;
+    title: string;
+    category: ActivityCategory;
+    mood: 1 | 2 | 3 | 4 | 5;
+    energy: 1 | 2 | 3 | 4 | 5;
+    note?: string;
+    startTime: string;   // ISO — when activity started
+    endTime?: string;    // ISO — undefined = currently active
+    createdAt: string;
+}
+
+// ─────────────────────────────────────────
+// WORK TASKS — Company / External Tasks
+// ─────────────────────────────────────────
+
+export type WorkTaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type WorkTaskStatus   = 'todo' | 'in_progress' | 'done' | 'blocked';
+
+export interface WorkTask {
+    id: string;
+    uid: string;
+    title: string;
+    description?: string;
+    project?: string;
+    assignedBy?: string;
+    priority: WorkTaskPriority;
+    status: WorkTaskStatus;
+    deadline?: string;
+    estimatedHours?: number;
+    actualHours?: number;
+    blocker?: string;
+    tags?: string[];
+    createdAt: string;
+    updatedAt: string;
+    completedAt?: string;
+}
+
+// ─────────────────────────────────────────
+// USER SITUATION — AI Context Snapshot
+// ─────────────────────────────────────────
+
+export type UserStatusType = 'busy' | 'normal' | 'relaxed' | 'on_leave' | 'sick';
+export type WorkloadLevel   = 'high' | 'medium' | 'low';
+
+export interface UserSituation {
+    uid: string;
+    currentStatus: UserStatusType;
+    weekFocus: string;
+    workload: WorkloadLevel;
+    activeProjects: string[];
+    contextNote: string;       // free text injected into AI
+    updatedAt: string;
+}
+
+// ─────────────────────────────────────────
+// HABITS
+// ─────────────────────────────────────────
+
+export interface Habit {
+    id: string;
+    uid: string;
+    name: string;
+    icon: string;              // emoji e.g. "🏋️"
+    category: ActivityCategory;
+    targetDays: number[];      // 0=Sun..6=Sat, empty = every day
+    createdAt: string;
+}
+
+export interface HabitLog {
+    id: string;
+    uid: string;
+    habitId: string;
+    date: string;              // YYYY-MM-DD
+    completed: boolean;
     createdAt: string;
 }

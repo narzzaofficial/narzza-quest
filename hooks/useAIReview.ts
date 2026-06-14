@@ -1,6 +1,7 @@
 'use client';
 
 import { approveQuest, rejectQuest } from '@/lib/db';
+import { formatGoal } from '@/constants/goal';
 import type { Quest, UserProfile } from '@/types';
 
 export interface AIReviewOutcome {
@@ -33,6 +34,7 @@ export async function runAIReview(
             submissionNote,
             hasProof,
             playerLevel: profile.level,
+            goalSummary: formatGoal(profile.goal) || undefined,
         }),
     });
 

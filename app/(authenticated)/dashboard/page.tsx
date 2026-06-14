@@ -30,8 +30,11 @@ import {
     Loader2,
 } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
-import { useAIQuests } from '@/hooks/useAIQuests';
-import type { UserProfile } from '@/types';
+import { useAIGameMaster } from '@/hooks/useAIGameMaster';
+import { useGMMessages } from '@/hooks/useGMMessages';
+import { useActivityLog } from '@/hooks/useActivityLog';
+import { GMBanner } from '@/components/gm/GMBanner';
+import { ArcCard } from '@/components/gm/ArcCard';
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -91,11 +94,22 @@ type DashboardData = ReturnType<typeof useDashboard>;
 function HeroDashboard({ d }: { d: DashboardData }) {
     const profile = d.profile!;
     const hasActivity = d.activity7d.some((p) => p.exp > 0);
-    const ai = useAIQuests(profile);
+    const ai = useAIGameMaster();
+    const gm = useGMMessages(profile.uid);
+    const activityLog = useActivityLog(profile.uid);
+
+    const totalMinutesToday = activityLog.entries.reduce(
+        (sum, e) => sum + activityLog.getDurationMinutes(e), 0
+    );
+    const jamAktifLabel = totalMinutesToday >= 60
+        ? `${(totalMinutesToday / 60).toFixed(1)}h`
+        : totalMinutesToday > 0
+            ? `${Math.round(totalMinutesToday)}m`
+            : '—';
 
     const stats = [
         { label: 'Quest Selesai', value: profile.totalQuestsCompleted || 0, icon: CheckCircle2, grad: GRAD.brand },
-        { label: 'Jam Fokus', value: `${(profile.totalHoursWorked || 0).toFixed(1)}h`, icon: Clock, grad: GRAD.sky },
+        { label: 'Jam Aktif Hari Ini', value: jamAktifLabel, icon: Clock, grad: GRAD.sky },
         { label: 'Day Streak', value: d.streak, icon: Flame, grad: GRAD.amber },
         { label: 'Total Level', value: profile.level || 1, icon: Trophy, grad: GRAD.green },
     ];
@@ -109,6 +123,14 @@ function HeroDashboard({ d }: { d: DashboardData }) {
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
             <PendingBanner count={d.pendingCount} />
+
+            {/* ── GM Proactive Banner ── */}
+            {gm.latestHighPriority && (
+                <GMBanner
+                    message={gm.latestHighPriority}
+                    onDismiss={gm.markRead}
+                />
+            )}
 
             {/* ── Hero banner ── */}
             <header
@@ -178,18 +200,13 @@ function HeroDashboard({ d }: { d: DashboardData }) {
 
                 {/* 7-day activity */}
                 <section className="glass rounded-card p-5 shadow-card lg:col-span-2">
-                    <div className="flex items-center justify-between mb-3">
-                        <div>
-                            <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-0.5">Aktivitas</p>
-                            <p className="text-ink font-bold text-sm">EXP 7 Hari Terakhir</p>
-                        </div>
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundImage: GRAD.brand }}>
-                            <Sparkles className="w-5 h-5 text-white" />
-                        </div>
+                    <div className="mb-3">
+                        <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-0.5">Aktivitas</p>
+                        <p className="text-ink font-bold text-sm">EXP 7 Hari Terakhir</p>
                     </div>
                     <div className="relative" style={{ height: 200 }}>
                         <ResponsiveContainer width="100%" height={200}>
-                            <AreaChart data={d.activity7d} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                            <AreaChart data={d.activity7d} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="xpFill" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.35} />
@@ -226,6 +243,25 @@ function HeroDashboard({ d }: { d: DashboardData }) {
                 ))}
             </section>
 
+            {/* ── Story Arc ── */}
+            <ArcCard
+                arc={ai.storyArc.arc}
+                loading={ai.storyArc.loading}
+                generating={ai.storyArc.generating}
+                daysRemaining={ai.storyArc.daysRemaining}
+                progressPct={ai.storyArc.progressPct}
+                justCompleted={ai.storyArc.justCompleted}
+                onDismissCompleted={ai.storyArc.dismissCompleted}
+                onRegenerateArc={() => ai.storyArc.generateNewArc()}
+                activeQuestCount={ai.active.length}
+                arcQuests={ai.storyArc.arc
+                    ? ai.aiQuests
+                        .filter(q => (q.createdAt || '') >= ai.storyArc.arc!.startDate)
+                        .map(q => ({ id: q.id, title: q.title, status: q.status }))
+                    : []
+                }
+            />
+
             {/* ── AI Game Master ── */}
             <section className="glass rounded-card p-5 md:p-6 shadow-card">
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -235,7 +271,9 @@ function HeroDashboard({ d }: { d: DashboardData }) {
                     <div className="flex-1">
                         <p className="text-brand text-[10px] uppercase tracking-widest font-bold">AI Game Master</p>
                         <h3 className="text-ink font-extrabold text-lg">Minta misi yang pas buatmu hari ini</h3>
-                        <p className="text-ink-soft text-sm">AI bakal lihat level, streak & jurnalmu lalu nyusun quest yang menantang tapi achievable.</p>
+                        <p className="text-ink-soft text-sm">
+                            Quest dibuat berdasarkan arc aktif{ai.storyArc.arc ? ` (${ai.storyArc.arc.theme})` : ''}, level, streak, dan konteks hidupmu.
+                        </p>
                     </div>
                     <button
                         type="button"
@@ -302,6 +340,7 @@ function HeroDashboard({ d }: { d: DashboardData }) {
         </div>
     );
 }
+
 
 // ──────────────────────────────────────────────
 // GM Dashboard

@@ -12,9 +12,20 @@ export interface QuestGenContext {
     streak: number;
     totalQuestsCompleted: number;
     recentJournalTitles?: string[];
-    goals?: string;
     memorySummary?: string;
     count?: number;
+    // Arc context — quest is driven by the active arc, not raw North Star
+    arcTheme?: string;
+    arcNarrative?: string;
+    arcWeeklyGoals?: string[];
+    // Phase 4: Dynamic Difficulty
+    completionRate7d?: number;
+    // Life Context
+    situationStatus?: string;
+    workload?: string;
+    weekFocus?: string;
+    activeWorkTasks?: string[];
+    todayActivitiesSummary?: string;
 }
 
 export interface QuestDraft {
@@ -46,16 +57,43 @@ function buildSystemPrompt(): string {
     ].join('\n');
 }
 
+function difficultyHint(rate?: number): string {
+    if (rate === undefined) return '';
+    if (rate < 0.4) return 'PENTING: User sedang kesulitan (completion rate rendah). Fokus pada quest difficulty E-D yang kecil & cepat selesai — bantu mereka membangun momentum.';
+    if (rate > 0.75) return 'PENTING: User sangat produktif (completion rate tinggi). Tingkatkan tantangan — berikan lebih banyak quest difficulty B-A-S.';
+    return 'Completion rate normal — variasikan difficulty D-C-B secara seimbang.';
+}
+
 function buildUserPrompt(ctx: QuestGenContext): string {
     const count = ctx.count ?? 4;
     const lines = [
         `Profil hero: ${ctx.displayName}, Level ${ctx.level} (${ctx.title}), streak ${ctx.streak} hari, total quest selesai ${ctx.totalQuestsCompleted}.`,
     ];
-    if (ctx.goals) lines.push(`Target/goal user: ${ctx.goals}.`);
-    if (ctx.memorySummary) lines.push(`Konteks user (memory AI): ${ctx.memorySummary}`);
+    if (ctx.memorySummary) lines.push(`Konteks user (AI memory): ${ctx.memorySummary}`);
+    if (ctx.arcTheme || ctx.arcNarrative || ctx.arcWeeklyGoals?.length) {
+        lines.push('--- Story Arc Aktif ---');
+        if (ctx.arcTheme) lines.push(`Tema: "${ctx.arcTheme}"`);
+        if (ctx.arcNarrative) lines.push(`Narasi GM: "${ctx.arcNarrative}"`);
+        if (ctx.arcWeeklyGoals?.length) lines.push(`Target arc: ${ctx.arcWeeklyGoals.join(' | ')}`);
+        lines.push('Quest HARUS mendukung arc ini — jadikan target arc sebagai panduan utama.');
+        lines.push('---');
+    }
     if (ctx.recentJournalTitles?.length) {
         lines.push(`Aktivitas terakhir: ${ctx.recentJournalTitles.join(', ')}.`);
     }
+
+    // Life context
+    if (ctx.situationStatus) {
+        lines.push(`Status hari ini: ${ctx.situationStatus}, workload: ${ctx.workload ?? 'normal'}.`);
+        if (ctx.workload === 'high') lines.push('PENTING: Workload kantor sedang tinggi — prioritaskan quest ringan (daily/side, difficulty E-D) yang tidak menambah beban.');
+        if (ctx.workload === 'low') lines.push('User punya banyak waktu bebas hari ini — boleh berikan quest lebih berat atau quest main/weekly.');
+    }
+    if (ctx.weekFocus) lines.push(`Fokus minggu ini: "${ctx.weekFocus}" — quest harus mendukung ini.`);
+    if (ctx.activeWorkTasks?.length) lines.push(`Task kantor aktif: ${ctx.activeWorkTasks.slice(0, 4).join(' | ')} — jangan duplikasi task kantor sebagai quest.`);
+    if (ctx.todayActivitiesSummary) lines.push(`Aktivitas hari ini: ${ctx.todayActivitiesSummary}.`);
+
+    const hint = difficultyHint(ctx.completionRate7d);
+    if (hint) lines.push(hint);
     lines.push(`Buat ${count} quest untuk dikerjakan hari ini sebagai JSON.`);
     return lines.join('\n');
 }

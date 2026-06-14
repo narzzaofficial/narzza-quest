@@ -43,6 +43,25 @@ export function createOpenAIProvider(): AIProvider {
             return res.choices[0]?.message?.content ?? "";
         },
 
+        async *streamText({
+            system,
+            messages,
+            maxTokens = 2048,
+            temperature = 0.7,
+        }: GenerateTextOptions): AsyncIterable<string> {
+            const stream = await client.chat.completions.create({
+                model: DEFAULT_MODEL,
+                max_tokens: maxTokens,
+                temperature,
+                messages: toOpenAIMessages(system, messages),
+                stream: true,
+            });
+            for await (const chunk of stream) {
+                const delta = chunk.choices[0]?.delta?.content;
+                if (delta) yield delta;
+            }
+        },
+
         async generateJSON<T = unknown>({
             system,
             messages,

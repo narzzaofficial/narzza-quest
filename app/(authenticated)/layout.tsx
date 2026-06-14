@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,7 +9,10 @@ import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import Footer from '@/components/layout/Footer';
 import Toast from '@/components/ui/Toast';
-import Loading from './loading'; 
+import GoalOnboarding from '@/components/system/GoalOnboarding';
+import { MilestoneModal } from '@/components/milestone/MilestoneModal';
+import { useMilestone } from '@/hooks/useMilestone';
+import Loading from './loading';
 
 export default function AuthenticatedLayout({
     children,
@@ -18,6 +21,9 @@ export default function AuthenticatedLayout({
 }) {
     const { user, profile, loading } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
+    const { milestone, dismiss } = useMilestone(profile ?? null);
+    const isFullscreen = pathname === '/chat';
 
     const [globalToast, setGlobalToast] = useState({ show: false, message: '', type: 'info' as 'info' | 'success' });
 
@@ -64,7 +70,6 @@ export default function AuthenticatedLayout({
         return () => unsubscribe();
     }, [profile]);
 
-    // 2. GUNAKAN KOMPONEN LOADING DI SINI
     if (loading || !user) {
         return <Loading />;
     }
@@ -76,13 +81,16 @@ export default function AuthenticatedLayout({
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
                 <TopBar />
 
-                <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth flex flex-col">
-                    <div className="flex-1">
+                <main className={`flex-1 overflow-x-hidden relative scroll-smooth flex flex-col ${isFullscreen ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+                    <div className={isFullscreen ? 'flex-1 flex flex-col overflow-hidden' : 'flex-1'}>
                         {children}
                     </div>
-                    <Footer />
+                    {!isFullscreen && <Footer />}
                 </main>
             </div>
+
+            <GoalOnboarding />
+            <MilestoneModal milestone={milestone} onDismiss={dismiss} />
 
             <Toast
                 isVisible={globalToast.show}

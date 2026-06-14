@@ -10,7 +10,7 @@ import { db } from "./firebase";
 import {
     UserProfile, Quest, JournalEntry, Notification,
     QuestStatus, calculateLevel, LEVEL_TITLES, getExpToNextLevel,
-    GuildQuest, AIMemory, DailyReview
+    GuildQuest, AIMemory, DailyReview, Withdrawal, GMMessage, StoryArc
 } from "@/types";
 
 const MAX_HEARTS = 5;
@@ -59,6 +59,20 @@ export async function updateUserProfile(
     data: Partial<UserProfile>
 ): Promise<void> {
     await updateDoc(doc(db, "users", uid), { ...data });
+}
+
+export async function saveUserGoal(
+    uid: string,
+    goal: { aspiration: string; focusAreas: string[]; timeframe?: string }
+): Promise<void> {
+    // Firestore rejects `undefined`, so only include timeframe when present.
+    const payload: Record<string, unknown> = {
+        aspiration: goal.aspiration,
+        focusAreas: goal.focusAreas,
+        updatedAt: new Date().toISOString(),
+    };
+    if (goal.timeframe) payload.timeframe = goal.timeframe;
+    await updateDoc(doc(db, "users", uid), { goal: payload });
 }
 
 export async function sendPartnerRequest(senderUid: string, receiverEmail: string): Promise<string | null> {
@@ -316,7 +330,7 @@ export async function approveQuest(
         }
     }
 
-    const userUpdatePayload: any = {
+    const userUpdatePayload: Record<string, unknown> = {
         level,
         exp,
         expToNextLevel,
@@ -552,7 +566,8 @@ export async function createWithdrawalRequest(heroProfile: UserProfile, gmUid: s
         fromName: heroProfile.displayName,
         type: 'reminder',
         title: '💸 Tagihan Pencairan Baru',
-        message: `${heroProfile.displayName} meminta pencairan Rp ${amount.toLocaleString('id-ID')}. Mohon segera upload bukti transfer.`
+        message: `${heroProfile.displayName} meminta pencairan Rp ${amount.toLocaleString('id-ID')}. Mohon segera upload bukti transfer.`,
+        refId: wdRef.id,
     });
 }
 
@@ -630,18 +645,18 @@ export async function resolveWithdrawal(
 }
 
 // Realtime listener untuk Hero (melihat status penarikannya)
-export function subscribeToHeroWithdrawals(heroUid: string, callback: (wds: any[]) => void) {
+export function subscribeToHeroWithdrawals(heroUid: string, callback: (wds: Withdrawal[]) => void) {
     const q = query(collection(db, "withdrawals"), where("heroUid", "==", heroUid), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
-        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Withdrawal)));
     });
 }
 
 // Realtime listener untuk GM (melihat tagihan dari Hero)
-export function subscribeToGMWithdrawals(gmUid: string, callback: (wds: any[]) => void) {
+export function subscribeToGMWithdrawals(gmUid: string, callback: (wds: Withdrawal[]) => void) {
     const q = query(collection(db, "withdrawals"), where("gmUid", "==", gmUid), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
-        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Withdrawal)));
     });
 }
 
@@ -800,8 +815,18 @@ export async function saveAIMemory(
 }
 
 export async function getDailyReview(uid: string, date: string): Promise<DailyReview | null> {
+    // Today's review
     const snap = await getDoc(doc(db, "dailyReviews", `${uid}_${date}`));
-    return snap.exists() ? (snap.data() as DailyReview) : null;
+    if (snap.exists()) return snap.data() as DailyReview;
+
+    // Fallback: only use _latest if it's actually from today
+    const latest = await getDoc(doc(db, "dailyReviews", `${uid}_latest`));
+    if (latest.exists()) {
+        const data = latest.data() as DailyReview;
+        if (data.date === date) return data;
+    }
+
+    return null;
 }
 
 export async function saveDailyReview(
@@ -809,9 +834,341 @@ export async function saveDailyReview(
     date: string,
     data: Omit<DailyReview, "uid" | "date" | "createdAt">
 ): Promise<void> {
-    await setDoc(
-        doc(db, "dailyReviews", `${uid}_${date}`),
-        { uid, date, ...data, createdAt: new Date().toISOString() },
-        { merge: true }
+    const payload = { uid, date, ...data, createdAt: new Date().toISOString() };
+    // Simpan ke key tanggal (history) DAN key tetap (fallback)
+    await Promise.all([
+        setDoc(doc(db, "dailyReviews", `${uid}_${date}`), payload, { merge: true }),
+        setDoc(doc(db, "dailyReviews", `${uid}_latest`), payload, { merge: true }),
+    ]);
+}
+
+// ─────────────────────────────────────────
+// GM PROACTIVE MESSAGES
+// ─────────────────────────────────────────
+
+export function subscribeToGMMessages(
+    uid: string,
+    callback: (messages: GMMessage[]) => void
+) {
+    const q = query(
+        collection(db, "gmMessages", uid, "messages"),
+        orderBy("createdAt", "desc"),
+        limit(20)
     );
+    return onSnapshot(q, (snap) => {
+        callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as GMMessage)));
+    });
+}
+
+export async function markGMMessageRead(uid: string, messageId: string): Promise<void> {
+    await updateDoc(doc(db, "gmMessages", uid, "messages", messageId), { isRead: true });
+}
+
+export async function markAllGMMessagesRead(uid: string): Promise<void> {
+    const q = query(
+        collection(db, "gmMessages", uid, "messages"),
+        where("isRead", "==", false)
+    );
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.docs.forEach((d) => batch.update(d.ref, { isRead: true }));
+    await batch.commit();
+}
+
+// ─────────────────────────────────────────
+// STORY ARC
+// ─────────────────────────────────────────
+
+export async function getActiveArc(uid: string): Promise<StoryArc | null> {
+    const q = query(
+        collection(db, "storyArcs"),
+        where("uid", "==", uid),
+        where("status", "==", "active"),
+        orderBy("startDate", "desc"),
+        limit(1)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    return { id: snap.docs[0].id, ...snap.docs[0].data() } as StoryArc;
+}
+
+export async function getArcHistory(uid: string): Promise<StoryArc[]> {
+    const q = query(
+        collection(db, "storyArcs"),
+        where("uid", "==", uid),
+        orderBy("startDate", "desc"),
+        limit(10)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as StoryArc));
+}
+
+export async function createArc(
+    uid: string,
+    draft: { title: string; theme: string; narrative: string; weeklyGoals: string[] },
+    arcNumber: number
+): Promise<StoryArc> {
+    const startDate = new Date().toISOString().split('T')[0];
+    const end = new Date();
+    end.setDate(end.getDate() + 14);
+    const endDate = end.toISOString().split('T')[0];
+
+    const ref = await addDoc(collection(db, "storyArcs"), {
+        uid,
+        arcNumber,
+        ...draft,
+        startDate,
+        endDate,
+        status: 'active',
+        questsCompleted: 0,
+    });
+
+    return { id: ref.id, uid, arcNumber, ...draft, startDate, endDate, status: 'active', questsCompleted: 0 };
+}
+
+export async function completeArc(arcId: string): Promise<void> {
+    await updateDoc(doc(db, "storyArcs", arcId), {
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+    });
+}
+
+export async function updateArcQuestsCompleted(arcId: string, count: number): Promise<void> {
+    await updateDoc(doc(db, "storyArcs", arcId), { questsCompleted: count });
+}
+
+export function subscribeToActiveArc(uid: string, callback: (arc: StoryArc | null) => void) {
+    const q = query(
+        collection(db, "storyArcs"),
+        where("uid", "==", uid),
+        where("status", "==", "active"),
+        orderBy("startDate", "desc"),
+        limit(1)
+    );
+    return onSnapshot(q, (snap) => {
+        callback(snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() } as StoryArc);
+    });
+}
+
+// ─────────────────────────────────────────
+// ACTIVITY LOG
+// ─────────────────────────────────────────
+
+import type {
+    ActivityEntry, ActivityCategory,
+    WorkTask, WorkTaskPriority, WorkTaskStatus,
+    UserSituation, UserStatusType, WorkloadLevel,
+    Habit, HabitLog,
+} from "@/types";
+
+// Close any currently-active entry then create a new one
+export async function logActivity(
+    uid: string,
+    data: { title: string; category: ActivityCategory; mood: 1|2|3|4|5; energy: 1|2|3|4|5; note?: string }
+): Promise<string> {
+    const now = new Date().toISOString();
+
+    // End the previous active entry
+    const activeQ = query(
+        collection(db, "activities"),
+        where("uid", "==", uid),
+        where("endTime", "==", null),
+        limit(1)
+    );
+    const activeSnap = await getDocs(activeQ);
+    const batch = writeBatch(db);
+    activeSnap.docs.forEach(d => batch.update(d.ref, { endTime: now }));
+
+    const newRef = doc(collection(db, "activities"));
+    batch.set(newRef, {
+        uid,
+        title: data.title,
+        category: data.category,
+        mood: data.mood,
+        energy: data.energy,
+        note: data.note ?? null,
+        startTime: now,
+        endTime: null,
+        createdAt: now,
+    });
+    await batch.commit();
+    return newRef.id;
+}
+
+export async function endCurrentActivity(uid: string): Promise<void> {
+    const now = new Date().toISOString();
+    const q = query(
+        collection(db, "activities"),
+        where("uid", "==", uid),
+        where("endTime", "==", null),
+        limit(1)
+    );
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.docs.forEach(d => batch.update(d.ref, { endTime: now }));
+    await batch.commit();
+}
+
+export function subscribeToTodayActivities(
+    uid: string,
+    date: string,  // YYYY-MM-DD
+    callback: (entries: ActivityEntry[]) => void
+) {
+    const startOfDay = `${date}T00:00:00.000Z`;
+    const q = query(
+        collection(db, "activities"),
+        where("uid", "==", uid),
+        where("createdAt", ">=", startOfDay),
+        orderBy("createdAt", "asc")
+    );
+    return onSnapshot(q, snap => {
+        callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as ActivityEntry)));
+    });
+}
+
+export async function getActivitiesRange(
+    uid: string,
+    fromDate: string,  // YYYY-MM-DD
+    toDate: string
+): Promise<ActivityEntry[]> {
+    const from = `${fromDate}T00:00:00.000Z`;
+    const to   = `${toDate}T23:59:59.999Z`;
+    const q = query(
+        collection(db, "activities"),
+        where("uid", "==", uid),
+        where("createdAt", ">=", from),
+        where("createdAt", "<=", to),
+        orderBy("createdAt", "asc")
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as ActivityEntry));
+}
+
+// ─────────────────────────────────────────
+// WORK TASKS
+// ─────────────────────────────────────────
+
+export async function createWorkTask(
+    uid: string,
+    data: Omit<WorkTask, 'id' | 'uid' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+    const now = new Date().toISOString();
+    const ref = await addDoc(collection(db, "workTasks"), { uid, ...data, createdAt: now, updatedAt: now });
+    return ref.id;
+}
+
+export async function updateWorkTask(id: string, data: Partial<WorkTask>): Promise<void> {
+    await updateDoc(doc(db, "workTasks", id), { ...data, updatedAt: new Date().toISOString() });
+}
+
+export async function deleteWorkTask(id: string): Promise<void> {
+    const { deleteDoc } = await import("firebase/firestore");
+    await deleteDoc(doc(db, "workTasks", id));
+}
+
+export function subscribeToWorkTasks(uid: string, callback: (tasks: WorkTask[]) => void) {
+    const q = query(
+        collection(db, "workTasks"),
+        where("uid", "==", uid),
+        orderBy("createdAt", "desc")
+    );
+    return onSnapshot(q, snap => {
+        callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as WorkTask)));
+    });
+}
+
+// ─────────────────────────────────────────
+// USER SITUATION
+// ─────────────────────────────────────────
+
+export async function getSituation(uid: string): Promise<UserSituation | null> {
+    const snap = await getDoc(doc(db, "situations", uid));
+    return snap.exists() ? (snap.data() as UserSituation) : null;
+}
+
+export async function saveSituation(uid: string, data: Omit<UserSituation, 'uid' | 'updatedAt'>): Promise<void> {
+    await setDoc(doc(db, "situations", uid), {
+        uid,
+        ...data,
+        updatedAt: new Date().toISOString(),
+    }, { merge: true });
+}
+
+// ─────────────────────────────────────────
+// HABITS
+// ─────────────────────────────────────────
+
+export async function createHabit(
+    uid: string,
+    data: Omit<Habit, 'id' | 'uid' | 'createdAt'>
+): Promise<string> {
+    const ref = await addDoc(collection(db, "habits"), {
+        uid, ...data, createdAt: new Date().toISOString()
+    });
+    return ref.id;
+}
+
+export async function deleteHabit(id: string): Promise<void> {
+    const { deleteDoc } = await import("firebase/firestore");
+    await deleteDoc(doc(db, "habits", id));
+}
+
+export function subscribeToHabits(uid: string, callback: (habits: Habit[]) => void) {
+    const q = query(collection(db, "habits"), where("uid", "==", uid), orderBy("createdAt", "asc"));
+    return onSnapshot(q, snap => {
+        callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as Habit)));
+    });
+}
+
+export async function toggleHabitLog(uid: string, habitId: string, date: string, completed: boolean): Promise<void> {
+    const id = `${uid}_${habitId}_${date}`;
+    await setDoc(doc(db, "habitLogs", id), {
+        id, uid, habitId, date, completed, createdAt: new Date().toISOString()
+    }, { merge: true });
+}
+
+export async function getHabitLogs(uid: string, fromDate: string, toDate: string): Promise<HabitLog[]> {
+    const q = query(
+        collection(db, "habitLogs"),
+        where("uid", "==", uid),
+        where("date", ">=", fromDate),
+        where("date", "<=", toDate)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => d.data() as HabitLog);
+}
+
+// Silence unused-import TS warnings for the new type imports above
+export type {
+    ActivityEntry, ActivityCategory,
+    WorkTask, WorkTaskPriority, WorkTaskStatus,
+    UserSituation, UserStatusType, WorkloadLevel,
+    Habit, HabitLog,
+};
+
+// ─────────────────────────────────────────
+// CHAT HISTORY
+// ─────────────────────────────────────────
+
+export interface StoredChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: string; // ISO string
+}
+
+export async function saveChatHistory(uid: string, messages: StoredChatMessage[]): Promise<void> {
+    const ref = doc(db, 'chatHistory', uid);
+    await setDoc(ref, {
+        uid,
+        messages: messages.slice(-60), // keep last 60 messages
+        updatedAt: new Date().toISOString(),
+    });
+}
+
+export async function loadChatHistory(uid: string): Promise<StoredChatMessage[]> {
+    const ref = doc(db, 'chatHistory', uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return [];
+    const data = snap.data();
+    return Array.isArray(data?.messages) ? data.messages as StoredChatMessage[] : [];
 }

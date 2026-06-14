@@ -219,12 +219,13 @@ export default function QuestDetailPage() {
     const canSubmitNow = navigator.onLine ? selectedFiles.length > 0 : selectedFiles.length > 0 || hasQueuedSubmission;
 
     return (
-        <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
+        <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
             <button onClick={() => router.back()} className="flex items-center gap-2 text-brand font-bold hover:text-brand-hover transition-colors">
                 <ArrowLeft className="w-5 h-5" /> Kembali ke Quest Board
             </button>
 
-            {/* ── Detail card ── */}
+            <div className="grid lg:grid-cols-2 gap-6 items-start">
+            {/* ── Detail card (kiri) ── */}
             <GlassCard className="p-6 md:p-8">
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                     <DifficultyBadge difficulty={quest.difficulty} className="px-2.5 py-1 text-sm" />
@@ -263,6 +264,8 @@ export default function QuestDetailPage() {
                 )}
             </GlassCard>
 
+            {/* ── Kolom kanan: aksi & arsip ── */}
+            <div className="space-y-6">
             {/* ── Accept (pending) ── */}
             {quest.status === 'pending' && profile?.role === 'player' && (
                 <GlassCard className="p-8 text-center">
@@ -352,7 +355,7 @@ export default function QuestDetailPage() {
                 <div className="space-y-5">
                     <GlassCard className="p-6">
                         <h3 className="text-sm font-extrabold text-ink-muted uppercase tracking-widest mb-3 flex items-center gap-2"><FileText className="w-4 h-4" /> Laporanmu</h3>
-                        <p className="text-ink-soft font-semibold mb-4 italic">&ldquo;{quest.submissionNote || 'Tidak ada catatan.'}&rdquo;</p>
+                        <p className="text-ink-soft font-medium mb-4 leading-relaxed whitespace-pre-line">{quest.submissionNote || 'Tidak ada catatan.'}</p>
                         {quest.submissionUrls && quest.submissionUrls.length > 0 && (
                             <div className="border-t border-line pt-4 flex flex-wrap gap-3">
                                 {quest.submissionUrls.map((url, idx) => (
@@ -371,12 +374,14 @@ export default function QuestDetailPage() {
                                 {fromAI ? 'Catatan AI Game Master' : 'Balasan dari Game Master'}
                             </h3>
                             <div className="bg-brand-soft p-4 rounded-xl border border-brand/15">
-                                <p className="text-ink font-semibold leading-relaxed text-lg italic">&ldquo;{quest.reviewNote}&rdquo;</p>
+                                <p className="text-ink font-medium leading-relaxed whitespace-pre-line">{quest.reviewNote}</p>
                             </div>
                         </GlassCard>
                     )}
                 </div>
             )}
+            </div>
+            </div>
         </div>
     );
 }

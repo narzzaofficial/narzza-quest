@@ -21,7 +21,20 @@ export function useAIQuests(profile: UserProfile | null, journals: JournalEntry[
     const [error, setError] = useState<string | null>(null);
     const [createdCount, setCreatedCount] = useState(0);
 
-    async function generate(goals?: string, memorySummary?: string): Promise<number> {
+    async function generate(
+        memorySummary?: string,
+        completionRate7d?: number,
+        arcTheme?: string,
+        arcNarrative?: string,
+        arcWeeklyGoals?: string[],
+        lifeContext?: {
+            situationStatus?: string;
+            workload?: string;
+            weekFocus?: string;
+            activeWorkTasks?: string[];
+            todayActivitiesSummary?: string;
+        }
+    ): Promise<number> {
         if (!profile) return 0;
         setGenerating(true);
         setError(null);
@@ -41,8 +54,12 @@ export function useAIQuests(profile: UserProfile | null, journals: JournalEntry[
                         .slice(0, 5)
                         .map((j) => j.questTitle || '')
                         .filter(Boolean),
-                    goals,
                     memorySummary,
+                    completionRate7d,
+                    arcTheme,
+                    arcNarrative,
+                    arcWeeklyGoals,
+                    ...lifeContext,
                 }),
             });
 

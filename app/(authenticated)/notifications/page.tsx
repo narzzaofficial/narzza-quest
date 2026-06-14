@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Bell,
+    Bot,
     Heart,
     CheckCircle2,
     AlertTriangle,
@@ -11,12 +13,40 @@ import {
     Swords,
     Loader2,
     Check,
+    ChevronRight,
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useGMMessages } from '@/hooks/useGMMessages';
+import { useAuth } from '@/hooks/useAuth';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import EmptyState from '@/components/ui/EmptyState';
-import type { Notification } from '@/types';
+import type { Notification, GMMessage } from '@/types';
+
+/** Where each notification type should navigate to when clicked. */
+function notifHref(type: string, role?: string, refId?: string): string | null {
+    switch (type) {
+        case 'quest_assigned':
+        case 'quest_created':
+        case 'quest_approved':
+        case 'quest_rejected':
+            return '/quest-board';
+        case 'guild_quest_open':
+            return '/guild-quest';
+        case 'guild_quest_claimed':
+            return '/gm/guild-quest';
+        case 'withdrawal_requested':
+        case 'withdrawal_confirmed':
+        case 'withdrawal_rejected':
+        case 'withdrawal_transferred':
+        case 'reminder': {
+            const base = role === 'gm' ? '/gm/payouts' : '/wallet';
+            return refId ? `${base}?highlight=${refId}` : base;
+        }
+        default:
+            return null; // encouragement → cukup tandai dibaca
+    }
+}
 
 function notifStyle(type: string): { Icon: React.ElementType; soft: string; color: string } {
     switch (type) {
@@ -37,6 +67,9 @@ function notifStyle(type: string): { Icon: React.ElementType; soft: string; colo
 
 export default function NotificationsPage() {
     const { notifications, loading, unreadCount, markRead, markAllRead } = useNotifications();
+    const { profile } = useAuth();
+    const router = useRouter();
+    const gm = useGMMessages(profile?.uid);
 
     if (loading) {
         return (
@@ -64,25 +97,97 @@ export default function NotificationsPage() {
                 }
             />
 
+            {/* ── GM Inbox ── */}
+            {gm.messages.length > 0 && (
+                <section>
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <Bot className="w-4 h-4 text-brand" />
+                            <p className="text-ink font-extrabold text-sm">Pesan dari AI Game Master</p>
+                            {gm.unreadCount > 0 && (
+                                <span className="bg-brand text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                                    {gm.unreadCount}
+                                </span>
+                            )}
+                        </div>
+                        {gm.unreadCount > 0 && (
+                            <button
+                                onClick={gm.markAllRead}
+                                className="text-brand text-xs font-bold hover:underline"
+                            >
+                                Tandai semua dibaca
+                            </button>
+                        )}
+                    </div>
+                    <div className="space-y-3">
+                        {gm.messages.map((msg) => (
+                            <GMMessageRow key={msg.id} message={msg} onRead={gm.markRead} />
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* ── Regular notifications ── */}
             {notifications.length === 0 ? (
                 <EmptyState icon={Bell} title="Kotak masukmu bersih!" desc="Belum ada notifikasi baru saat ini." />
             ) : (
                 <div className="space-y-3">
-                    {notifications.map((notif) => (
-                        <NotifRow key={notif.id} notif={notif} onRead={() => markRead(notif.id, notif.isRead)} />
-                    ))}
+                    {notifications.map((notif) => {
+                        const href = notifHref(notif.type, profile?.role, notif.refId);
+                        return (
+                            <NotifRow
+                                key={notif.id}
+                                notif={notif}
+                                href={href}
+                                onActivate={() => {
+                                    markRead(notif.id, notif.isRead);
+                                    if (href) router.push(href);
+                                }}
+                            />
+                        );
+                    })}
                 </div>
             )}
         </div>
     );
 }
 
-function NotifRow({ notif, onRead }: { notif: Notification; onRead: () => void }) {
+function GMMessageRow({ message, onRead }: { message: GMMessage; onRead: (id: string) => void }) {
+    return (
+        <GlassCard
+            onClick={() => !message.isRead && onRead(message.id)}
+            className={`p-4 flex gap-3 transition-all ${message.isRead ? 'opacity-60' : 'hover:shadow-pop cursor-pointer'}`}
+        >
+            <div className="w-10 h-10 rounded-xl bg-brand-soft flex items-center justify-center shrink-0">
+                <Bot className="w-5 h-5 text-brand" />
+            </div>
+            <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className={`text-sm font-bold ${message.isRead ? 'text-ink-soft' : 'text-ink'}`}>
+                        AI Game Master
+                        {message.priority === 'high' && !message.isRead && (
+                            <span className="ml-2 text-[9px] bg-danger text-white font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                                Penting
+                            </span>
+                        )}
+                    </p>
+                    <span className="text-[10px] text-ink-muted whitespace-nowrap">
+                        {new Date(message.createdAt).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                </div>
+                <p className="text-sm text-ink-soft leading-relaxed">{message.content}</p>
+            </div>
+            {!message.isRead && <div className="w-2.5 h-2.5 bg-brand rounded-full self-center shrink-0 mt-0.5" />}
+        </GlassCard>
+    );
+}
+
+function NotifRow({ notif, href, onActivate }: { notif: Notification; href: string | null; onActivate: () => void }) {
     const { Icon, soft, color } = notifStyle(notif.type);
     return (
         <GlassCard
-            onClick={onRead}
-            className={`p-4 md:p-5 flex gap-4 cursor-pointer transition-all ${notif.isRead ? 'opacity-70' : 'hover:shadow-pop'}`}
+            onClick={onActivate}
+            className={`p-4 md:p-5 flex gap-4 cursor-pointer transition-all ${notif.isRead ? 'opacity-70 hover:opacity-100' : 'hover:shadow-pop'}`}
         >
             <div className={`${soft} w-12 h-12 shrink-0 rounded-xl flex items-center justify-center`}>
                 <Icon className="w-6 h-6" style={{ color }} />
@@ -101,7 +206,10 @@ function NotifRow({ notif, onRead }: { notif: Notification; onRead: () => void }
                     Dari: {notif.fromName}
                 </span>
             </div>
-            {!notif.isRead && <div className="w-2.5 h-2.5 bg-brand rounded-full mt-2 shrink-0" />}
+            <div className="flex items-center gap-2 self-center shrink-0">
+                {!notif.isRead && <div className="w-2.5 h-2.5 bg-brand rounded-full" />}
+                {href && <ChevronRight className="w-4 h-4 text-ink-muted" />}
+            </div>
         </GlassCard>
     );
 }
