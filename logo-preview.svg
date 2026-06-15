@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="320" viewBox="0 0 600 320" style="background:#e9eef7; font-family: system-ui, -apple-system, sans-serif;">
+
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f7cff"/>
+      <stop offset="100%" style="stop-color:#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="grad-text" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4f7cff"/>
+      <stop offset="100%" style="stop-color:#38bdf8"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#2850a0" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- ─── Label kiri atas ─── -->
+  <text x="30" y="38" font-size="11" font-weight="800" fill="#98a3ba" letter-spacing="2" text-anchor="start" font-family="system-ui">FULL LOGO</text>
+
+  <!-- ─── FULL: Mark + Wordmark (large) ─── -->
+  <!-- Mark box -->
+  <rect x="30" y="52" width="64" height="64" rx="16" fill="url(#grad)" filter="url(#shadow)"/>
+  <text x="62" y="93" font-size="28" font-weight="900" fill="white" text-anchor="middle" dominant-baseline="auto" letter-spacing="-1">N</text>
+  <text x="62" y="107" font-size="10" font-weight="800" fill="rgba(255,255,255,0.82)" text-anchor="middle" letter-spacing="3">Q</text>
+
+  <!-- Wordmark -->
+  <text x="108" y="93" font-size="32" font-weight="900" fill="url(#grad-text)" letter-spacing="-1">Narzza</text>
+  <text x="108" y="93" font-size="32" font-weight="900" fill="#16203a" letter-spacing="-1" x="264"> Quest</text>
+  <text x="264" y="93" font-size="32" font-weight="900" fill="#16203a" letter-spacing="-1"> Quest</text>
+
+  <!-- Subtitle -->
+  <text x="108" y="113" font-size="11" font-weight="700" fill="#98a3ba" letter-spacing="1">Your Personal RPG Life System</text>
+
+  <!-- Divider -->
+  <line x1="30" y1="140" x2="570" y2="140" stroke="#d2dbea" stroke-width="1"/>
+
+  <!-- ─── VARIANTS row ─── -->
+  <text x="30" y="166" font-size="11" font-weight="800" fill="#98a3ba" letter-spacing="2">VARIANTS</text>
+
+  <!-- Mark only (md) -->
+  <rect x="30" y="178" width="44" height="44" rx="12" fill="url(#grad)" filter="url(#shadow)"/>
+  <text x="52" y="207" font-size="19" font-weight="900" fill="white" text-anchor="middle" letter-spacing="-1">N</text>
+  <text x="52" y="219" font-size="7.5" font-weight="800" fill="rgba(255,255,255,0.82)" text-anchor="middle" letter-spacing="3">Q</text>
+
+  <!-- Mark only (sm) -->
+  <rect x="88" y="186" width="36" height="36" rx="10" fill="url(#grad)" filter="url(#shadow)"/>
+  <text x="106" y="210" font-size="15" font-weight="900" fill="white" text-anchor="middle" letter-spacing="-0.5">N</text>
+  <text x="106" y="220" font-size="6" font-weight="800" fill="rgba(255,255,255,0.82)" text-anchor="middle" letter-spacing="2.5">Q</text>
+
+  <!-- Mark only (xs) -->
+  <rect x="136" y="192" width="28" height="28" rx="8" fill="url(#grad)" filter="url(#shadow)"/>
+  <text x="150" y="211" font-size="12" font-weight="900" fill="white" text-anchor="middle">N</text>
+  <text x="150" y="218" font-size="5" font-weight="800" fill="rgba(255,255,255,0.82)" text-anchor="middle" letter-spacing="2">Q</text>
+
+  <text x="30" y="238" font-size="10" font-weight="700" fill="#98a3ba" text-anchor="middle">xl</text>
+  <text x="78" y="238" font-size="10" font-weight="700" fill="#98a3ba" text-anchor="middle">md</text>
+  <text x="122" y="238" font-size="10" font-weight="700" fill="#98a3ba" text-anchor="middle">sm</text>
+
+  <!-- Wordmark only variant -->
+  <text x="200" y="180" font-size="11" font-weight="800" fill="#98a3ba" letter-spacing="2">WORDMARK ONLY</text>
+  <text x="200" y="213" font-size="28" font-weight="900" fill="url(#grad-text)" letter-spacing="-1">Narzza</text>
+  <text x="354" y="213" font-size="28" font-weight="900" fill="#16203a" letter-spacing="-1"> Quest</text>
+
+  <!-- Divider -->
+  <line x1="30" y1="256" x2="570" y2="256" stroke="#d2dbea" stroke-width="1"/>
+
+  <!-- ─── Usage: Dark card bg simulation ─── -->
+  <text x="30" y="278" font-size="11" font-weight="800" fill="#98a3ba" letter-spacing="2">IN CONTEXT — NAVBAR</text>
+
+  <rect x="30" y="288" width="540" height="22" rx="6" fill="rgba(255,255,255,0.7)" stroke="#e3e9f3" stroke-width="1"/>
+  <!-- Mini mark -->
+  <rect x="40" y="291" width="16" height="16" rx="4" fill="url(#grad)"/>
+  <text x="48" y="303" font-size="8" font-weight="900" fill="white" text-anchor="middle">N</text>
+  <!-- Mini wordmark -->
+  <text x="60" y="304" font-size="12" font-weight="900" fill="url(#grad-text)">Narzza</text>
+  <text x="114" y="304" font-size="12" font-weight="900" fill="#16203a"> Quest</text>
+  <!-- Nav items simulation -->
+  <text x="380" y="304" font-size="10" font-weight="700" fill="#98a3ba">Sign In</text>
+  <rect x="420" y="293" width="140" height="16" rx="5" fill="url(#grad)"/>
+  <text x="490" y="305" font-size="9" font-weight="800" fill="white" text-anchor="middle">Mulai Petualangan</text>
+
+</svg>
