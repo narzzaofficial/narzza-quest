@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Circle, Clock, Sparkles, Swords } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Sparkles, Swords, Trash2 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import type { StoryArc } from '@/types';
 
@@ -12,10 +12,13 @@ function formatDate(dateStr: string) {
 interface Props {
     arc: StoryArc;
     defaultOpen: boolean;
+    isDeletable?: boolean;
+    onDelete?: () => void;
 }
 
-export function ArcHistoryCard({ arc, defaultOpen }: Props) {
+export function ArcHistoryCard({ arc, defaultOpen, isDeletable = false, onDelete }: Props) {
     const [open, setOpen] = useState(defaultOpen);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const isActive = arc.status === 'active';
 
     const daysRemaining = isActive
@@ -25,49 +28,86 @@ export function ArcHistoryCard({ arc, defaultOpen }: Props) {
 
     return (
         <GlassCard className={isActive ? 'ring-2 ring-brand/25' : ''}>
-            <button
-                type="button"
-                onClick={() => setOpen((v) => !v)}
-                className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-surface-2/40 transition-colors rounded-card"
-            >
+            {/* Header row — toggle area + delete actions as siblings (no nested buttons) */}
+            <div className="px-5 py-4 flex items-center gap-4">
+                {/* Clickable toggle area */}
                 <div
-                    className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-sm shadow-sm ${
-                        isActive ? 'text-white' : 'bg-surface-2 text-ink-muted border border-line'
-                    }`}
-                    style={isActive ? { background: 'linear-gradient(135deg, #4f7cff 0%, #38bdf8 100%)' } : undefined}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setOpen((v) => !v)}
+                    onKeyDown={e => e.key === 'Enter' && setOpen(v => !v)}
+                    className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
                 >
-                    {arc.arcNumber}
-                </div>
+                    <div
+                        className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-sm shadow-sm ${
+                            isActive ? 'text-white' : 'bg-surface-2 text-ink-muted border border-line'
+                        }`}
+                        style={isActive ? { background: 'linear-gradient(135deg, #4f7cff 0%, #38bdf8 100%)' } : undefined}
+                    >
+                        {arc.arcNumber}
+                    </div>
 
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-ink font-extrabold text-base leading-tight truncate">{arc.title}</h2>
-                        {isActive ? (
-                            <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">Aktif</span>
-                        ) : (
-                            <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-success-soft text-success border border-success/20 flex items-center gap-1">
-                                <CheckCircle2 className="w-2.5 h-2.5" /> Selesai
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-ink font-extrabold text-base leading-tight truncate">{arc.title}</h2>
+                            {isActive ? (
+                                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">Aktif</span>
+                            ) : (
+                                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-success-soft text-success border border-success/20 flex items-center gap-1">
+                                    <CheckCircle2 className="w-2.5 h-2.5" /> Selesai
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5 text-ink-muted text-xs">
+                            <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatDate(arc.startDate)} — {formatDate(arc.endDate)}
                             </span>
-                        )}
+                            <span className="flex items-center gap-1">
+                                <Swords className="w-3 h-3" />
+                                {arc.questsCompleted} quest
+                            </span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3 mt-0.5 text-ink-muted text-xs">
-                        <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {formatDate(arc.startDate)} — {formatDate(arc.endDate)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <Swords className="w-3 h-3" />
-                            {arc.questsCompleted} quest
-                        </span>
-                    </div>
+
+                    <span className={`text-ink-muted transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`}>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                            <path d="M6 8L1 3h10L6 8z" />
+                        </svg>
+                    </span>
                 </div>
 
-                <span className={`text-ink-muted transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`}>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                        <path d="M6 8L1 3h10L6 8z" />
-                    </svg>
-                </span>
-            </button>
+                {/* Delete controls — sibling to toggle, never nested inside it */}
+                {isDeletable && onDelete && (
+                    confirmDelete ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => { onDelete(); setConfirmDelete(false); }}
+                                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-danger text-white"
+                            >
+                                Hapus
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setConfirmDelete(false)}
+                                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-surface-2 text-ink-muted border border-line"
+                            >
+                                Batal
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => setConfirmDelete(true)}
+                            className="shrink-0 p-1.5 text-ink-muted/40 hover:text-danger hover:bg-danger-soft rounded-lg transition-colors"
+                            title="Hapus arc ini"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                    )
+                )}
+            </div>
 
             {open && (
                 <div className="px-5 pb-5 space-y-4 border-t border-line">

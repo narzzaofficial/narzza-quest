@@ -69,6 +69,13 @@ export default function ChatPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [chat.messages, chat.loading]);
 
+    // Refocus input once AI finishes responding
+    useEffect(() => {
+        if (!chat.loading && !chat.typing) {
+            inputRef.current?.focus();
+        }
+    }, [chat.loading, chat.typing]);
+
     const handleSend = () => {
         if (!chat.input.trim() || chat.loading || chat.typing) return;
         chat.send();

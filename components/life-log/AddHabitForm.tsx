@@ -24,7 +24,7 @@ export function AddHabitForm({ onAdd, onCancel, saving }: Props) {
             />
             <div>
                 <p className="text-ink-muted text-[10px] font-bold uppercase tracking-widest mb-2">Pilih ikon</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-6 gap-2">
                     {HABIT_ICON_NAMES.map((iconKey) => {
                         const Icon       = HABIT_ICON_MAP[iconKey];
                         const color      = HABIT_ICON_COLORS[iconKey];

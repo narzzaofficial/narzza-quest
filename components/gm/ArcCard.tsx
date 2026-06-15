@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { BookOpen, Circle, CheckCircle2, Loader2, Sparkles, RefreshCw, Lock, ScrollText } from 'lucide-react';
+import { BookOpen, Circle, CheckCircle2, Sparkles, ExternalLink } from 'lucide-react';
 import type { QuestStatus, StoryArc } from '@/types';
 
 interface ArcQuest {
@@ -19,15 +19,12 @@ interface Props {
     progressPct: number;
     justCompleted: StoryArc | null;
     onDismissCompleted: () => void;
-    onRegenerateArc: () => void;
-    activeQuestCount?: number;
     arcQuests?: ArcQuest[];
 }
 
 export function ArcCard({
     arc, loading, generating, daysRemaining, progressPct,
-    justCompleted, onDismissCompleted, onRegenerateArc,
-    activeQuestCount = 0,
+    justCompleted, onDismissCompleted,
     arcQuests = [],
 }: Props) {
 
@@ -39,28 +36,30 @@ export function ArcCard({
                     <div className="text-4xl">🎉</div>
                     <h2 className="font-extrabold text-lg text-ink">{justCompleted.title} Selesai!</h2>
                     <p className="text-ink-muted text-sm max-w-xs mx-auto leading-relaxed">
-                        Chapter ini telah selesai. Game Master sedang menyusun arc petualangan baru untukmu...
+                        Chapter ini telah selesai. Buka Story Arc untuk menyusun arc petualangan baru.
                     </p>
-                    {generating && (
-                        <div className="flex items-center justify-center gap-2 text-ink-muted text-sm">
-                            <Loader2 className="w-4 h-4 animate-spin text-brand" />
-                            <span>Menyusun arc baru...</span>
-                        </div>
-                    )}
-                    {!generating && (
+                    <div className="flex items-center justify-center gap-3 mt-2">
                         <button
                             onClick={onDismissCompleted}
-                            className="mt-2 bg-brand text-white hover:bg-brand-hover transition px-5 py-2 rounded-xl font-bold text-sm shadow-card"
+                            className="bg-surface-2 text-ink-muted border border-line hover:bg-surface transition px-4 py-2 rounded-xl font-bold text-sm"
                         >
-                            Lanjutkan →
+                            Tutup
                         </button>
-                    )}
+                        <Link
+                            href="/story-arc"
+                            onClick={onDismissCompleted}
+                            className="bg-brand text-white hover:bg-brand-hover transition px-5 py-2 rounded-xl font-bold text-sm shadow-card inline-flex items-center gap-1.5"
+                        >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            Buka Story Arc
+                        </Link>
+                    </div>
                 </div>
             </section>
         );
     }
 
-    // Loading / generating
+    // Loading / generating skeleton
     if (loading || (generating && !arc)) {
         return (
             <section className="rounded-card shadow-card bg-surface glass px-5 py-4">
@@ -96,23 +95,13 @@ export function ArcCard({
                         <h2 className="text-ink font-extrabold text-base leading-tight">{arc.title}</h2>
                     </div>
                 </div>
-                {activeQuestCount > 0 ? (
-                    <div
-                        title={`Selesaikan ${activeQuestCount} quest aktif dulu sebelum minta arc baru`}
-                        className="p-1.5 text-ink-muted/40 cursor-not-allowed"
-                    >
-                        <Lock className="w-4 h-4" />
-                    </div>
-                ) : (
-                    <button
-                        onClick={onRegenerateArc}
-                        disabled={generating}
-                        title="Minta arc baru"
-                        className="p-1.5 text-ink-muted hover:text-brand hover:bg-brand-soft rounded-lg transition-colors disabled:opacity-30"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-                    </button>
-                )}
+                <Link
+                    href="/story-arc"
+                    className="p-1.5 text-ink-muted hover:text-brand hover:bg-brand-soft rounded-lg transition-colors"
+                    title="Kelola Story Arc"
+                >
+                    <ExternalLink className="w-4 h-4" />
+                </Link>
             </div>
 
             {/* Progress bar */}
@@ -163,7 +152,7 @@ export function ArcCard({
                         <p className="text-ink-muted text-[10px] font-bold uppercase tracking-widest mb-2.5">Quest Arc Ini</p>
                         <ul className="space-y-1.5">
                             {arcQuests.map((q) => {
-                                const done = q.status === 'approved';
+                                const done   = q.status === 'approved';
                                 const missed = q.status === 'missed' || q.status === 'rejected';
                                 return (
                                     <li key={q.id} className="flex items-center gap-2">
@@ -183,26 +172,12 @@ export function ArcCard({
                     </div>
                 )}
 
-                {/* Footer: quest count + link */}
-                <div className="pt-2 border-t border-line space-y-2">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className="text-brand font-extrabold text-lg">{arc.questsCompleted}</span>
-                            <span className="text-ink-muted text-xs">quest selesai dalam arc ini</span>
-                        </div>
-                        <Link
-                            href="/quest-board"
-                            className="text-brand text-xs font-bold hover:underline underline-offset-2"
-                        >
-                            Lihat Quest Board →
-                        </Link>
+                {/* Footer */}
+                <div className="pt-2 border-t border-line">
+                    <div className="flex items-center gap-2">
+                        <span className="text-brand font-extrabold text-lg">{arc.questsCompleted}</span>
+                        <span className="text-ink-muted text-xs">quest selesai dalam arc ini</span>
                     </div>
-                    {activeQuestCount > 0 && (
-                        <div className="flex items-center gap-1.5 text-ink-muted/70 text-[11px]">
-                            <Lock className="w-3 h-3 shrink-0" />
-                            <span>Selesaikan <span className="font-bold text-ink-muted">{activeQuestCount} quest aktif</span> dulu untuk bisa minta arc baru</span>
-                        </div>
-                    )}
                 </div>
             </div>
         </section>

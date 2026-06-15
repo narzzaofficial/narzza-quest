@@ -55,14 +55,14 @@ export function ExpGrowthChart({ data }: { data: ExpPoint[] }) {
     return (
         <div className="glass rounded-card shadow-card p-5">
             {/* Header row */}
-            <div className="flex items-start justify-between mb-1">
+            <div className="flex items-start justify-between gap-2 mb-1">
                 <h3 className="text-ink font-extrabold text-base">EXP Growth</h3>
-                <div className="flex bg-surface-2 rounded-lg p-0.5">
+                <div className="flex bg-surface-2 rounded-lg p-0.5 shrink-0">
                     {(['cumulative', 'daily'] as const).map((m) => (
                         <button
                             key={m}
                             onClick={() => setMode(m)}
-                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                            className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
                                 mode === m
                                     ? 'bg-white shadow text-ink'
                                     : 'text-ink-muted hover:text-ink'
@@ -119,7 +119,7 @@ export function ExpGrowthChart({ data }: { data: ExpPoint[] }) {
                             tick={{ fontSize: 10 }}
                             tickLine={false}
                             axisLine={false}
-                            width={42}
+                            width={36}
                         />
                         <Tooltip content={<CumulativeTip />} />
                         <Area

@@ -6,6 +6,7 @@ import { useWorkTasks } from '@/hooks/useWorkTasks';
 import { useSituation } from '@/hooks/useSituation';
 import { AI_GM } from '@/constants/ai';
 import { GRAD } from '@/constants/ui';
+import PageHeader from '@/components/ui/PageHeader';
 import { GoalCard } from '@/components/ai-gm/GoalCard';
 import { DailyReviewCard } from '@/components/ai-gm/DailyReviewCard';
 import { MemoryCard } from '@/components/ai-gm/MemoryCard';
@@ -37,21 +38,13 @@ export default function AIGameMasterPage() {
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
             {/* ── Persona header ── */}
-            <header className="relative overflow-hidden rounded-card p-6 md:p-7 text-white shadow-card" style={{ backgroundImage: GRAD.brand }}>
-                <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-white/15 blur-2xl pointer-events-none" />
-                <div className="relative flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-white/20 ring-1 ring-white/30 flex items-center justify-center shrink-0">
-                        <Bot className="w-9 h-9 text-white" />
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-2xl md:text-3xl font-extrabold text-white">{AI_GM.name}</h1>
-                            <span className="text-[10px] font-extrabold uppercase tracking-widest bg-white/20 ring-1 ring-white/30 px-2 py-0.5 rounded-full">Solo Mode</span>
-                        </div>
-                        <p className="text-white/80 text-sm mt-0.5">{AI_GM.tagline}</p>
-                    </div>
-                </div>
-            </header>
+            <PageHeader
+                icon={<Bot className="w-8 h-8 text-white" />}
+                title={AI_GM.name}
+                subtitle={AI_GM.tagline}
+                badge="Solo Mode"
+                grad="brand"
+            />
 
             {/* ── North Star goal ── */}
             <GoalCard />

@@ -3,7 +3,7 @@ import {
     collection, addDoc, query, where,
     orderBy, getDocs, onSnapshot, limit,
     writeBatch, deleteField, arrayUnion,
-    increment, runTransaction,
+    increment, runTransaction, deleteDoc,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -984,6 +984,39 @@ export async function completeArc(arcId: string): Promise<void> {
 
 export async function updateArcQuestsCompleted(arcId: string, count: number): Promise<void> {
     await updateDoc(doc(db, "storyArcs", arcId), { questsCompleted: count });
+}
+
+export async function deleteArc(arcId: string): Promise<void> {
+    await deleteDoc(doc(db, "storyArcs", arcId));
+}
+
+/** Delete all AI-generated quests assigned to a user within an arc's date range. */
+export async function deleteAIQuestsForArc(uid: string, startDate: string, endDate: string): Promise<void> {
+    const q = query(
+        collection(db, "quests"),
+        where("assignedTo", "==", uid),
+        where("createdBy", "==", "ai-gm"),
+    );
+    const snap = await getDocs(q);
+    const toDelete = snap.docs.filter(d => {
+        const created = (d.data().createdAt as string | undefined ?? '').slice(0, 10);
+        return created >= startDate && created <= endDate;
+    });
+    if (toDelete.length === 0) return;
+    const batch = writeBatch(db);
+    toDelete.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+}
+
+export function subscribeToAllArcs(uid: string, callback: (arcs: StoryArc[]) => void) {
+    const q = query(
+        collection(db, "storyArcs"),
+        where("uid", "==", uid),
+        orderBy("arcNumber", "asc"),
+    );
+    return onSnapshot(q, (snap) => {
+        callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as StoryArc)));
+    });
 }
 
 export function subscribeToActiveArc(uid: string, callback: (arc: StoryArc | null) => void) {

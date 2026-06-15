@@ -69,7 +69,7 @@ export function LogForm({ onSave, onCancel, saving, label = 'Mulai Aktivitas' }:
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                     <label className="text-ink-muted text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 mb-2">
                         Mood <CurrentMoodIcon style={{ color: MOOD_COLORS[mood - 1] }} className="w-3.5 h-3.5" />
@@ -82,7 +82,7 @@ export function LogForm({ onSave, onCancel, saving, label = 'Mulai Aktivitas' }:
                                 <button
                                     key={v}
                                     onClick={() => setMood(v)}
-                                    className={`flex-1 flex items-center justify-center py-2.5 rounded-xl border-2 transition-all ${
+                                    className={`flex-1 flex items-center justify-center py-2 rounded-xl border-2 transition-all ${
                                         isSelected
                                             ? 'border-transparent shadow-sm scale-110'
                                             : 'border-line hover:bg-surface-2'
@@ -107,7 +107,7 @@ export function LogForm({ onSave, onCancel, saving, label = 'Mulai Aktivitas' }:
                             <button
                                 key={v}
                                 onClick={() => setEnergy(v)}
-                                className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition-all ${
+                                className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-all ${
                                     energy === v ? 'bg-brand text-white border-brand shadow-sm' : 'border-line text-ink-muted hover:bg-surface-2'
                                 }`}
                             >

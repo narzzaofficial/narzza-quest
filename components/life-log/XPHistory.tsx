@@ -143,18 +143,18 @@ export function XPHistory({ days, loading, totalEarned, totalPenalty, totalNet, 
                         </div>
 
                         {/* Legend */}
-                        <div className="flex items-center gap-4 text-[10px] font-bold text-ink-muted">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] font-bold text-ink-muted">
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-brand inline-block" />XP Dapat</span>
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-danger inline-block" />Penalti Miss Quest</span>
-                            <span className="ml-auto text-ink-muted italic">Klik bar untuk detail</span>
+                            <span className="italic sm:ml-auto">Klik bar untuk detail</span>
                         </div>
 
                         {/* Selected day detail */}
                         {selectedDay ? (
                             <div className="border border-line rounded-xl overflow-hidden">
-                                <div className="px-4 py-3 bg-surface-2 border-b border-line flex items-center justify-between">
-                                    <p className="text-ink font-bold text-sm">{fullDate(selectedDay.date)}</p>
-                                    <div className="flex items-center gap-3 text-sm font-extrabold">
+                                <div className="px-4 py-3 bg-surface-2 border-b border-line flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                                    <p className="text-ink font-bold text-sm flex-1 min-w-0">{fullDate(selectedDay.date)}</p>
+                                    <div className="flex items-center gap-2 sm:gap-3 text-sm font-extrabold shrink-0">
                                         {selectedDay.earned  > 0 && <span className="text-brand">+{selectedDay.earned.toLocaleString()}</span>}
                                         {selectedDay.penalty > 0 && <span className="text-danger">−{selectedDay.penalty.toLocaleString()}</span>}
                                         {(selectedDay.earned > 0 || selectedDay.penalty > 0) && (

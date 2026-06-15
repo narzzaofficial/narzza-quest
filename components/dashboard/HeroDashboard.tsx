@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
     ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis,
@@ -27,6 +27,22 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
     const profile     = d.profile!;
     const hasActivity = d.activity7d.some((p) => p.exp > 0 || p.penalty > 0);
     const [chartType, setChartType] = useState<'bar' | 'line'>('line');
+    const [displayPct, setDisplayPct] = useState(0);
+    const rafRef = useRef<number | null>(null);
+    useEffect(() => {
+        const target   = d.expPercent;
+        const duration = 800;
+        const start    = performance.now();
+        const tick = (now: number) => {
+            const t = Math.min(1, (now - start) / duration);
+            // ease-out cubic
+            const eased = 1 - Math.pow(1 - t, 3);
+            setDisplayPct(Math.round(eased * target));
+            if (t < 1) rafRef.current = requestAnimationFrame(tick);
+        };
+        rafRef.current = requestAnimationFrame(tick);
+        return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    }, [d.expPercent]);
     const ai         = useAIGameMaster();
     const gm         = useGMMessages(profile.uid);
     const activityLog = useActivityLog(profile.uid);
@@ -102,11 +118,11 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                                     </linearGradient>
                                 </defs>
                                 <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                                <RadialBar background={{ fill: 'var(--color-surface-2)' }} dataKey="value" cornerRadius={20} fill="url(#radialGrad)" />
+                                <RadialBar background={{ fill: 'var(--color-surface-2)' }} dataKey="value" cornerRadius={20} fill="url(#radialGrad)" animationBegin={0} animationDuration={800} />
                             </RadialBarChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-3xl font-extrabold text-ink">{d.expPercent}%</span>
+                            <span className="text-3xl font-extrabold text-ink">{displayPct}%</span>
                             <span className="text-ink-muted text-[10px] uppercase tracking-widest font-bold">Progress</span>
                         </div>
                     </div>
@@ -205,8 +221,6 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                 progressPct={ai.storyArc.progressPct}
                 justCompleted={ai.storyArc.justCompleted}
                 onDismissCompleted={ai.storyArc.dismissCompleted}
-                onRegenerateArc={() => ai.storyArc.generateNewArc()}
-                activeQuestCount={ai.active.length}
                 arcQuests={ai.storyArc.arc
                     ? ai.aiQuests
                         .filter(q => (q.createdAt || '') >= ai.storyArc.arc!.startDate)
