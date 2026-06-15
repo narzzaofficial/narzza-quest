@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Nunito, Noto_Serif } from "next/font/google";
+import {  Nunito, Noto_Serif } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import MusicPlayerClient from "@/components/ui/MusicPlayerClient";

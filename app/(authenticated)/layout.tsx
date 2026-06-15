@@ -10,6 +10,8 @@ import TopBar from '@/components/layout/TopBar';
 import Footer from '@/components/layout/Footer';
 import Toast from '@/components/ui/Toast';
 import GoalOnboarding from '@/components/system/GoalOnboarding';
+import { HapticProvider } from '@/components/system/HapticProvider';
+import { BottomNav } from '@/components/layout/BottomNav';
 import { MilestoneModal } from '@/components/milestone/MilestoneModal';
 import { useMilestone } from '@/hooks/useMilestone';
 import Loading from './loading';
@@ -81,7 +83,7 @@ export default function AuthenticatedLayout({
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
                 <TopBar />
 
-                <main className={`flex-1 overflow-x-hidden relative scroll-smooth flex flex-col ${isFullscreen ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+                <main className={`flex-1 overflow-x-hidden relative scroll-smooth flex flex-col ${isFullscreen ? 'overflow-hidden' : 'overflow-y-auto'} pb-16 md:pb-0`}>
                     <div className={isFullscreen ? 'flex-1 flex flex-col overflow-hidden' : 'flex-1'}>
                         {children}
                     </div>
@@ -89,6 +91,8 @@ export default function AuthenticatedLayout({
                 </main>
             </div>
 
+            <HapticProvider />
+            <BottomNav />
             <GoalOnboarding />
             <MilestoneModal milestone={milestone} onDismiss={dismiss} />
 

@@ -25,6 +25,10 @@ import {
     Trophy,
     Wallet,
     Receipt,
+    MessageCircle,
+    BookMarked,
+    Activity,
+    BarChart2,
 } from 'lucide-react';
 import { dicebearAvatar } from '@/lib/avatar';
 
@@ -57,17 +61,21 @@ export default function TopBar() {
     }, [isMenuOpen]);
 
     const heroLinks: LinkItem[] = [
-        { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badgeKey: null },
-        { name: 'AI Game Master', href: '/ai-gm', icon: <Bot className="w-5 h-5" />, badgeKey: null },
-        { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" />, badgeKey: 'questBoard' },
-        { name: 'Guild Quest', href: '/guild-quest', icon: <Swords className="w-5 h-5" />, badgeKey: 'guildQuest' },
-        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: null },
-        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badgeKey: null },
-        { name: 'My Wallet', href: '/wallet', icon: <Wallet className="w-5 h-5" />, badgeKey: 'wallet' },
-        { name: 'Jurnal', href: '/journal', icon: <BookOpen className="w-5 h-5" />, badgeKey: 'warRoom' },
-        { name: 'Arena', href: '/arena', icon: <Swords className="w-5 h-5" />, badgeKey: 'arena' },
-        { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badgeKey: 'network' },
-        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badgeKey: 'notifications' },
+        { name: 'Dashboard',     href: '/dashboard',     icon: <LayoutDashboard className="w-5 h-5" />, badgeKey: null },
+        { name: 'AI Game Master',href: '/ai-gm',         icon: <Bot className="w-5 h-5" />,             badgeKey: null },
+        { name: 'AI Coach',      href: '/chat',          icon: <MessageCircle className="w-5 h-5" />,   badgeKey: null },
+        { name: 'Story Arc',     href: '/story-arc',     icon: <BookMarked className="w-5 h-5" />,      badgeKey: null },
+        { name: 'Life Log',      href: '/life-log',      icon: <Activity className="w-5 h-5" />,        badgeKey: null },
+        { name: 'Analytics',     href: '/analytics',     icon: <BarChart2 className="w-5 h-5" />,       badgeKey: null },
+        { name: 'Quest Board',   href: '/quest-board',   icon: <ScrollText className="w-5 h-5" />,      badgeKey: 'questBoard' },
+        { name: 'Guild Quest',   href: '/guild-quest',   icon: <Swords className="w-5 h-5" />,          badgeKey: 'guildQuest' },
+        { name: 'Roadmap',       href: '/calendar',      icon: <CalendarDays className="w-5 h-5" />,    badgeKey: null },
+        { name: 'Leaderboard',   href: '/leaderboard',   icon: <Trophy className="w-5 h-5" />,          badgeKey: null },
+        { name: 'Arena',         href: '/arena',         icon: <Swords className="w-5 h-5" />,          badgeKey: 'arena' },
+        { name: 'My Network',    href: '/network',       icon: <Users className="w-5 h-5" />,           badgeKey: 'network' },
+        { name: 'Jurnal',        href: '/journal',       icon: <BookOpen className="w-5 h-5" />,        badgeKey: 'warRoom' },
+        { name: 'My Wallet',     href: '/wallet',        icon: <Wallet className="w-5 h-5" />,          badgeKey: 'wallet' },
+        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />,            badgeKey: 'notifications' },
     ];
 
     const gmLinks: LinkItem[] = [
