@@ -1,7 +1,7 @@
 {
   "name": "Narzza Quest — Your Personal RPG Life System",
   "short_name": "NarzzaQuest",
-  "description": "Turn your life into an epic RPG adventure",
+  "description": "Turn your life into an epic RPG adventure.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
