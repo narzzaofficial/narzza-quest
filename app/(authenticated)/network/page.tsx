@@ -10,10 +10,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Toast from '@/components/ui/Toast';
 import { MemberCard } from '@/components/network/MemberCard';
-
-function avatarFor(name: string, bg = 'e9f1ff', color = '3b82f6') {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${bg}&color=${color}&bold=true`;
-}
+import { dicebearAvatar } from '@/lib/avatar';
 
 export default function NetworkPage() {
     const n = useNetwork();
@@ -39,7 +36,7 @@ export default function NetworkPage() {
                     <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
                         <div className="flex items-center gap-4">
                             <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-success/20 bg-surface shrink-0">
-                                <img src={n.profile.pendingPartnerRequest.avatar || avatarFor(n.profile.pendingPartnerRequest.displayName, 'e7f6ef', '18a06b')} alt="Avatar" className="w-full h-full object-cover" />
+                                <img src={n.profile.pendingPartnerRequest.avatar || dicebearAvatar(n.profile.pendingPartnerRequest.displayName)} alt="Avatar" className="w-full h-full object-cover" />
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-ink mb-0.5">Ada Permintaan Baru!</h2>

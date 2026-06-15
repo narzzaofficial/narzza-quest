@@ -11,6 +11,7 @@ import StatTile from '@/components/ui/StatTile';
 import ExpBar from '@/components/ui/ExpBar';
 import EmptyState from '@/components/ui/EmptyState';
 import { Users, BookOpen, Send, ShieldAlert, Award, Shield, CheckCircle2, Clock, Flame, Loader2 } from 'lucide-react';
+import { dicebearAvatar } from '@/lib/avatar';
 
 export default function GMHeroProfilePage() {
     const { profile, loading: authLoading } = useAuth();
@@ -60,7 +61,7 @@ export default function GMHeroProfilePage() {
 
     if (!hero) return null;
 
-    const heroAvatar = hero.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(hero.displayName)}&background=e9f1ff&color=3b82f6&bold=true&size=250`;
+    const heroAvatar = hero.avatar || dicebearAvatar(hero.displayName, 250);
     const expRemaining = (hero.expToNextLevel || 100) - (hero.exp || 0);
 
     return (

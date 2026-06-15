@@ -18,13 +18,10 @@ import { GMBanner } from '@/components/gm/GMBanner';
 import { ArcCard } from '@/components/gm/ArcCard';
 import { PendingBanner } from '@/components/dashboard/PendingBanner';
 import { ChartTooltip } from '@/components/dashboard/ChartTooltip';
+import { dicebearAvatar } from '@/lib/avatar';
 import type { useDashboard } from '@/hooks/useDashboard';
 
 type DashboardData = ReturnType<typeof useDashboard>;
-
-function avatarFor(name: string) {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=e9f1ff&color=3b82f6&bold=true&size=200`;
-}
 
 export function HeroDashboard({ d }: { d: DashboardData }) {
     const profile     = d.profile!;
@@ -69,7 +66,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                 <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-5">
                     <div className="relative shrink-0">
                         <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden ring-4 ring-white/40 bg-white/20">
-                            <img src={profile.avatar || avatarFor(profile.displayName)} alt={profile.displayName} className="w-full h-full object-cover" />
+                            <img src={profile.avatar || dicebearAvatar(profile.displayName)} alt={profile.displayName} className="w-full h-full object-cover" />
                         </div>
                         <span className="absolute -bottom-2 -right-2 bg-white text-brand text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-card">
                             LV {profile.level || 1}

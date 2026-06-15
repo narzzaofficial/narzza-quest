@@ -46,7 +46,7 @@ export async function generateArcDraft(ctx: ArcGenContext): Promise<ArcDraft> {
         '- Target (weeklyGoals) harus merupakan langkah LANJUTAN dari target arc sebelumnya.',
         '- Jika arc sebelumnya targetnya belajar API → arc baru bisa: membangun proyek dengan API itu.',
         '- Setiap arc harus terasa seperti naik satu tangga, bukan mengulang atau lompat terlalu jauh.',
-        '- Gunakan nama hero ("Nardi", bukan "kamu") dalam narrative untuk efek sinematik.',
+        `- Gunakan nama hero ("${ctx.displayName}", bukan "kamu") dalam narrative untuk efek sinematik.`,
         '',
         'Balas HANYA dengan JSON berikut (tanpa teks lain):',
         '{',

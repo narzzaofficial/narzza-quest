@@ -3,11 +3,8 @@
 import { Crown, Medal, Star } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { getCumulativeExp } from '@/lib/leveling';
+import { dicebearAvatar } from '@/lib/avatar';
 import type { UserProfile } from '@/types';
-
-function avatarFor(name: string) {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=fbf1dd&color=d99a2b&bold=true&size=200`;
-}
 
 function rankMeta(rank: number) {
     if (rank === 1) return { Icon: Crown, chip: 'bg-xp text-white',          accent: 'var(--color-xp)'       };
@@ -34,7 +31,7 @@ export function LeaderRow({ user, rank, isMe }: Props) {
             </div>
 
             <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden shrink-0 ring-2" style={{ ['--tw-ring-color' as string]: isTop ? accent : 'var(--color-line)' }}>
-                <img src={user.avatar || avatarFor(user.displayName)} alt={user.displayName} className="w-full h-full object-cover" />
+                <img src={user.avatar || dicebearAvatar(user.displayName)} alt={user.displayName} className="w-full h-full object-cover" />
             </div>
 
             <div className="flex-1 min-w-0">

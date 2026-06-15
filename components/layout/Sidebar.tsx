@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
+import { dicebearAvatar } from '@/lib/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useBadges } from '@/hooks/useBadges';
 import {
@@ -224,8 +225,7 @@ export default function Sidebar() {
     if (!profile) return null;
 
     const groups = profile.role === 'gm' ? gmGroups : heroGroups;
-    const avatarUrl = profile.avatar ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.displayName)}&background=e9eef7&color=4f7cff&bold=true`;
+    const avatarUrl = profile.avatar || dicebearAvatar(profile.displayName);
 
     return (
         <aside className={`hidden md:flex flex-col h-screen border-r border-line glass-soft transition-all duration-300 ease-in-out ${collapsed ? 'w-17' : 'w-64'}`}>

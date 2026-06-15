@@ -9,7 +9,7 @@ import {
     updateArcQuestsCompleted,
 } from '@/lib/db';
 import type { Quest, StoryArc, UserProfile, AIMemory } from '@/types';
-import { formatGoal } from '@/constants/goal';
+import { formatGoal, hasGoal } from '@/constants/goal';
 
 interface UseStoryArcOptions {
     profile: UserProfile | null;
@@ -108,9 +108,9 @@ export function useStoryArc({ profile, memory, approvedQuests }: UseStoryArcOpti
         }
     }, [profile, memory]);
 
-    // Auto-generate first arc if none exists
+    // Auto-generate first arc only after user has set their goal
     useEffect(() => {
-        if (!loading && !arc && !generating && profile) {
+        if (!loading && !arc && !generating && profile && hasGoal(profile.goal)) {
             generateNewArc(true);
         }
     }, [loading, arc, generating, profile, generateNewArc]);

@@ -26,6 +26,7 @@ import {
     Wallet,
     Receipt,
 } from 'lucide-react';
+import { dicebearAvatar } from '@/lib/avatar';
 
 function NavBadge({ count }: { count: number }) {
     if (count <= 0) return null;
@@ -95,9 +96,7 @@ export default function TopBar() {
     if (!profile) return null;
 
     const links = profile.role === 'gm' ? gmLinks : heroLinks;
-    const avatarUrl =
-        profile.avatar ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.displayName)}&background=e9f1ff&color=3b82f6&bold=true`;
+    const avatarUrl = profile.avatar || dicebearAvatar(profile.displayName);
 
     const totalBadges = Object.values(badges).reduce((a, b) => a + b, 0);
 

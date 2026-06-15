@@ -21,6 +21,7 @@ import {
     Flame,
     CheckCircle2,
 } from 'lucide-react';
+import { dicebearAvatar } from '@/lib/avatar';
 
 export default function ProfilePage() {
     const { profile, loading, isSaving, isUploading, uploadAvatar, saveName } = useProfileSettings();
@@ -69,9 +70,7 @@ export default function ProfilePage() {
         );
     }
 
-    const avatarUrl =
-        profile.avatar ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.displayName)}&background=e9f1ff&color=3b82f6&bold=true&size=200`;
+    const avatarUrl = profile.avatar || dicebearAvatar(profile.displayName);
     const isGm = profile.role === 'gm';
 
     const stats = [

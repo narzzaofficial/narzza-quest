@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2MB
@@ -18,14 +19,16 @@ export function useProfileSettings() {
         if (file.size > MAX_AVATAR_BYTES) {
             throw new Error('Ukuran file terlalu besar! Maksimal 2MB.');
         }
+        if (!file.type.startsWith('image/')) {
+            throw new Error('File harus berupa gambar.');
+        }
         setIsUploading(true);
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await fetch('/api/upload', { method: 'POST', body: formData });
-            if (!res.ok) throw new Error('Gagal mengunggah gambar.');
-            const data = await res.json();
-            await updateDoc(doc(db, 'users', profile.uid), { avatar: data.url });
+            const ext = file.name.split('.').pop() ?? 'jpg';
+            const storageRef = ref(storage, `avatars/${profile.uid}/avatar.${ext}`);
+            const snapshot = await uploadBytes(storageRef, file, { contentType: file.type });
+            const url = await getDownloadURL(snapshot.ref);
+            await updateDoc(doc(db, 'users', profile.uid), { avatar: url });
             await refreshProfile();
         } finally {
             setIsUploading(false);

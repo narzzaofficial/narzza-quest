@@ -2,18 +2,15 @@
 
 import { Crown, Shield } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
+import { dicebearAvatar } from '@/lib/avatar';
 import type { UserProfile } from '@/types';
-
-function avatarFor(name: string, bg = 'e9f1ff', color = '3b82f6') {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${bg}&color=${color}&bold=true`;
-}
 
 export function MemberCard({ member }: { member: UserProfile }) {
     const isGm = member.role === 'gm';
     return (
         <GlassCard className="flex items-center gap-4 p-4">
             <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-line bg-surface shrink-0">
-                <img src={member.avatar || avatarFor(member.displayName)} alt={member.displayName} className="w-full h-full object-cover" />
+                <img src={member.avatar || dicebearAvatar(member.displayName)} alt={member.displayName} className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-ink truncate leading-snug">{member.displayName}</h3>

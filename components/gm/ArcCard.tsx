@@ -63,11 +63,20 @@ export function ArcCard({
     // Loading / generating
     if (loading || (generating && !arc)) {
         return (
-            <section className="rounded-card shadow-card bg-surface glass">
-                <div className="px-5 py-4 flex items-center gap-3 text-ink-soft">
-                    <Loader2 className="w-4 h-4 animate-spin text-brand shrink-0" />
-                    <p className="text-sm font-medium">Game Master sedang menyusun arc petualanganmu...</p>
+            <section className="rounded-card shadow-card bg-surface glass px-5 py-4">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-surface-2 animate-pulse shrink-0" />
+                    <div className="space-y-2 flex-1">
+                        <div className="h-3 bg-surface-2 rounded animate-pulse w-24" />
+                        <div className="h-4 bg-surface-2 rounded animate-pulse w-48" />
+                    </div>
                 </div>
+                <div className="h-1.5 bg-surface-2 rounded-full animate-pulse mb-4" />
+                <div className="space-y-2">
+                    <div className="h-3 bg-surface-2 rounded animate-pulse w-full" />
+                    <div className="h-3 bg-surface-2 rounded animate-pulse w-4/5" />
+                </div>
+                <p className="text-ink-muted text-xs mt-4">Game Master sedang menyusun arc petualanganmu...</p>
             </section>
         );
     }
