@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { Mail, Lock, User as UserIcon, Loader2, Shield, Crown, Sparkles } from "lucide-react";
+import Logo from "@/components/ui/Logo";
+import { Mail, Lock, User as UserIcon, Loader2, Shield, Crown } from "lucide-react";
 
 const field =
     "w-full pl-11 pr-4 py-3 bg-surface border border-line rounded-xl text-ink font-bold placeholder:font-medium placeholder:text-ink-muted outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 transition";
@@ -60,11 +61,11 @@ export default function LoginPage() {
             <div className="relative z-10 w-full max-w-md glass rounded-card shadow-pop p-7 md:p-9">
                 {/* Brand */}
                 <div className="text-center mb-6">
-                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl shadow-card mb-3" style={{ backgroundImage: "linear-gradient(135deg, #4f7cff 0%, #38bdf8 100%)" }}>
-                        <Sparkles className="w-7 h-7 text-white" />
+                    <div className="flex justify-center mb-3">
+                        <Logo size="xl" variant="mark" />
                     </div>
-                    <h1 className="text-2xl font-extrabold !text-brand">Narzza Quest</h1>
-                    <p className="text-ink-soft text-sm mt-1">{isRegister ? "Mulai perjalanan epikmu sekarang." : "Masuk untuk lanjut bertualang."}</p>
+                    <Logo size="lg" variant="wordmark" className="justify-center" />
+                    <p className="text-ink-soft text-sm mt-2">{isRegister ? "Mulai perjalanan epikmu sekarang." : "Masuk untuk lanjut bertualang."}</p>
                 </div>
 
                 {/* Tabs */}

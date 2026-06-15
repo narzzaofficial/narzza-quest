@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Button from "@/components/ui/Button";
+import Logo from "@/components/ui/Logo";
 import { FiArrowRight, FiCheck } from "react-icons/fi";
-import { PiScrollLight, PiCrownSimpleLight, PiSwordLight, PiSparkleLight } from "react-icons/pi";
+import { PiScrollLight, PiCrownSimpleLight, PiSwordLight } from "react-icons/pi";
 
 const features = [
   { icon: PiScrollLight, title: "Sistem Quest Harian", desc: "Ubah tugas menumpuk jadi misi berperingkat E–S. Kumpulkan EXP dan capai level tertinggimu.", accent: "#3b82f6", tint: "rgba(59,130,246,0.10)" },
@@ -19,12 +20,7 @@ export default function LandingPage() {
 
       {/* Navbar */}
       <nav className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-card" style={{ backgroundImage: "linear-gradient(135deg, #4f7cff 0%, #38bdf8 100%)" }}>
-            <PiSparkleLight className="h-5 w-5" />
-          </span>
-          <span className="text-xl font-extrabold tracking-tight text-ink">Narzza Quest</span>
-        </div>
+        <Logo size="md" />
         <div className="flex items-center gap-3">
           <Link href="/login" className="hidden font-bold text-ink-soft transition-colors hover:text-brand md:block">Sign In</Link>
           <Link href="/login"><Button variant="primary">Mulai Petualangan</Button></Link>
@@ -106,9 +102,8 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="relative z-10 mt-auto border-t border-line py-8 text-center">
-        <div className="mb-2 flex items-center justify-center gap-2">
-          <PiSparkleLight className="h-4 w-4 text-brand" />
-          <span className="font-extrabold tracking-tight text-ink">Narzza Quest</span>
+        <div className="mb-2 flex items-center justify-center">
+          <Logo size="sm" />
         </div>
         <p className="text-sm font-semibold uppercase tracking-[0.15em] text-ink-muted">© {new Date().getFullYear()} Narzza. All rights reserved.</p>
       </footer>
