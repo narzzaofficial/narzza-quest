@@ -37,3 +37,7 @@ export const MISSES_PER_HEART_LOSS = 3;
 export const COMPLETIONS_PER_HEART_RECOVERY = 3;
 export const MIN_DEADLINE_PENALTY_EXP = 10;
 export const DEADLINE_PENALTY_RATE = 0.2; // 20% of quest exp reward
+
+// ── Analytics weights ──────────────────────────────────────────
+export const DIFF_WEIGHT: Record<string, number> = { E: 1, D: 2, C: 3, B: 4, A: 5, S: 6 };
+export const QUEST_CATEGORIES = ['daily', 'weekly', 'main', 'side'] as const;

@@ -32,7 +32,7 @@ export default function Error({
             <Button
                 variant="primary"
                 onClick={() => reset()}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-500 hover:shadow-lg transition-all px-8 py-4"
+                className="flex items-center gap-2 bg-brand hover:bg-brand-hover hover:shadow-lg transition-all px-8 py-4"
             >
                 <RefreshCcw className="w-4 h-4" />
                 <span>Coba Lagi</span>

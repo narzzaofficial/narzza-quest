@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/gm-check",
-      "schedule": "0 1,12 * * *"
-    }
-  ]
-}
+{}

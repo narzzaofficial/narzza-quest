@@ -1,5 +1,6 @@
 import { adminDb } from './firebase-admin';
 import { getAIProvider } from './ai';
+import { sendExpoPush } from './push';
 import type { UserProfile, GMMessageType } from '@/types';
 
 const TODAY = () => new Date().toISOString().split('T')[0];
@@ -43,17 +44,25 @@ async function saveGMMessage(
             createdAt: new Date().toISOString(),
         });
 
-    // Also write to the regular notifications collection so the bell badge lights up
+    const title = gmMessageTitle(type);
+    const shortBody = content.slice(0, 120) + (content.length > 120 ? '…' : '');
+
+    // Write to notifications collection (in-app bell)
     await adminDb.collection('notifications').add({
         toUid: uid,
         fromUid: 'ai-gm',
         fromName: 'AI Game Master',
         type: 'encouragement',
-        title: gmMessageTitle(type),
-        message: content.slice(0, 120) + (content.length > 120 ? '…' : ''),
+        title,
+        message: shortBody,
         isRead: false,
         createdAt: new Date().toISOString(),
     });
+
+    // Send Expo push notification to the user's device
+    const userSnap = await adminDb.collection('users').doc(uid).get();
+    const pushToken = userSnap.data()?.pushToken as string | undefined;
+    await sendExpoPush(pushToken, title, shortBody, { type, uid });
 }
 
 function gmMessageTitle(type: GMMessageType): string {

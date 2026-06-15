@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Users, UserPlus, Mail, Crown, Shield, Loader2 } from 'lucide-react';
+import { Users, UserPlus, Mail, Loader2 } from 'lucide-react';
 import { useNetwork } from '@/hooks/useNetwork';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Toast from '@/components/ui/Toast';
-import type { UserProfile } from '@/types';
+import { MemberCard } from '@/components/network/MemberCard';
 
 function avatarFor(name: string, bg = 'e9f1ff', color = '3b82f6') {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${bg}&color=${color}&bold=true`;
@@ -34,7 +34,6 @@ export default function NetworkPage() {
                 subtitle="Kelola undangan & lihat siapa yang terhubung dengan akunmu."
             />
 
-            {/* Incoming request */}
             {n.profile?.pendingPartnerRequest && (
                 <GlassCard className="p-5 border border-success/20 bg-success-soft">
                     <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
@@ -59,7 +58,6 @@ export default function NetworkPage() {
                 </GlassCard>
             )}
 
-            {/* Invite form */}
             <GlassCard className="p-5 md:p-6">
                 <div className="flex flex-col md:flex-row items-center gap-5">
                     <div className="flex-1 text-center md:text-left">
@@ -86,7 +84,6 @@ export default function NetworkPage() {
                 </div>
             </GlassCard>
 
-            {/* Members */}
             <section className="space-y-3">
                 <SectionLabel className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Relasi Aktif</SectionLabel>
                 {n.loadingPartners ? (
@@ -104,31 +101,5 @@ export default function NetworkPage() {
 
             <Toast isVisible={n.toast.show} onClose={() => n.setToast({ ...n.toast, show: false })} message={n.toast.message} type="success" />
         </div>
-    );
-}
-
-function MemberCard({ member }: { member: UserProfile }) {
-    const isGm = member.role === 'gm';
-    return (
-        <GlassCard className="flex items-center gap-4 p-4">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-line bg-surface shrink-0">
-                <img src={member.avatar || avatarFor(member.displayName)} alt={member.displayName} className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-ink truncate leading-snug">{member.displayName}</h3>
-                <p className="text-xs text-ink-muted truncate">{member.email}</p>
-                <div className="mt-1.5">
-                    {isGm ? (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-xp-soft text-xp">
-                            <Crown className="w-2.5 h-2.5" /> Game Master
-                        </span>
-                    ) : (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-brand-soft text-brand">
-                            <Shield className="w-2.5 h-2.5" /> Lv. {member.level || 1} Hero
-                        </span>
-                    )}
-                </div>
-            </div>
-        </GlassCard>
     );
 }

@@ -1,4 +1,4 @@
-import type { QuestCategory, QuestDifficulty, QuestStatus } from '@/types';
+import type { QuestCategory, QuestDifficulty, QuestStatus, UserStatusType, WorkloadLevel, WorkTaskPriority } from '@/types';
 
 // Shared gradients for headers / icon chips / accents.
 export const GRAD = {
@@ -36,4 +36,48 @@ export const CATEGORY_LABEL: Record<QuestCategory, string> = {
     weekly: 'Mingguan',
     main: 'Utama',
     side: 'Sampingan',
+};
+
+// ── User status & work task labels ────────────────────────────
+export const STATUS_LABELS: Record<UserStatusType, string> = {
+    busy: 'Sibuk', normal: 'Normal', relaxed: 'Santai', on_leave: 'Cuti', sick: 'Sakit',
+};
+export const STATUS_COLORS: Record<UserStatusType, string> = {
+    busy: 'text-danger bg-danger-soft',
+    normal: 'text-brand bg-brand-soft',
+    relaxed: 'text-success bg-success-soft',
+    on_leave: 'text-xp bg-xp-soft',
+    sick: 'text-warn bg-warn-soft',
+};
+export const WORKLOAD_LABELS: Record<WorkloadLevel, string> = {
+    high: 'Tinggi', medium: 'Sedang', low: 'Ringan',
+};
+export const PRIORITY_META: Record<WorkTaskPriority, { label: string; color: string; bg: string }> = {
+    low:    { label: 'Rendah', color: 'text-ink-muted', bg: 'bg-surface-2'  },
+    medium: { label: 'Sedang', color: 'text-brand',     bg: 'bg-brand-soft' },
+    high:   { label: 'Tinggi', color: 'text-warn',      bg: 'bg-warn-soft'  },
+    urgent: { label: 'Urgent', color: 'text-danger',    bg: 'bg-danger-soft'},
+};
+
+// ── Date / time labels (Indonesian) ───────────────────────────
+export const DAY_NAMES_SHORT  = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] as const;
+export const MONTH_NAMES_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'] as const;
+export const MONTH_NAMES_FULL  = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] as const;
+
+// ── Activity category display ──────────────────────────────────
+export const ACTIVITY_CAT_COLORS: Record<string, string> = {
+    work: '#3b82f6', learning: '#a855f7', health: '#f43f5e',
+    social: '#f59e0b', personal: '#14b8a6', rest: '#6366f1', commute: '#f97316',
+};
+export const ACTIVITY_CAT_LABELS: Record<string, string> = {
+    work: 'Kerja', learning: 'Belajar', health: 'Kesehatan',
+    social: 'Sosial', personal: 'Personal', rest: 'Istirahat', commute: 'Perjalanan',
+};
+
+// ── Calendar quest ribbon colors ───────────────────────────────
+export const QUEST_STATUS_RIBBON: Record<string, string> = {
+    approved:    'bg-success-soft text-success',
+    submitted:   'bg-brand-soft text-brand',
+    in_progress: 'bg-warn-soft text-warn',
+    rejected:    'bg-danger-soft text-danger',
 };

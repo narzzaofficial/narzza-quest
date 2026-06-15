@@ -466,6 +466,22 @@ export async function getJournals(playerUid: string): Promise<JournalEntry[]> {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() } as JournalEntry));
 }
 
+export async function getJournalsRange(
+    playerUid: string,
+    fromDate: string,
+    toDate: string
+): Promise<JournalEntry[]> {
+    const q = query(
+        collection(db, "journals"),
+        where("authorId", "==", playerUid),
+        where("createdAt", ">=", `${fromDate}T00:00:00.000Z`),
+        where("createdAt", "<=", `${toDate}T23:59:59.999Z`),
+        orderBy("createdAt", "asc")
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as JournalEntry));
+}
+
 // ─────────────────────────────────────────
 // NOTIFICATIONS
 // ─────────────────────────────────────────
@@ -478,6 +494,13 @@ export async function sendNotification(
         isRead: false,
         createdAt: new Date().toISOString(),
     });
+
+    // Fire-and-forget push to recipient's device
+    fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: notif.toUid, title: notif.title, body: notif.message }),
+    }).catch(() => {});
 }
 
 export async function getNotifications(uid: string): Promise<Notification[]> {

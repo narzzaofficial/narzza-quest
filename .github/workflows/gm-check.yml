@@ -1,0 +1,22 @@
+name: GM Proactive Check
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 08:00 WIB (UTC+7)
+    - cron: '0 12 * * *'  # 19:00 WIB (UTC+7)
+  workflow_dispatch:       # manual trigger from GitHub UI
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger GM Check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET \
+            "${{ secrets.APP_URL }}/api/cron/gm-check" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "Response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "GM Check failed with status $STATUS"
+            exit 1
+          fi
