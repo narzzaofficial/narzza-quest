@@ -1,6 +1,7 @@
 import { adminDb } from './firebase-admin';
 import { getAIProvider } from './ai';
 import { sendExpoPush } from './push';
+import { sendWebPushToUser } from './webPush';
 import type { UserProfile, GMMessageType } from '@/types';
 
 const TODAY = () => new Date().toISOString().split('T')[0];
@@ -59,10 +60,13 @@ async function saveGMMessage(
         createdAt: new Date().toISOString(),
     });
 
-    // Send Expo push notification to the user's device
+    // Send push notifications (Expo for React Native + Web Push for PWA)
     const userSnap = await adminDb.collection('users').doc(uid).get();
     const pushToken = userSnap.data()?.pushToken as string | undefined;
-    await sendExpoPush(pushToken, title, shortBody, { type, uid });
+    await Promise.allSettled([
+        sendExpoPush(pushToken, title, shortBody, { type, uid }),
+        sendWebPushToUser(uid, { title, body: shortBody, url: '/notifications' }),
+    ]);
 }
 
 function gmMessageTitle(type: GMMessageType): string {

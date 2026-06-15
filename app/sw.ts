@@ -184,3 +184,51 @@ addEventListener("sync", (event: Event) => {
     syncEvent.waitUntil(syncOfflineQueue());
   }
 });
+
+// ── Web Push ──────────────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sw = self as any;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+sw.addEventListener("push", (event: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  const data: Record<string, string> = event.data?.json() ?? {};
+  const title = data.title ?? "Narzza Quest";
+  const body = data.body ?? "Ada notifikasi baru untukmu!";
+  const icon = data.icon ?? "/icon-192x192.png";
+  const url = data.url ?? "/notifications";
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  event.waitUntil(
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    sw.registration.showNotification(title, {
+      body,
+      icon,
+      badge: "/icon-192x192.png",
+      data: { url },
+    }) as Promise<void>
+  );
+});
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+sw.addEventListener("notificationclick", (event: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  event.notification.close();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  const url: string = (event.notification.data as { url?: string })?.url ?? "/notifications";
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  event.waitUntil(
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    (sw.clients.matchAll({ type: "window", includeUncontrolled: true }) as Promise<{ url: string; navigate: (u: string) => Promise<unknown>; focus: () => Promise<unknown> }[]>).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes((sw.location as Location).origin) && "focus" in client) {
+          void client.navigate(url);
+          return client.focus();
+        }
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      return sw.clients.openWindow(url) as Promise<unknown>;
+    })
+  );
+});

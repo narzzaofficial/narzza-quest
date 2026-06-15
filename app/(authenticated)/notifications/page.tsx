@@ -2,10 +2,11 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Bot, Loader2, Check } from 'lucide-react';
+import { Bell, Bot, Loader2, Check, BellOff, BellRing } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useGMMessages } from '@/hooks/useGMMessages';
 import { useAuth } from '@/hooks/useAuth';
+import { usePushSubscription } from '@/hooks/usePushSubscription';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import { GMMessageRow } from '@/components/notifications/GMMessageRow';
@@ -40,6 +41,7 @@ export default function NotificationsPage() {
     const { profile } = useAuth();
     const router = useRouter();
     const gm = useGMMessages(profile?.uid);
+    const { state: pushState, subscribe, unsubscribe } = usePushSubscription();
 
     if (loading) {
         return (
@@ -57,13 +59,36 @@ export default function NotificationsPage() {
                 subtitle="Pemberitahuan dari sistem & Game Master."
                 badge={unreadCount > 0 ? `${unreadCount} baru` : undefined}
                 actions={
-                    <button
-                        onClick={markAllRead}
-                        disabled={unreadCount === 0}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 ring-1 ring-white/25 px-4 py-2.5 text-white text-sm font-bold hover:bg-white/25 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Check className="w-4 h-4" /> Tandai semua dibaca
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {pushState === 'unsubscribed' && (
+                            <button
+                                onClick={subscribe}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-brand/20 ring-1 ring-brand/40 px-4 py-2.5 text-brand text-sm font-bold hover:bg-brand/30 transition"
+                            >
+                                <BellRing className="w-4 h-4" /> Aktifkan Push
+                            </button>
+                        )}
+                        {pushState === 'subscribed' && (
+                            <button
+                                onClick={unsubscribe}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 ring-1 ring-white/20 px-4 py-2.5 text-white/60 text-sm font-bold hover:bg-white/15 transition"
+                            >
+                                <BellOff className="w-4 h-4" /> Push Aktif
+                            </button>
+                        )}
+                        {pushState === 'denied' && (
+                            <span className="inline-flex items-center gap-1.5 px-4 py-2.5 text-red-400 text-sm font-bold">
+                                <BellOff className="w-4 h-4" /> Notifikasi diblokir
+                            </span>
+                        )}
+                        <button
+                            onClick={markAllRead}
+                            disabled={unreadCount === 0}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 ring-1 ring-white/25 px-4 py-2.5 text-white text-sm font-bold hover:bg-white/25 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Check className="w-4 h-4" /> Tandai semua dibaca
+                        </button>
+                    </div>
                 }
             />
 

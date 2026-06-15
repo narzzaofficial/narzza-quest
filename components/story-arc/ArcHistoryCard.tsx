@@ -29,14 +29,14 @@ export function ArcHistoryCard({ arc, defaultOpen, isDeletable = false, onDelete
     return (
         <GlassCard className={isActive ? 'ring-2 ring-brand/25' : ''}>
             {/* Header row — toggle area + delete actions as siblings (no nested buttons) */}
-            <div className="px-5 py-4 flex items-center gap-4">
+            <div className="px-4 sm:px-5 py-4 flex items-center gap-2 sm:gap-4">
                 {/* Clickable toggle area */}
                 <div
                     role="button"
                     tabIndex={0}
                     onClick={() => setOpen((v) => !v)}
                     onKeyDown={e => e.key === 'Enter' && setOpen(v => !v)}
-                    className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                    className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
                 >
                     <div
                         className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-sm shadow-sm ${
@@ -48,23 +48,23 @@ export function ArcHistoryCard({ arc, defaultOpen, isDeletable = false, onDelete
                     </div>
 
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="text-ink font-extrabold text-base leading-tight truncate">{arc.title}</h2>
+                        <div className="flex items-start gap-2 flex-wrap">
+                            <h2 className="text-ink font-extrabold text-base leading-tight wrap-break-word min-w-0">{arc.title}</h2>
                             {isActive ? (
-                                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">Aktif</span>
+                                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 mt-0.5">Aktif</span>
                             ) : (
-                                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-success-soft text-success border border-success/20 flex items-center gap-1">
+                                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-success-soft text-success border border-success/20 flex items-center gap-1 mt-0.5">
                                     <CheckCircle2 className="w-2.5 h-2.5" /> Selesai
                                 </span>
                             )}
                         </div>
-                        <div className="flex items-center gap-3 mt-0.5 text-ink-muted text-xs">
-                            <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-ink-muted text-xs">
+                            <span className="flex items-center gap-1 whitespace-nowrap">
+                                <Clock className="w-3 h-3 shrink-0" />
                                 {formatDate(arc.startDate)} — {formatDate(arc.endDate)}
                             </span>
-                            <span className="flex items-center gap-1">
-                                <Swords className="w-3 h-3" />
+                            <span className="flex items-center gap-1 whitespace-nowrap">
+                                <Swords className="w-3 h-3 shrink-0" />
                                 {arc.questsCompleted} quest
                             </span>
                         </div>
