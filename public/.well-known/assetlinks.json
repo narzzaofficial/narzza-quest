@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.narzza_quest_hmtv.twa",
+      "sha256_cert_fingerprints": [
+        "34:87:7C:91:18:15:35:2E:DA:BC:34:4C:AA:D0:76:37:79:10:D1:D4:AC:09:B9:07:86:15:57:E5:33:6A:9A:A6"
+      ]
+    }
+  }
+]

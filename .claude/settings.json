@@ -4,7 +4,8 @@
       "Skill(claude-api)",
       "Skill(claude-api:*)",
       "WebFetch(domain:docs.expo.dev)",
-      "Read(//c/Users/Xia Xia/.claude/projects/c--Users-Xia-Xia-Documents-Github-lifegame/memory/**)"
+      "Read(//c/Users/Xia Xia/.claude/projects/c--Users-Xia-Xia-Documents-Github-lifegame/memory/**)",
+      "Read(//c/Users/Xia Xia/Documents/Github/narzza-twa/app/**)"
     ]
   }
 }
