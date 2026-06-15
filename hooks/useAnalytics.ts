@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { getActivitiesRange, getHabitLogs, getJournals, subscribeToQuests } from '@/lib/db';
+import { getActivitiesRange, getHabitLogs, getJournals, getMissedQuestsInRange, subscribeToQuests } from '@/lib/db';
+import { localDateStr } from '@/lib/dateUtils';
 import { isAIQuest } from '@/constants/ai';
 import { ACTIVITY_CAT_COLORS, ACTIVITY_CAT_LABELS, MONTH_NAMES_SHORT, DAY_NAMES_SHORT } from '@/constants/ui';
 import { DIFF_WEIGHT, QUEST_CATEGORIES } from '@/constants/game';
@@ -9,15 +10,17 @@ import { CATEGORY_LABEL } from '@/constants/ui';
 import type { ActivityEntry, Quest, JournalEntry, HabitLog } from '@/types';
 
 function dateRange(days: number): { from: string; to: string } {
-    const to = new Date();
-    const from = new Date(Date.now() - days * 86_400_000);
     return {
-        from: from.toISOString().split('T')[0],
-        to:   to.toISOString().split('T')[0],
+        from: localDateStr(new Date(Date.now() - days * 86_400_000)),
+        to:   localDateStr(new Date()),
     };
 }
 
-export function dateKey(iso: string) { return iso.split('T')[0]; }
+export function dateKey(iso: string) {
+    // Convert UTC ISO string to local date (YYYY-MM-DD) so WIB/WITA/WIT users
+    // see dates in their timezone, not UTC.
+    return localDateStr(iso);
+}
 
 function durationHours(e: ActivityEntry): number {
     const end = e.endTime ? new Date(e.endTime) : new Date();
@@ -29,20 +32,24 @@ export function useAnalytics(uid: string | undefined) {
     const [quests, setQuests] = useState<Quest[]>([]);
     const [journals, setJournals] = useState<JournalEntry[]>([]);
     const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
+    const [missed, setMissed] = useState<Array<{ date: string; penalty: number; questTitle: string }>>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!uid) return;
         const { from, to } = dateRange(182); // 6 months back for heatmap coverage
+        const { from: from30 } = dateRange(30);
 
         Promise.all([
             getActivitiesRange(uid, from, to),
             getJournals(uid),
             getHabitLogs(uid, from, to),
-        ]).then(([acts, jnls, hlogs]) => {
+            getMissedQuestsInRange(uid, from30, to),
+        ]).then(([acts, jnls, hlogs, missedQuests]) => {
             setActivities(acts);
             setJournals(jnls);
             setHabitLogs(hlogs);
+            setMissed(missedQuests);
             setLoading(false);
         }).catch(() => setLoading(false));
 
@@ -114,20 +121,36 @@ export function useAnalytics(uid: string | undefined) {
     const expData = useMemo(() => {
         const { from } = dateRange(30);
         const recent = journals.filter(j => (j.createdAt ?? '') >= from);
-        const byDate: Record<string, number> = {};
+
+        // Collect all dates that appear in earned or penalty data
+        const earnedByDate: Record<string, number>  = {};
+        const penaltyByDate: Record<string, number> = {};
+
         recent.forEach(j => {
             const k = dateKey(j.createdAt ?? '');
-            byDate[k] = (byDate[k] ?? 0) + (j.expEarned ?? 0);
+            earnedByDate[k] = (earnedByDate[k] ?? 0) + (j.expEarned ?? 0);
         });
+        missed.forEach(m => {
+            penaltyByDate[m.date] = (penaltyByDate[m.date] ?? 0) + m.penalty;
+        });
+
+        const allDates = Array.from(new Set([...Object.keys(earnedByDate), ...Object.keys(penaltyByDate)])).sort();
+
         let cumulative = 0;
-        return Object.entries(byDate)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([date, exp]) => {
-                cumulative += exp;
-                const d = new Date(date);
-                return { label: `${d.getDate()} ${MONTH_NAMES_SHORT[d.getMonth()]}`, exp, cumulative };
-            });
-    }, [journals]);
+        return allDates.map(date => {
+            const exp     = earnedByDate[date]  ?? 0;
+            const penalty = penaltyByDate[date] ?? 0;
+            cumulative += exp - penalty;
+            const d = new Date(date);
+            return {
+                label:      `${d.getDate()} ${MONTH_NAMES_SHORT[d.getMonth()]}`,
+                exp,
+                penalty:    -penalty,  // negative so bar goes downward
+                net:        exp - penalty,
+                cumulative,
+            };
+        });
+    }, [journals, missed]);
 
     const moodVsQuestData = useMemo(() => {
         const aiApproved = quests.filter(q => q.status === 'approved' && isAIQuest(q.createdBy));

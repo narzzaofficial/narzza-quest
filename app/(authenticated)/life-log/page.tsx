@@ -5,7 +5,6 @@ import { Activity, Plus, Clock, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useActivityHistory } from '@/hooks/useActivityHistory';
-import { useXPHistory } from '@/hooks/useXPHistory';
 import { useHabits } from '@/hooks/useHabits';
 import { GRAD } from '@/constants/ui';
 import { formatDuration } from '@/constants/life-log';
@@ -15,14 +14,12 @@ import { TimelineEntry }       from '@/components/life-log/TimelineEntry';
 import { HabitRow }            from '@/components/life-log/HabitRow';
 import { AddHabitForm }        from '@/components/life-log/AddHabitForm';
 import { ActivityHistory }     from '@/components/life-log/ActivityHistory';
-import { XPHistory }           from '@/components/life-log/XPHistory';
 
 export default function LifeLogPage() {
     const { profile } = useAuth();
     const log     = useActivityLog(profile?.uid);
     const habits  = useHabits(profile?.uid);
     const history = useActivityHistory(profile?.uid);
-    const xp      = useXPHistory(profile?.uid);
 
     const [showLogForm,   setShowLogForm]   = useState(false);
     const [showHabitForm, setShowHabitForm] = useState(false);
@@ -203,13 +200,6 @@ export default function LifeLogPage() {
                 loading={history.loading}
                 habits={habits.habits}
                 getDurationMinutes={history.getDurationMinutes}
-            />
-
-            <XPHistory
-                days={xp.days}
-                loading={xp.loading}
-                totalXP={xp.totalXP}
-                maxXP={xp.maxXP}
             />
         </div>
     );

@@ -3,19 +3,22 @@
 import {
     LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
     RadarChart, Radar, PolarGrid, PolarAngleAxis,
-    AreaChart, Area,
     XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { Loader2, TrendingUp, Activity, Clock, Zap, Target, BarChart2 } from 'lucide-react';
+import { Loader2, Activity, Clock, Zap, Target, BarChart2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useXPHistory } from '@/hooks/useXPHistory';
+import { XPHistory } from '@/components/life-log/XPHistory';
 import { ChartTip } from '@/components/analytics/ChartTip';
 import { StatCard } from '@/components/analytics/StatCard';
 import { ChartCard } from '@/components/analytics/ChartCard';
 import { ActivityHeatmap } from '@/components/analytics/ActivityHeatmap';
+import { ExpGrowthChart } from '@/components/analytics/ExpGrowthChart';
 
 export default function AnalyticsPage() {
     const { profile } = useAuth();
+    const xp = useXPHistory(profile?.uid);
     const {
         loading, activities,
         moodEnergyData, categoryData, peakHoursData, bestDayData,
@@ -130,6 +133,10 @@ export default function AnalyticsPage() {
                 </ChartCard>
             )}
 
+            {!noActivity && (
+                <ExpGrowthChart data={expData} />
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <ChartCard title="Strength Radar" sub="Kekuatanmu berdasarkan quest yang diselesaikan">
                     {radarData.every(r => r.score === 0) ? (
@@ -146,26 +153,27 @@ export default function AnalyticsPage() {
                     )}
                 </ChartCard>
 
-                <ChartCard title="EXP Growth" sub="Kumulatif EXP yang kamu kumpulkan">
-                    {expData.length === 0 ? (
-                        <p className="text-ink-muted text-sm py-8 text-center">Belum ada data EXP</p>
-                    ) : (
-                        <ResponsiveContainer width="100%" height={220}>
-                            <AreaChart data={expData}>
-                                <defs>
-                                    <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={35} />
-                                <Tooltip content={<ChartTip />} />
-                                <Area type="monotone" dataKey="cumulative" name="Total EXP" stroke="#f59e0b" fill="url(#expGrad)" strokeWidth={2} dot={false} />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    )}
-                </ChartCard>
+                {habitRate !== null && (
+                    <ChartCard title="Habit Completion" sub="Tingkat penyelesaian habit 12 minggu terakhir">
+                        <div className="flex items-center gap-6 h-full py-4">
+                            <div className="text-center">
+                                <p className="text-5xl font-extrabold text-success">{habitRate}%</p>
+                                <p className="text-ink-muted text-xs mt-1">Completion Rate</p>
+                            </div>
+                            <div className="flex-1">
+                                <div className="h-4 bg-surface-2 rounded-full overflow-hidden border border-line">
+                                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${habitRate}%`, background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' }} />
+                                </div>
+                                <p className="text-ink-muted text-xs mt-2">
+                                    {habitRate >= 80 ? '🔥 Konsistensi luar biasa!' :
+                                     habitRate >= 60 ? '👍 Cukup bagus, terus tingkatkan!' :
+                                     habitRate >= 40 ? '⚡ Masih perlu usaha lebih.' :
+                                     '💪 Mulai bangun konsistensi sekarang.'}
+                                </p>
+                            </div>
+                        </div>
+                    </ChartCard>
+                )}
             </div>
 
             {moodVsQuestData.length > 0 && (
@@ -184,27 +192,14 @@ export default function AnalyticsPage() {
                 </ChartCard>
             )}
 
-            {habitRate !== null && (
-                <ChartCard title="Habit Completion" sub="Tingkat penyelesaian habit 12 minggu terakhir">
-                    <div className="flex items-center gap-6">
-                        <div className="text-center">
-                            <p className="text-5xl font-extrabold text-success">{habitRate}%</p>
-                            <p className="text-ink-muted text-xs mt-1">Completion Rate</p>
-                        </div>
-                        <div className="flex-1">
-                            <div className="h-4 bg-surface-2 rounded-full overflow-hidden border border-line">
-                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${habitRate}%`, background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' }} />
-                            </div>
-                            <p className="text-ink-muted text-xs mt-2">
-                                {habitRate >= 80 ? '🔥 Konsistensi luar biasa!' :
-                                 habitRate >= 60 ? '👍 Cukup bagus, terus tingkatkan!' :
-                                 habitRate >= 40 ? '⚡ Masih perlu usaha lebih.' :
-                                 '💪 Mulai bangun konsistensi sekarang.'}
-                            </p>
-                        </div>
-                    </div>
-                </ChartCard>
-            )}
+            <XPHistory
+                days={xp.days}
+                loading={xp.loading}
+                totalEarned={xp.totalEarned}
+                totalPenalty={xp.totalPenalty}
+                totalNet={xp.totalNet}
+                maxAbs={xp.maxAbs}
+            />
         </div>
     );
 }

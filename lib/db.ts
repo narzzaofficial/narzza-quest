@@ -7,6 +7,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "./firebase";
+import { localDateStr } from "./dateUtils";
 import {
     UserProfile, Quest, JournalEntry, Notification,
     QuestStatus, calculateLevel, LEVEL_TITLES, getExpToNextLevel,
@@ -464,6 +465,31 @@ export async function getJournals(playerUid: string): Promise<JournalEntry[]> {
     );
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() } as JournalEntry));
+}
+
+export async function getMissedQuestsInRange(
+    uid: string,
+    fromDate: string,
+    toDate: string
+): Promise<Array<{ date: string; penalty: number; questTitle: string }>> {
+    // No orderBy to avoid composite-index requirement; filter by date client-side.
+    const q = query(
+        collection(db, 'quests'),
+        where('assignedTo', '==', uid),
+        where('status', '==', 'missed'),
+        limit(200)
+    );
+    const snap = await getDocs(q);
+    return snap.docs
+        .map(d => {
+            const data = d.data();
+            return {
+                date:       localDateStr((data.deadline || data.missedAt || data.updatedAt || '') as string),
+                penalty:    (data.deadlinePenaltyExp as number) || 0,
+                questTitle: (data.title as string) || 'Quest',
+            };
+        })
+        .filter(({ date, penalty }) => penalty > 0 && date >= fromDate && date <= toDate);
 }
 
 export async function getJournalsRange(

@@ -1,13 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import {
     ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis,
-    AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
+    ComposedChart, Bar, Line, Area, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine,
 } from 'recharts';
 import {
     Flame, Trophy, Clock, CheckCircle2, Swords, ScrollText,
-    BookOpen, Sparkles, ChevronRight, Compass, Loader2,
+    BookOpen, Sparkles, ChevronRight, Compass, Loader2, BarChart2, TrendingUp,
 } from 'lucide-react';
 import { useAIGameMaster } from '@/hooks/useAIGameMaster';
 import { useGMMessages } from '@/hooks/useGMMessages';
@@ -26,8 +27,9 @@ function avatarFor(name: string) {
 }
 
 export function HeroDashboard({ d }: { d: DashboardData }) {
-    const profile    = d.profile!;
-    const hasActivity = d.activity7d.some((p) => p.exp > 0);
+    const profile     = d.profile!;
+    const hasActivity = d.activity7d.some((p) => p.exp > 0 || p.penalty > 0);
+    const [chartType, setChartType] = useState<'bar' | 'line'>('line');
     const ai         = useAIGameMaster();
     const gm         = useGMMessages(profile.uid);
     const activityLog = useActivityLog(profile.uid);
@@ -117,25 +119,62 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                 </section>
 
                 <section className="glass rounded-card p-5 shadow-card lg:col-span-2">
-                    <div className="mb-3">
-                        <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-0.5">Aktivitas</p>
-                        <p className="text-ink font-bold text-sm">EXP 7 Hari Terakhir</p>
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-0.5">Aktivitas</p>
+                            <p className="text-ink font-bold text-sm">EXP 7 Hari Terakhir</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {/* Chart type toggle */}
+                            <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-surface-2 border border-line">
+                                <button
+                                    onClick={() => setChartType('bar')}
+                                    className={`p-1.5 rounded-md transition-all ${chartType === 'bar' ? 'bg-surface shadow-sm text-brand' : 'text-ink-muted hover:text-ink'}`}
+                                    title="Bar chart"
+                                >
+                                    <BarChart2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => setChartType('line')}
+                                    className={`p-1.5 rounded-md transition-all ${chartType === 'line' ? 'bg-surface shadow-sm text-brand' : 'text-ink-muted hover:text-ink'}`}
+                                    title="Line chart"
+                                >
+                                    <TrendingUp className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-3 text-[10px] font-bold text-ink-muted">
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-brand inline-block" />Dapat</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-danger inline-block" />Penalti</span>
+                            </div>
+                        </div>
                     </div>
                     <div className="relative" style={{ height: 200 }}>
                         <ResponsiveContainer width="100%" height={200}>
-                            <AreaChart data={d.activity7d} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                            <ComposedChart data={d.activity7d} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={2}>
                                 <defs>
-                                    <linearGradient id="xpFill" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.35} />
-                                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                                    <linearGradient id="expLineGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.2} />
+                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="penLineGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%"  stopColor="#ef4444" stopOpacity={0} />
+                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.15} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-line)" vertical={false} />
                                 <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: 'var(--color-ink-muted)', fontSize: 12 }} />
                                 <YAxis tickLine={false} axisLine={false} tick={{ fill: 'var(--color-ink-muted)', fontSize: 12 }} allowDecimals={false} width={32} />
-                                <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--color-line-strong)' }} />
-                                <Area type="monotone" dataKey="exp" stroke="#3b82f6" strokeWidth={2.5} fill="url(#xpFill)" />
-                            </AreaChart>
+                                <ReferenceLine y={0} stroke="var(--color-line-strong)" strokeWidth={1} />
+                                <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--color-line-strong)', strokeWidth: 1 }} />
+                                {chartType === 'bar' ? (
+                                    <>
+                                        <Bar dataKey="exp"     name="Dapat"   fill="#3b82f6" radius={[4,4,0,0]} maxBarSize={32} />
+                                        <Bar dataKey="penalty" name="Penalti" fill="#ef4444" radius={[0,0,4,4]} maxBarSize={32} />
+                                    </>
+                                ) : (
+                                    <Area type="monotone" dataKey="exp" name="Dapat" stroke="#3b82f6" strokeWidth={2.5} fill="url(#expLineGrad)" dot={{ r: 4, fill: '#3b82f6', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                                )}
+                            </ComposedChart>
                         </ResponsiveContainer>
                         {!hasActivity && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

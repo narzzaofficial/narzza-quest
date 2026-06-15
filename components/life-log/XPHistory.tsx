@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, Star, Clock } from 'lucide-react';
+import { Zap, Star, Clock, AlertTriangle } from 'lucide-react';
 import type { DayXP } from '@/hooks/useXPHistory';
 
 function shortDate(dateStr: string) {
@@ -19,23 +19,25 @@ function fmtTime(sec: number) {
     if (!sec) return null;
     const h = Math.floor(sec / 3600);
     const m = Math.floor((sec % 3600) / 60);
-    if (h > 0) return `${h}j ${m}m`;
-    return `${m} mnt`;
+    return h > 0 ? `${h}j ${m}m` : `${m} mnt`;
 }
 
 interface Props {
     days: DayXP[];
     loading: boolean;
-    totalXP: number;
-    maxXP: number;
+    totalEarned: number;
+    totalPenalty: number;
+    totalNet: number;
+    maxAbs: number;
 }
 
-export function XPHistory({ days, loading, totalXP, maxXP }: Props) {
+export function XPHistory({ days, loading, totalEarned, totalPenalty, totalNet, maxAbs }: Props) {
     const [selected, setSelected] = useState<string | null>(null);
 
-    // Show newest-first for the list, but chart left=oldest right=newest
-    const chartDays = [...days].reverse(); // oldest → newest
+    const chartDays   = [...days].reverse(); // oldest → newest for chart
     const selectedDay = days.find((d) => d.date === selected);
+
+    const hasAny = days.some((d) => d.earned > 0 || d.penalty > 0);
 
     return (
         <section className="glass rounded-card shadow-card">
@@ -51,52 +53,84 @@ export function XPHistory({ days, loading, totalXP, maxXP }: Props) {
                             <h2 className="text-ink font-extrabold text-base leading-tight">EXP Harian</h2>
                         </div>
                     </div>
-                    {totalXP > 0 && (
-                        <div className="text-right">
-                            <p className="text-[10px] text-ink-muted uppercase tracking-widest font-bold">14 Hari</p>
-                            <p className="text-brand font-extrabold text-lg leading-tight">+{totalXP.toLocaleString()} XP</p>
+                    {hasAny && (
+                        <div className="text-right space-y-0.5">
+                            <p className="text-[10px] text-ink-muted uppercase tracking-widest font-bold">14 Hari · Net</p>
+                            <p className={`font-extrabold text-lg leading-tight ${totalNet >= 0 ? 'text-brand' : 'text-danger'}`}>
+                                {totalNet >= 0 ? '+' : ''}{totalNet.toLocaleString()} XP
+                            </p>
+                            {totalPenalty > 0 && (
+                                <p className="text-danger text-[10px] font-bold">−{totalPenalty.toLocaleString()} penalti</p>
+                            )}
                         </div>
                     )}
                 </div>
 
                 {loading ? (
                     <div className="py-8 text-center text-ink-muted text-sm">Memuat riwayat XP...</div>
-                ) : totalXP === 0 ? (
+                ) : !hasAny ? (
                     <div className="py-10 flex flex-col items-center gap-3">
                         <div className="w-12 h-12 rounded-2xl bg-surface-2 flex items-center justify-center">
                             <Star className="w-6 h-6 text-ink-muted" />
                         </div>
                         <p className="text-ink-muted text-sm text-center">
-                            Belum ada XP yang diperoleh<br className="hidden sm:block" /> dalam 14 hari terakhir.
+                            Belum ada XP dalam 14 hari terakhir.
                         </p>
                     </div>
                 ) : (
                     <>
                         {/* Bar chart */}
                         <div className="overflow-x-auto">
-                            <div className="flex items-end gap-1.5 h-28 min-w-0" style={{ minWidth: `${chartDays.length * 36}px` }}>
+                            <div
+                                className="flex items-center gap-1.5"
+                                style={{ minWidth: `${chartDays.length * 36}px`, height: '120px' }}
+                            >
                                 {chartDays.map((day) => {
-                                    const pct        = maxXP > 0 ? (day.totalXP / maxXP) * 100 : 0;
+                                    const earnedPct  = maxAbs > 0 ? (day.earned  / maxAbs) * 100 : 0;
+                                    const penaltyPct = maxAbs > 0 ? (day.penalty / maxAbs) * 100 : 0;
                                     const isSelected = selected === day.date;
                                     const isToday    = day.date === new Date().toISOString().split('T')[0];
+
                                     return (
                                         <button
                                             key={day.date}
                                             onClick={() => setSelected(isSelected ? null : day.date)}
-                                            className="flex-1 flex flex-col items-center gap-1 group"
+                                            className="flex-1 flex flex-col items-center gap-0.5 group"
+                                            style={{ height: '120px' }}
                                         >
-                                            <div className="w-full flex items-end justify-center" style={{ height: '88px' }}>
-                                                <div
-                                                    className={`w-full rounded-t-lg transition-all duration-300 ${
-                                                        day.totalXP === 0
-                                                            ? 'bg-surface-2 border border-line'
-                                                            : isSelected
-                                                                ? 'bg-brand shadow-md'
-                                                                : 'bg-brand/30 group-hover:bg-brand/50'
-                                                    }`}
-                                                    style={{ height: day.totalXP === 0 ? '6px' : `${Math.max(8, pct * 0.88)}px` }}
-                                                />
+                                            {/* Top half: earned bars grow upward */}
+                                            <div className="flex-1 w-full flex items-end justify-center" style={{ height: '54px' }}>
+                                                {day.earned > 0 ? (
+                                                    <div
+                                                        className={`w-full rounded-t-md transition-all duration-300 ${isSelected ? 'opacity-100' : 'opacity-70 group-hover:opacity-90'}`}
+                                                        style={{
+                                                            height: `${Math.max(4, earnedPct * 0.54)}px`,
+                                                            background: isSelected ? '#3b82f6' : '#3b82f680',
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="w-full" style={{ height: '3px' }} />
+                                                )}
                                             </div>
+
+                                            {/* Zero line */}
+                                            <div className="w-full h-px bg-line-strong shrink-0" />
+
+                                            {/* Bottom half: penalty bars grow downward */}
+                                            <div className="flex-1 w-full flex items-start justify-center" style={{ height: '54px' }}>
+                                                {day.penalty > 0 ? (
+                                                    <div
+                                                        className={`w-full rounded-b-md transition-all duration-300 ${isSelected ? 'opacity-100' : 'opacity-70 group-hover:opacity-90'}`}
+                                                        style={{
+                                                            height: `${Math.max(4, penaltyPct * 0.54)}px`,
+                                                            background: isSelected ? '#ef4444' : '#ef444480',
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="w-full" style={{ height: '3px' }} />
+                                                )}
+                                            </div>
+
                                             <span className={`text-[9px] font-bold whitespace-nowrap transition-colors ${
                                                 isSelected ? 'text-brand' : isToday ? 'text-ink' : 'text-ink-muted'
                                             }`}>
@@ -108,18 +142,31 @@ export function XPHistory({ days, loading, totalXP, maxXP }: Props) {
                             </div>
                         </div>
 
+                        {/* Legend */}
+                        <div className="flex items-center gap-4 text-[10px] font-bold text-ink-muted">
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-brand inline-block" />XP Dapat</span>
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-danger inline-block" />Penalti Miss Quest</span>
+                            <span className="ml-auto text-ink-muted italic">Klik bar untuk detail</span>
+                        </div>
+
                         {/* Selected day detail */}
                         {selectedDay ? (
                             <div className="border border-line rounded-xl overflow-hidden">
-                                <div className="px-4 py-3 bg-brand-soft border-b border-line flex items-center justify-between">
+                                <div className="px-4 py-3 bg-surface-2 border-b border-line flex items-center justify-between">
                                     <p className="text-ink font-bold text-sm">{fullDate(selectedDay.date)}</p>
-                                    <span className="text-brand font-extrabold text-sm">
-                                        +{selectedDay.totalXP.toLocaleString()} XP
-                                    </span>
+                                    <div className="flex items-center gap-3 text-sm font-extrabold">
+                                        {selectedDay.earned  > 0 && <span className="text-brand">+{selectedDay.earned.toLocaleString()}</span>}
+                                        {selectedDay.penalty > 0 && <span className="text-danger">−{selectedDay.penalty.toLocaleString()}</span>}
+                                        {(selectedDay.earned > 0 || selectedDay.penalty > 0) && (
+                                            <span className={selectedDay.net >= 0 ? 'text-success' : 'text-danger'}>
+                                                = {selectedDay.net >= 0 ? '+' : ''}{selectedDay.net.toLocaleString()} net
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                                {selectedDay.entries.length === 0 ? (
-                                    <p className="text-ink-muted text-xs py-4 text-center">Tidak ada quest selesai hari ini.</p>
-                                ) : (
+
+                                {/* Earned quests */}
+                                {selectedDay.entries.length > 0 && (
                                     <div className="divide-y divide-line">
                                         {selectedDay.entries.map((e) => (
                                             <div key={e.id} className="flex items-center gap-3 px-4 py-3">
@@ -127,13 +174,10 @@ export function XPHistory({ days, loading, totalXP, maxXP }: Props) {
                                                     <Star className="w-3.5 h-3.5 text-amber-500" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-ink font-semibold text-sm truncate">
-                                                        {e.questTitle ?? 'Quest'}
-                                                    </p>
+                                                    <p className="text-ink font-semibold text-sm truncate">{e.questTitle ?? 'Quest'}</p>
                                                     {e.timeWorkedSeconds > 0 && (
                                                         <p className="text-ink-muted text-xs flex items-center gap-1 mt-0.5">
-                                                            <Clock className="w-3 h-3" />
-                                                            {fmtTime(e.timeWorkedSeconds)}
+                                                            <Clock className="w-3 h-3" />{fmtTime(e.timeWorkedSeconds)}
                                                         </p>
                                                     )}
                                                 </div>
@@ -144,11 +188,28 @@ export function XPHistory({ days, loading, totalXP, maxXP }: Props) {
                                         ))}
                                     </div>
                                 )}
+
+                                {/* Missed quests (penalties) */}
+                                {selectedDay.missedTitles.length > 0 && (
+                                    <div className={`divide-y divide-line ${selectedDay.entries.length > 0 ? 'border-t border-line' : ''}`}>
+                                        {selectedDay.missedTitles.map((title, i) => (
+                                            <div key={i} className="flex items-center gap-3 px-4 py-3 bg-danger-soft/30">
+                                                <div className="w-7 h-7 rounded-lg bg-danger-soft flex items-center justify-center shrink-0">
+                                                    <AlertTriangle className="w-3.5 h-3.5 text-danger" />
+                                                </div>
+                                                <p className="flex-1 text-ink-soft font-semibold text-sm truncate line-through">{title}</p>
+                                                <span className="text-danger font-extrabold text-sm shrink-0">Missed</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {selectedDay.entries.length === 0 && selectedDay.missedTitles.length === 0 && (
+                                    <p className="text-ink-muted text-xs py-4 text-center">Tidak ada aktivitas XP hari ini.</p>
+                                )}
                             </div>
                         ) : (
-                            <p className="text-center text-ink-muted text-xs pb-1">
-                                Klik bar untuk lihat detail quest hari itu.
-                            </p>
+                            <p className="text-center text-ink-muted text-xs">Klik bar untuk lihat detail.</p>
                         )}
                     </>
                 )}

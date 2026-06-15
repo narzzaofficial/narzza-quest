@@ -89,7 +89,7 @@ export default function StoryArcPage() {
                         <div className="space-y-3">
                             {completedArcs.map((arc) => (
                                 <div key={arc.id} className="relative pl-12">
-                                    <div className="absolute left-[14px] top-5 w-2.5 h-2.5 rounded-full bg-brand/30 border-2 border-brand/50" />
+                                    <div className="absolute left-3.5 top-5 w-2.5 h-2.5 rounded-full bg-brand/30 border-2 border-brand/50" />
                                     <ArcHistoryCard arc={arc} defaultOpen={false} />
                                 </div>
                             ))}

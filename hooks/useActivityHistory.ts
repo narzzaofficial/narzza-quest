@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { getActivitiesRange, getHabitLogs } from '@/lib/db';
+import { localDateStr, todayLocal, daysAgoLocal } from '@/lib/dateUtils';
 import type { ActivityEntry, HabitLog } from '@/types';
 
 export interface DayActivity {
@@ -26,18 +27,18 @@ export function useActivityHistory(uid: string | undefined, daysBack = 14) {
         if (!uid) return;
         setLoading(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
-            const from  = new Date(Date.now() - daysBack * 86_400_000).toISOString().split('T')[0];
+            const today = todayLocal();
+            const from  = daysAgoLocal(daysBack);
 
             const [entries, allHabitLogs] = await Promise.all([
                 getActivitiesRange(uid, from, today),
                 getHabitLogs(uid, from, today),
             ]);
 
-            // Group activities by UTC date
+            // Group activities by local date
             const map: Record<string, ActivityEntry[]> = {};
             for (const e of entries) {
-                const date = e.createdAt.split('T')[0];
+                const date = localDateStr(e.createdAt);
                 if (!map[date]) map[date] = [];
                 map[date].push(e);
             }
@@ -45,7 +46,7 @@ export function useActivityHistory(uid: string | undefined, daysBack = 14) {
             // Collect all dates that have either activities or habit logs
             const allDates = new Set([
                 ...Object.keys(map),
-                ...allHabitLogs.map((l) => l.date),
+                ...allHabitLogs.map((l) => l.date), // habitLog.date already stored as local YYYY-MM-DD
             ]);
 
             const result: DayActivity[] = Array.from(allDates)
