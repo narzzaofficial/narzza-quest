@@ -8,6 +8,10 @@ export async function POST(req: Request) {
         if (!ctx?.displayName) {
             return Response.json({ error: 'Context tidak lengkap.' }, { status: 400 });
         }
+        const isFirstArc = ctx.arcNumber === 1 || !ctx.previousArc;
+        if (isFirstArc && !ctx.goalSummary) {
+            return Response.json({ error: 'Tetapkan North Star goal terlebih dahulu.' }, { status: 400 });
+        }
         const arc = await generateArcDraft(ctx);
         return Response.json(arc);
     } catch (err) {

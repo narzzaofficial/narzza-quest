@@ -36,24 +36,31 @@ export interface ArcDraft {
 export async function generateArcDraft(ctx: ArcGenContext): Promise<ArcDraft> {
     const ai = getAIProvider();
 
+    const isFirstArc = ctx.arcNumber === 1 || !ctx.previousArc;
+
     const system = [
         'Kamu adalah AI Game Master dari RPG kehidupan nyata "Narzza Quest".',
         'Tugasmu menulis chapter baru dalam kisah nyata sang hero — sebuah Story Arc 2 minggu.',
         '',
         'PRINSIP UTAMA:',
-        '- Arc adalah kelanjutan langsung dari arc sebelumnya — bukan episode terpisah.',
-        '- Narrative harus menyebut/mengakui apa yang sudah dicapai di arc lalu (jika ada).',
-        '- Target (weeklyGoals) harus merupakan langkah LANJUTAN dari target arc sebelumnya.',
-        '- Jika arc sebelumnya targetnya belajar API → arc baru bisa: membangun proyek dengan API itu.',
+        isFirstArc
+            ? '- Ini adalah Arc PERTAMA hero. Seluruh konten (judul, tema, narasi, target) harus 100% bersumber dari North Star goal hero yang diberikan. Jangan mengarang konten dari luar konteks yang ada.'
+            : '- Arc adalah kelanjutan LANGSUNG dari arc sebelumnya — bukan episode terpisah.',
+        '- Narrative harus spesifik terhadap tujuan hero ini — jangan gunakan contoh atau topik generik.',
+        isFirstArc
+            ? '- weeklyGoals harus merupakan langkah konkret pertama menuju North Star goal hero.'
+            : '- Target (weeklyGoals) harus merupakan langkah LANJUTAN dari target arc sebelumnya.',
         '- Setiap arc harus terasa seperti naik satu tangga, bukan mengulang atau lompat terlalu jauh.',
         `- Gunakan nama hero ("${ctx.displayName}", bukan "kamu") dalam narrative untuk efek sinematik.`,
         '',
+        'PENTING: Isi arc harus EKSKLUSIF berasal dari konteks hero yang diberikan. Jangan tambahkan topik, teknologi, atau referensi yang tidak ada dalam goal atau history hero.',
+        '',
         'Balas HANYA dengan JSON berikut (tanpa teks lain):',
         '{',
-        '  "title": "Arc [Nomor]: [Judul Chapter yang Epik & Spesifik]",',
-        '  "theme": "[tema singkat 3-5 kata]",',
-        '  "narrative": "[2-3 kalimat GM yang melanjutkan kisah — akui pencapaian lalu, buka tantangan baru]",',
-        '  "weeklyGoals": ["[goal konkret yang merupakan kelanjutan logis dari arc sebelumnya]", "[goal konkret kedua]"]',
+        '  "title": "Arc [Nomor]: [Judul Chapter yang Epik & Spesifik sesuai goal hero]",',
+        '  "theme": "[tema singkat 3-5 kata — harus relevan dengan goal hero]",',
+        '  "narrative": "[2-3 kalimat GM yang spesifik terhadap perjalanan hero ini]",',
+        '  "weeklyGoals": ["[goal konkret sesuai North Star hero]", "[goal konkret kedua]"]',
         '}',
     ].join('\n');
 
