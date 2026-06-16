@@ -21,10 +21,10 @@ function getDurationMinutes(entry: ActivityEntry): number {
 
 export function useActivityHistory(uid: string | undefined, daysBack = 14) {
     const [days,    setDays]    = useState<DayActivity[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const load = useCallback(async () => {
-        if (!uid) return;
+        if (!uid) { setLoading(false); return; }
         setLoading(true);
         try {
             const today = todayLocal();

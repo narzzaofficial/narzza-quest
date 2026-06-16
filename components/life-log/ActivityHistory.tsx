@@ -1,13 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { CalendarDays, ChevronDown, ChevronUp, Clock, Activity, SortAsc, SortDesc, Check, X } from 'lucide-react';
-import { FaBullseye } from 'react-icons/fa6';
+import { CalendarDays, ChevronDown, ChevronUp, Clock, Activity, SortAsc, SortDesc, Check, X, Target } from 'lucide-react';
 import { MOOD_ICONS, MOOD_COLORS, HABIT_ICON_MAP, HABIT_ICON_COLORS } from '@/components/life-log/activityMeta';
 import { formatDuration } from '@/constants/life-log';
 import { TimelineEntry } from '@/components/life-log/TimelineEntry';
 import type { DayActivity } from '@/hooks/useActivityHistory';
 import type { ActivityEntry, Habit } from '@/types';
+
+function DayCardSkeleton() {
+    return (
+        <div className="border border-line rounded-xl overflow-hidden animate-pulse">
+            <div className="flex items-center gap-3 px-4 py-3.5">
+                <div className="flex-1 space-y-2">
+                    <div className="h-3.5 bg-surface-2 rounded-md w-44" />
+                    <div className="h-3 bg-surface-2 rounded-md w-28" />
+                </div>
+                <div className="w-5 h-5 bg-surface-2 rounded-md" />
+                <div className="w-4 h-4 bg-surface-2 rounded-md" />
+            </div>
+        </div>
+    );
+}
 
 function formatDate(dateStr: string) {
     return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('id-ID', {
@@ -51,7 +65,9 @@ export function ActivityHistory({ days, loading, habits, getDurationMinutes }: P
                 </div>
 
                 {loading ? (
-                    <div className="py-8 text-center text-ink-muted text-sm">Memuat riwayat...</div>
+                    <div className="space-y-2">
+                        {Array.from({ length: 6 }).map((_, i) => <DayCardSkeleton key={i} />)}
+                    </div>
                 ) : sorted.length === 0 ? (
                     <div className="py-10 flex flex-col items-center gap-3">
                         <div className="w-12 h-12 rounded-2xl bg-surface-2 flex items-center justify-center">
@@ -116,7 +132,7 @@ export function ActivityHistory({ days, loading, habits, getDurationMinutes }: P
                                                     <div className="flex flex-wrap gap-2">
                                                         {habits.map((h) => {
                                                             const done      = doneIds.has(h.id);
-                                                            const HabitIcon = HABIT_ICON_MAP[h.icon] ?? FaBullseye;
+                                                            const HabitIcon = HABIT_ICON_MAP[h.icon] ?? Target;
                                                             const color     = HABIT_ICON_COLORS[h.icon] ?? '#ef4444';
                                                             return (
                                                                 <div

@@ -1,13 +1,11 @@
 import React from 'react';
-import { Briefcase, BookOpen, Heart, Users, User, Moon, Car } from 'lucide-react';
 import {
-    FaFaceTired, FaFaceFrown, FaFaceSmile, FaFaceGrin, FaFaceGrinStars,
-    FaDumbbell, FaBookOpen, FaHeart, FaPersonRunning, FaPills,
-    FaUtensils, FaDroplet, FaPenNib, FaBullseye, FaLaptopCode, FaMusic, FaLeaf,
-} from 'react-icons/fa6';
+    Briefcase, BookOpen, Heart, Users, User, Moon, Car,
+    Frown, Meh, Smile, Laugh, SmilePlus,
+    Dumbbell, Footprints, Pill, Utensils, Droplets, PenLine, Target, Laptop, Music, Leaf,
+} from 'lucide-react';
 import type { ActivityCategory } from '@/types';
 
-// Activity category metadata (used in LogForm, CurrentActivityCard, TimelineEntry)
 export const CATEGORIES: {
     value: ActivityCategory;
     label: string;
@@ -28,13 +26,13 @@ export function catMeta(cat: ActivityCategory) {
     return CATEGORIES.find((c) => c.value === cat) ?? CATEGORIES[0];
 }
 
-// Mood icons — fa6 filled faces, indexed 0–4 (mood value 1–5)
+// Mood icons — lucide face icons, indexed 0–4 (mood value 1–5)
 export const MOOD_ICONS: React.ElementType[] = [
-    FaFaceTired,     // 1 — terrible
-    FaFaceFrown,     // 2 — bad
-    FaFaceSmile,     // 3 — okay
-    FaFaceGrin,      // 4 — good
-    FaFaceGrinStars, // 5 — amazing
+    Frown,     // 1 — terrible
+    Meh,       // 2 — bad
+    Smile,     // 3 — okay
+    Laugh,     // 4 — good
+    SmilePlus, // 5 — amazing
 ];
 export const MOOD_COLORS: string[] = [
     '#ef4444', // red
@@ -46,18 +44,18 @@ export const MOOD_COLORS: string[] = [
 
 // Habit icons — stored by key string in Firestore
 export const HABIT_ICON_MAP: Record<string, React.ElementType> = {
-    Dumbbell: FaDumbbell,
-    BookOpen: FaBookOpen,
-    Heart:    FaHeart,
-    Running:  FaPersonRunning,
-    Pill:     FaPills,
-    Food:     FaUtensils,
-    Water:    FaDroplet,
-    Writing:  FaPenNib,
-    Target:   FaBullseye,
-    Laptop:   FaLaptopCode,
-    Music:    FaMusic,
-    Leaf:     FaLeaf,
+    Dumbbell: Dumbbell,
+    BookOpen: BookOpen,
+    Heart:    Heart,
+    Running:  Footprints,
+    Pill:     Pill,
+    Food:     Utensils,
+    Water:    Droplets,
+    Writing:  PenLine,
+    Target:   Target,
+    Laptop:   Laptop,
+    Music:    Music,
+    Leaf:     Leaf,
 };
 export const HABIT_ICON_COLORS: Record<string, string> = {
     Dumbbell: '#a855f7',
