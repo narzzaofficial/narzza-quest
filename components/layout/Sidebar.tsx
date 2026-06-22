@@ -11,7 +11,7 @@ import {
     LayoutDashboard, Bot, ScrollText, BookOpen, Swords, Bell,
     ListTodo, ClipboardCheck, HeartHandshake, LogOut, Users,
     Settings, CalendarDays, Trophy, Wallet, Receipt,
-    Activity, BarChart2, PanelLeftClose, PanelLeftOpen, ChevronDown, MessageCircle, BookMarked,
+    Activity, BarChart2, PanelLeftClose, PanelLeftOpen, ChevronDown, MessageCircle, BookMarked, Landmark
 } from 'lucide-react';
 
 type BadgeKey = keyof ReturnType<typeof useBadges>;
@@ -162,7 +162,7 @@ export default function Sidebar() {
             links: [
                 { name: 'Quest Board', href: '/quest-board', icon: <ScrollText className="w-5 h-5" />, badgeKey: 'questBoard' },
                 { name: 'Guild Quest', href: '/guild-quest', icon: <Swords className="w-5 h-5" />, badgeKey: 'guildQuest' },
-                { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: null },
+                { name: 'Kalender', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: null },
             ],
         },
         {
@@ -177,8 +177,9 @@ export default function Sidebar() {
             label: 'Personal',
             links: [
                 { name: 'Jurnal', href: '/journal', icon: <BookOpen className="w-5 h-5" />, badgeKey: 'warRoom' },
+                { name: 'Keuangan', href: '/finance', icon: <Landmark className="w-5 h-5" />, badgeKey: null },
                 { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badgeKey: 'notifications' },
-                { name: 'My Wallet', href: '/wallet', icon: <Wallet className="w-5 h-5" />, badgeKey: 'wallet' },
+                { name: 'Dompet Quest', href: '/wallet', icon: <Wallet className="w-5 h-5" />, badgeKey: 'wallet' },
             ],
         },
     ];

@@ -29,6 +29,7 @@ import {
     BookMarked,
     Activity,
     BarChart2,
+    Landmark,
 } from 'lucide-react';
 import { dicebearAvatar } from '@/lib/avatar';
 
@@ -69,12 +70,13 @@ export default function TopBar() {
         { name: 'Analytics',     href: '/analytics',     icon: <BarChart2 className="w-5 h-5" />,       badgeKey: null },
         { name: 'Quest Board',   href: '/quest-board',   icon: <ScrollText className="w-5 h-5" />,      badgeKey: 'questBoard' },
         { name: 'Guild Quest',   href: '/guild-quest',   icon: <Swords className="w-5 h-5" />,          badgeKey: 'guildQuest' },
-        { name: 'Roadmap',       href: '/calendar',      icon: <CalendarDays className="w-5 h-5" />,    badgeKey: null },
+        { name: 'Kalender',       href: '/calendar',      icon: <CalendarDays className="w-5 h-5" />,    badgeKey: null },
         { name: 'Leaderboard',   href: '/leaderboard',   icon: <Trophy className="w-5 h-5" />,          badgeKey: null },
         { name: 'Arena',         href: '/arena',         icon: <Swords className="w-5 h-5" />,          badgeKey: 'arena' },
         { name: 'My Network',    href: '/network',       icon: <Users className="w-5 h-5" />,           badgeKey: 'network' },
         { name: 'Jurnal',        href: '/journal',       icon: <BookOpen className="w-5 h-5" />,        badgeKey: 'warRoom' },
-        { name: 'My Wallet',     href: '/wallet',        icon: <Wallet className="w-5 h-5" />,          badgeKey: 'wallet' },
+        { name: 'Keuangan',      href: '/finance',       icon: <Landmark className="w-5 h-5" />,        badgeKey: null },
+        { name: 'Dompet Quest',  href: '/wallet',        icon: <Wallet className="w-5 h-5" />,          badgeKey: 'wallet' },
         { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />,            badgeKey: 'notifications' },
     ];
 
@@ -82,7 +84,7 @@ export default function TopBar() {
         { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badgeKey: null },
         { name: 'Manage Quests', href: '/gm/quests', icon: <ListTodo className="w-5 h-5" />, badgeKey: 'manageQuests' },
         { name: 'Guild Quest', href: '/gm/guild-quest', icon: <Swords className="w-5 h-5" />, badgeKey: null },
-        { name: 'Roadmap', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: 'roadmap' },
+        { name: 'Kalender', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: 'roadmap' },
         { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badgeKey: null },
         { name: 'Review Submissions', href: '/gm/review', icon: <ClipboardCheck className="w-5 h-5" />, badgeKey: 'reviewSubmissions' },
         { name: 'Send Encouragement', href: '/gm/encourage', icon: <HeartHandshake className="w-5 h-5" />, badgeKey: 'encourage' },

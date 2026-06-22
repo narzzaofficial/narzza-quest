@@ -360,3 +360,59 @@ export interface HabitLog {
     completed: boolean;
     createdAt: string;
 }
+
+// ─────────────────────────────────────────
+// LIFE FINANCE — Asset & Expense Tracking
+// ─────────────────────────────────────────
+
+export type AssetType = 'bank' | 'ewallet' | 'investment' | 'cash' | 'crypto';
+export type TransactionType = 'income' | 'expense' | 'transfer';
+export type GoalStatus = 'active' | 'achieved';
+
+export interface FinancialAsset {
+    id: string;
+    uid: string;
+    name: string;
+    type: AssetType;
+    balance: number;
+    currency: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface FinancialTransaction {
+    id: string;
+    uid: string;
+    assetId: string;           // The asset involved
+    toAssetId?: string;        // Target asset (only used if type is 'transfer')
+    toGoalId?: string;         // Target financial goal (only used if type is 'transfer')
+    amount: number;            // Amount in asset's currency (deducted/added to asset)
+    toAmount?: number;         // Amount received in target asset (for cross-currency transfers)
+    transferFee?: number;      // Transfer fee amount
+    transferFeeType?: 'add_to_source' | 'deduct_from_target'; // How the fee was applied
+    originalAmount?: number;   // The amount entered by user in txCurrency
+    originalCurrency?: string; // The currency selected by user for the transaction
+    type: TransactionType;
+    category: string;          // Main category e.g. Food, Transport
+    merchant?: string;         // Payee / Store name
+    tags?: string[];           // Additional labels e.g. 'impulse-buy', 'need'
+    context?: string;          // Emotion/reason e.g. 'stress-relief'
+    isRecurring?: boolean;     // Monthly bills flag
+    title: string;             // Short description
+    date: string;              // YYYY-MM-DD
+    timestamp: string;         // ISO date/time for peak hour analysis
+    createdAt: string;
+}
+
+export interface FinancialGoal {
+    id: string;
+    uid: string;
+    title: string;
+    targetAmount: number;
+    currentAmount: number;
+    currency: string;
+    deadline?: string;         // YYYY-MM-DD
+    status: GoalStatus;
+    createdAt: string;
+    updatedAt: string;
+}

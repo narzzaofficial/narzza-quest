@@ -9,6 +9,7 @@ import { useActivityLog } from '@/hooks/useActivityLog';
 import { useWorkTasks } from '@/hooks/useWorkTasks';
 import { useSituation } from '@/hooks/useSituation';
 import { useHabits } from '@/hooks/useHabits';
+import { useFinance } from '@/hooks/useFinance';
 import { MarkdownMessage } from '@/components/ai/MarkdownMessage';
 import { TypingIndicator } from '@/components/ai/TypingIndicator';
 import { formatGoal } from '@/constants/goal';
@@ -21,6 +22,7 @@ export default function ChatPage() {
     const workTasks = useWorkTasks(profile?.uid);
     const sit       = useSituation(profile?.uid);
     const habits    = useHabits(profile?.uid);
+    const finance   = useFinance(profile?.uid);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef       = useRef<HTMLTextAreaElement>(null);
@@ -59,6 +61,18 @@ export default function ChatPage() {
         habitSummary: habits.todayTotal > 0
             ? { completed: habits.todayCount, total: habits.todayTotal }
             : null,
+        financeSummary: {
+            totalNetWorthIDR: finance.totalNetWorthIDR,
+            incomeThisMonth: finance.getIncomeThisMonth(),
+            expenseThisMonth: finance.getExpenseThisMonth(),
+            goals: finance.goals.map((g: { title: string, currentAmount: number, targetAmount: number }) => ({
+                title: g.title,
+                progressPercentage: Math.round((g.currentAmount / g.targetAmount) * 100)
+            })),
+            recentTransactions: finance.transactions.slice(0, 5).map((t: { title: string, amount: number, type: string, category: string }) => ({
+                title: t.title, amount: t.amount, type: t.type, category: t.category
+            }))
+        },
         arcTitle:     ai.storyArc.arc?.title,
         arcNarrative: ai.storyArc.arc?.narrative,
     } : null;
@@ -91,7 +105,7 @@ export default function ChatPage() {
         setConfirmClear(false);
     };
 
-    const isEmpty = chat.messages.length === 0 && !chat.loading;
+    const isEmpty = chat.historyLoaded && chat.messages.length === 0 && !chat.loading;
 
     return (
         <div className="flex flex-col h-full max-h-screen bg-transparent">
@@ -217,7 +231,7 @@ export default function ChatPage() {
                         </button>
                     </div>
                     <p className="text-center text-ink-muted/40 text-[10px] mt-2">
-                        AI punya konteks penuh hidupmu — aktivitas, task, habit, tujuan, dan story arc
+                        AI punya konteks penuh hidupmu — aktivitas, task, habit, tujuan, story arc, dan kondisi keuanganmu.
                     </p>
                 </div>
             </div>

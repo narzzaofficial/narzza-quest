@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 
 import {
     LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -15,8 +16,10 @@ import { StatCard } from '@/components/analytics/StatCard';
 import { ChartCard } from '@/components/analytics/ChartCard';
 import { ActivityHeatmap } from '@/components/analytics/ActivityHeatmap';
 import { ExpGrowthChart } from '@/components/analytics/ExpGrowthChart';
+import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
 
 export default function AnalyticsPage() {
+    const [tab, setTab] = useState<'life' | 'finance'>('life');
     const { profile } = useAuth();
     const xp = useXPHistory(profile?.uid);
     const {
@@ -38,12 +41,32 @@ export default function AnalyticsPage() {
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
-            <header>
-                <h1 className="text-2xl font-extrabold text-ink">Analytics</h1>
-                <p className="text-ink-muted text-sm mt-0.5">Pola hidupmu dalam 30 hari terakhir</p>
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-extrabold text-ink">Analytics</h1>
+                    <p className="text-ink-muted text-sm mt-0.5">Pola hidup & finansialmu</p>
+                </div>
+                <div className="flex bg-surface-2 p-1 rounded-xl shadow-sm border border-line">
+                    <button
+                        onClick={() => setTab('life')}
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab === 'life' ? 'bg-brand text-white shadow-card' : 'text-ink-muted hover:text-ink hover:bg-surface-3'}`}
+                    >
+                        Life Analytics
+                    </button>
+                    <button
+                        onClick={() => setTab('finance')}
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all ${tab === 'finance' ? 'bg-brand text-white shadow-card' : 'text-ink-muted hover:text-ink hover:bg-surface-3'}`}
+                    >
+                        Finance Analytics
+                    </button>
+                </div>
             </header>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {tab === 'finance' ? (
+                <FinanceAnalytics />
+            ) : (
+                <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard icon={Activity} label="Jam Tercatat"   value={`${totalHoursLogged}j`} sub="30 hari" />
                 <StatCard icon={Zap}      label="Rata-rata Mood" value={avgMood}                 sub="(1–5)"  color="text-xp"      bg="bg-xp-soft" />
                 <StatCard icon={Clock}    label="Peak Hour"      value={peakHour}                sub="paling aktif" color="text-purple-600" bg="bg-purple-50" />
@@ -61,11 +84,11 @@ export default function AnalyticsPage() {
             {!noActivity && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <ChartCard title="Mood & Energi" sub="Rata-rata harian (skala 1–5)">
-                        <ResponsiveContainer width="100%" height={200}>
+                        <ResponsiveContainer width="100%" height={200} style={{ touchAction: 'pan-y' }}>
                             <LineChart data={moodEnergyData}>
                                 <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                                 <YAxis domain={[1, 5]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} />
-                                <Tooltip content={<ChartTip />} />
+                                <Tooltip content={<ChartTip />} isAnimationActive={false} />
                                 <Legend wrapperStyle={{ fontSize: 11 }} />
                                 <Line type="monotone" dataKey="mood"   name="Mood"   stroke="#3b82f6" strokeWidth={2} dot={false} />
                                 <Line type="monotone" dataKey="energy" name="Energi" stroke="#10b981" strokeWidth={2} dot={false} />
@@ -78,12 +101,12 @@ export default function AnalyticsPage() {
                             <p className="text-ink-muted text-sm py-8 text-center">Belum ada data</p>
                         ) : (
                             <div className="flex items-center gap-4">
-                                <ResponsiveContainer width="60%" height={200}>
+                                <ResponsiveContainer width="60%" height={200} style={{ touchAction: 'pan-y' }}>
                                     <PieChart>
                                         <Pie data={categoryData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
                                             {categoryData.map((e, i) => <Cell key={i} fill={e.color} />)}
                                         </Pie>
-                                        <Tooltip formatter={(v) => [`${Number(v).toFixed(1)} jam`]} />
+                                        <Tooltip formatter={(v) => [`${Number(v).toFixed(1)} jam`]} isAnimationActive={false} />
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="flex-1 space-y-1.5">
@@ -104,22 +127,22 @@ export default function AnalyticsPage() {
             {!noActivity && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <ChartCard title="Peak Hours" sub="Jam kamu paling sering mulai aktivitas">
-                        <ResponsiveContainer width="100%" height={180}>
+                        <ResponsiveContainer width="100%" height={180} style={{ touchAction: 'pan-y' }}>
                             <BarChart data={peakHoursData} barSize={8}>
                                 <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={2} />
                                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
-                                <Tooltip content={<ChartTip />} />
+                                <Tooltip content={<ChartTip />} isAnimationActive={false} />
                                 <Bar dataKey="count" name="Aktivitas" fill="#f59e0b" radius={[4,4,0,0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </ChartCard>
 
                     <ChartCard title="Hari Terbaik" sub="Hari dalam seminggu yang paling aktif">
-                        <ResponsiveContainer width="100%" height={180}>
+                        <ResponsiveContainer width="100%" height={180} style={{ touchAction: 'pan-y' }}>
                             <BarChart data={bestDayData} barSize={24}>
                                 <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
-                                <Tooltip content={<ChartTip />} />
+                                <Tooltip content={<ChartTip />} isAnimationActive={false} />
                                 <Bar dataKey="count" name="Aktivitas" fill="#10b981" radius={[4,4,0,0]} />
                             </BarChart>
                         </ResponsiveContainer>
@@ -142,12 +165,12 @@ export default function AnalyticsPage() {
                     {radarData.every(r => r.score === 0) ? (
                         <p className="text-ink-muted text-sm py-8 text-center">Selesaikan quest untuk melihat kekuatanmu</p>
                     ) : (
-                        <ResponsiveContainer width="100%" height={220}>
+                        <ResponsiveContainer width="100%" height={220} style={{ touchAction: 'pan-y' }}>
                             <RadarChart data={radarData}>
                                 <PolarGrid stroke="#e3e9f3" />
                                 <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: '#586484' }} />
                                 <Radar dataKey="score" name="Strength" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
-                                <Tooltip content={<ChartTip />} />
+                                <Tooltip content={<ChartTip />} isAnimationActive={false} />
                             </RadarChart>
                         </ResponsiveContainer>
                     )}
@@ -178,12 +201,12 @@ export default function AnalyticsPage() {
 
             {moodVsQuestData.length > 0 && (
                 <ChartCard title="Mood vs Output" sub="Korelasi rata-rata mood dengan quest selesai per hari">
-                    <ResponsiveContainer width="100%" height={200}>
+                    <ResponsiveContainer width="100%" height={200} style={{ touchAction: 'pan-y' }}>
                         <LineChart data={moodVsQuestData}>
                             <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                             <YAxis yAxisId="mood"   domain={[1,5]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} />
                             <YAxis yAxisId="quests" orientation="right" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
-                            <Tooltip content={<ChartTip />} />
+                            <Tooltip content={<ChartTip />} isAnimationActive={false} />
                             <Legend wrapperStyle={{ fontSize: 11 }} />
                             <Line yAxisId="mood"   type="monotone" dataKey="mood"   name="Mood"  stroke="#3b82f6" strokeWidth={2} dot={false} />
                             <Line yAxisId="quests" type="monotone" dataKey="quests" name="Quest" stroke="#10b981" strokeWidth={2} dot={false} strokeDasharray="4 2" />
@@ -200,6 +223,8 @@ export default function AnalyticsPage() {
                 totalNet={xp.totalNet}
                 maxAbs={xp.maxAbs}
             />
+                </>
+            )}
         </div>
     );
 }

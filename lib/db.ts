@@ -172,6 +172,18 @@ export async function updateQuestStatus(
     });
 }
 
+export async function updateQuestReflection(
+    questId: string,
+    submissionNote: string,
+    reviewNote: string
+): Promise<void> {
+    await updateDoc(doc(db, "quests", questId), {
+        submissionNote,
+        reviewNote,
+        updatedAt: new Date().toISOString(),
+    });
+}
+
 function getDeadlinePenaltyExp(quest: Quest): number {
     return Math.max(MIN_DEADLINE_PENALTY_EXP, Math.round((quest.expReward || 0) * 0.2));
 }

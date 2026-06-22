@@ -49,6 +49,13 @@ export interface ChatContext {
     recentEnergyAvg?: number | null;
     arcTitle?: string;
     arcNarrative?: string;
+    financeSummary?: {
+        totalNetWorthIDR: number;
+        incomeThisMonth: number;
+        expenseThisMonth: number;
+        goals: { title: string; progressPercentage: number }[];
+        recentTransactions: { title: string; amount: number; type: string; category: string }[];
+    } | null;
 }
 
 export async function POST(req: Request) {
@@ -133,6 +140,17 @@ export async function POST(req: Request) {
             lines.push(`Quest terbaru: ${context.recentQuestTitles.slice(0, 5).join(', ')}.`);
         }
 
+        // Finance context
+        if (context.financeSummary) {
+            const f = context.financeSummary;
+            lines.push([
+                `Kondisi Keuangan: Total Net Worth Rp ${Math.round(f.totalNetWorthIDR).toLocaleString('id-ID')}.`,
+                `Bulan ini: Pemasukan Rp ${Math.round(f.incomeThisMonth).toLocaleString('id-ID')}, Pengeluaran Rp ${Math.round(f.expenseThisMonth).toLocaleString('id-ID')}.`,
+                f.goals?.length ? `Target Finansial: ${f.goals.map(g => `${g.title} (${g.progressPercentage}%)`).join(', ')}.` : '',
+                f.recentTransactions?.length ? `Transaksi terakhir: ${f.recentTransactions.map(t => `${t.title} (${t.type === 'expense' ? '-' : '+'} ${t.amount})`).join('; ')}.` : ''
+            ].filter(Boolean).join(' '));
+        }
+
         const contextBlock = lines.filter(Boolean).join('\n');
 
         const system = [
@@ -155,6 +173,7 @@ export async function POST(req: Request) {
             '- Dompet/uang/reward → [My Wallet](/wallet)',
             '- Jadwal/roadmap/deadline → [Roadmap](/calendar)',
             '- Koneksi/partner → [My Network](/network)',
+            '- Keuangan/Aset/Pengeluaran → [Keuangan](/finance)',
             '- AI Game Master/generate quest/daily review → [AI Game Master](/ai-gm)',
             'Embed link secara natural di tengah kalimat, bukan sebagai list terpisah. Hanya link yang benar-benar relevan dengan isi jawaban.',
             '',
