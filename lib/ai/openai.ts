@@ -10,7 +10,7 @@ import type {
 const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
 function toOpenAIMessages(system: string | undefined, messages: AIMessage[]) {
-    const out: { role: AIMessage["role"]; content: string }[] = [];
+    const out: { role: AIMessage["role"]; content: string | any[] }[] = [];
     if (system) out.push({ role: "system", content: system });
     for (const m of messages) out.push({ role: m.role, content: m.content });
     return out;

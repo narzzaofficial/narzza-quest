@@ -18,6 +18,7 @@ export interface ChatContext {
         expEarned: number;
     } | null;
     recentQuestTitles?: string[];
+    recentJournals?: { content: string; createdAt: string }[];
     // Life Coach context
     situation?: {
         currentStatus: string;
@@ -138,6 +139,13 @@ export async function POST(req: Request) {
 
         if (context.recentQuestTitles?.length) {
             lines.push(`Quest terbaru: ${context.recentQuestTitles.slice(0, 5).join(', ')}.`);
+        }
+
+        if (context.recentJournals?.length) {
+            lines.push(`Catatan Jurnal/Perasaan terbaru dari user:`);
+            context.recentJournals.forEach(j => {
+                lines.push(`- [${new Date(j.createdAt).toLocaleDateString()}] "${j.content}"`);
+            });
         }
 
         // Finance context

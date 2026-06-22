@@ -4,9 +4,13 @@
 
 export type AIRole = "system" | "user" | "assistant";
 
+export type AIMessageContentPart = 
+    | { type: 'text'; text: string }
+    | { type: 'image_url'; image_url: { url: string } };
+
 export interface AIMessage {
     role: AIRole;
-    content: string;
+    content: string | AIMessageContentPart[];
 }
 
 export interface GenerateTextOptions {

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getPlayerQuests, getLinkedProfiles } from '@/lib/db';
-import type { Quest, UserProfile } from '@/types';
+import { subscribeToPersonalJournals } from '@/lib/journalDb';
+import type { Quest, UserProfile, PersonalJournal, TimelineItem } from '@/types';
 
 /** Journal logic: approved quests for the current player (or selected hero, for GM). */
 export function useJournal() {
@@ -12,6 +13,7 @@ export function useJournal() {
     const [linkedHeroes, setLinkedHeroes] = useState<UserProfile[]>([]);
     const [selectedHeroId, setSelectedHeroId] = useState('');
     const [completedQuests, setCompletedQuests] = useState<Quest[]>([]);
+    const [personalJournals, setPersonalJournals] = useState<PersonalJournal[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
 
     useEffect(() => {
@@ -33,6 +35,8 @@ export function useJournal() {
     useEffect(() => {
         if (!selectedHeroId) return;
         setIsLoadingData(true);
+        
+        // Fetch quests
         getPlayerQuests(selectedHeroId)
             .then((quests) => {
                 const approved = quests
@@ -42,10 +46,25 @@ export function useJournal() {
                 setIsLoadingData(false);
             })
             .catch((err) => {
-                console.error('Gagal mengambil jurnal:', err);
+                console.error('Gagal mengambil jurnal quest:', err);
                 setIsLoadingData(false);
             });
+
+        // Subscribe to personal journals
+        const unsub = subscribeToPersonalJournals(selectedHeroId, (journals) => {
+            setPersonalJournals(journals);
+        });
+
+        return () => unsub();
     }, [selectedHeroId]);
+
+    // Build timeline
+    const timeline: TimelineItem[] = [
+        ...completedQuests.map(q => ({ type: 'quest' as const, data: q, sortDate: new Date(q.updatedAt).getTime() })),
+        ...personalJournals
+            .filter(j => profile?.role === 'gm' ? j.visibility === 'gm' : true)
+            .map(j => ({ type: 'personal' as const, data: j, sortDate: new Date(j.createdAt).getTime() }))
+    ].sort((a, b) => b.sortDate - a.sortDate);
 
     const totalExpEarned = completedQuests.reduce((sum, q) => sum + q.expReward + (q.bonusExp || 0), 0);
 
@@ -55,6 +74,7 @@ export function useJournal() {
         linkedHeroes,
         selectedHeroId,
         setSelectedHeroId,
+        timeline,
         completedQuests,
         isLoadingData,
         totalExpEarned,

@@ -10,6 +10,7 @@ import { useWorkTasks } from '@/hooks/useWorkTasks';
 import { useSituation } from '@/hooks/useSituation';
 import { useHabits } from '@/hooks/useHabits';
 import { useFinance } from '@/hooks/useFinance';
+import { useJournal } from '@/hooks/useJournal';
 import { MarkdownMessage } from '@/components/ai/MarkdownMessage';
 import { TypingIndicator } from '@/components/ai/TypingIndicator';
 import { formatGoal } from '@/constants/goal';
@@ -23,6 +24,7 @@ export default function ChatPage() {
     const sit       = useSituation(profile?.uid);
     const habits    = useHabits(profile?.uid);
     const finance   = useFinance(profile?.uid);
+    const journal   = useJournal();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef       = useRef<HTMLTextAreaElement>(null);
@@ -43,6 +45,13 @@ export default function ChatPage() {
             expEarned:       ai.review.expEarned,
         } : null,
         recentQuestTitles: ai.aiQuests.slice(0, 5).map((q: { title: string }) => q.title),
+        recentJournals: journal.timeline
+            .filter(item => item.type === 'personal')
+            .slice(0, 5)
+            .map(item => ({
+                content: (item.data as any).content,
+                createdAt: (item.data as any).createdAt
+            })),
         situation: sit.situation ? {
             currentStatus:  sit.situation.currentStatus,
             weekFocus:      sit.situation.weekFocus,

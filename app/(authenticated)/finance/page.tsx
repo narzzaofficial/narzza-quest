@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFinance } from '@/hooks/useFinance';
-import { Landmark, Plus, ArrowUpRight, ArrowDownRight, Wallet, Banknote, LineChart, Loader2, Target, PieChart } from 'lucide-react';
+import { Landmark, Plus, ArrowUpRight, ArrowDownRight, Wallet, Banknote, LineChart, Loader2, Target, PieChart, ScanLine } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import SectionLabel from '@/components/ui/SectionLabel';
@@ -46,6 +46,8 @@ export default function FinancePage() {
     });
 
     const [toast, setToast] = useState({ show: false, msg: '', type: 'success' as 'success' | 'error' });
+    const [isScanning, setIsScanning] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
         setToast({ show: true, msg, type });
@@ -146,6 +148,59 @@ export default function FinancePage() {
         } catch (error) {
             console.error(error);
             showToast('Gagal mencatat transaksi', 'error');
+        }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsScanning(true);
+        showToast('Memindai struk dengan AI...', 'success');
+
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                const base64 = reader.result as string;
+                
+                const res = await fetch('/api/ai/scan-receipt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64: base64 })
+                });
+
+                const json = await res.json();
+                if (json.error) throw new Error(json.error);
+
+                const data = json.data;
+                const matchedAsset = assets.find(a => data.assetName && a.name.toLowerCase().includes(data.assetName.toLowerCase()));
+                const matchedToAsset = assets.find(a => data.toAssetName && a.name.toLowerCase().includes(data.toAssetName.toLowerCase()));
+
+                setNewTx(prev => ({
+                    ...prev,
+                    type: data.type === 'income' ? 'income' : data.type === 'transfer' ? 'transfer' : 'expense',
+                    amount: data.amount || 0,
+                    merchant: data.merchant || '',
+                    title: data.title || '',
+                    category: data.category || '',
+                    context: data.context || '',
+                    hasTransferFee: !!data.transferFee,
+                    transferFee: data.transferFee || 0,
+                    assetId: matchedAsset ? matchedAsset.id : prev.assetId,
+                    toAssetId: matchedToAsset ? matchedToAsset.id : prev.toAssetId
+                }));
+                showToast('Struk berhasil dibaca!', 'success');
+                setIsScanning(false);
+            };
+            reader.onerror = () => {
+                throw new Error('Gagal membaca file gambar');
+            };
+        } catch (error: any) {
+            showToast(error.message || 'Gagal memindai struk', 'error');
+            setIsScanning(false);
+        } finally {
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
@@ -335,6 +390,18 @@ export default function FinancePage() {
                                 <button onClick={() => setNewTx({ ...newTx, type: 'expense', category: '' })} className={`flex-1 py-2 rounded-lg font-bold text-xs border transition-colors ${newTx.type === 'expense' ? 'bg-danger-soft text-danger border-danger/30' : 'bg-surface-2 text-ink-muted border-transparent hover:bg-surface-3'}`}>Pengeluaran</button>
                                 <button onClick={() => setNewTx({ ...newTx, type: 'income', category: '' })} className={`flex-1 py-2 rounded-lg font-bold text-xs border transition-colors ${newTx.type === 'income' ? 'bg-success-soft text-success border-success/30' : 'bg-surface-2 text-ink-muted border-transparent hover:bg-surface-3'}`}>Pemasukan</button>
                                 <button onClick={() => setNewTx({ ...newTx, type: 'transfer', category: 'Transfer / Convert' })} className={`flex-1 py-2 rounded-lg font-bold text-xs border transition-colors ${newTx.type === 'transfer' ? 'bg-brand-soft text-brand border-brand/30' : 'bg-surface-2 text-ink-muted border-transparent hover:bg-surface-3'}`}>Transfer / Beli Aset</button>
+                            </div>
+
+                            <div className="mb-4">
+                                <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                                <button 
+                                    onClick={() => fileInputRef.current?.click()} 
+                                    disabled={isScanning}
+                                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-brand/40 bg-brand-soft/30 hover:bg-brand-soft/50 text-brand font-bold text-sm transition-all disabled:opacity-50"
+                                >
+                                    {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
+                                    {isScanning ? 'AI Sedang Membaca...' : '🪄 Auto Scan Struk dengan AI'}
+                                </button>
                             </div>
 
                             <div className="space-y-3">

@@ -97,6 +97,21 @@ export interface JournalEntry {
     authorId: string;
 }
 
+export interface PersonalJournal {
+    id: string;
+    uid: string;
+    content: string;
+    mood?: 1 | 2 | 3 | 4 | 5;
+    visibility?: 'private' | 'gm';
+    createdAt: string;
+    updatedAt: string;
+}
+
+export type TimelineItem = 
+    | { type: 'quest', data: Quest, sortDate: number }
+    | { type: 'personal', data: PersonalJournal, sortDate: number };
+
+
 export interface Notification {
     id: string;
     toUid: string;
