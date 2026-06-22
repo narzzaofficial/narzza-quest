@@ -11,7 +11,7 @@ import {
     LayoutDashboard, Bot, ScrollText, BookOpen, Swords, Bell,
     ListTodo, ClipboardCheck, HeartHandshake, LogOut, Users,
     Settings, CalendarDays, Trophy, Wallet, Receipt,
-    Activity, BarChart2, PanelLeftClose, PanelLeftOpen, ChevronDown, MessageCircle, BookMarked, Landmark
+    Activity, BarChart2, PanelLeftClose, PanelLeftOpen, ChevronDown, MessageCircle, BookMarked, Landmark, ShieldAlert
 } from 'lucide-react';
 
 type BadgeKey = keyof ReturnType<typeof useBadges>;
@@ -225,7 +225,17 @@ export default function Sidebar() {
 
     if (!profile) return null;
 
-    const groups = profile.role === 'gm' ? gmGroups : heroGroups;
+    let groups = profile.role === 'gm' ? [...gmGroups] : [...heroGroups];
+    if (profile.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL) {
+        groups = [{
+            label: 'System',
+            links: [
+                { name: 'Super Admin', href: '/superadmin', icon: <ShieldAlert className="w-5 h-5" />, badgeKey: null }
+            ]
+        }];
+    }
+    
+    const isSuperAdmin = profile.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
     const avatarUrl = profile.avatar || dicebearAvatar(profile.displayName);
 
     return (
@@ -233,19 +243,23 @@ export default function Sidebar() {
 
             {/* PROFILE */}
             <Link
-                href="/dashboard"
+                href={isSuperAdmin ? "/superadmin" : "/dashboard"}
                 className={`flex items-center gap-3 border-b border-line hover:bg-surface-2 transition-colors rounded-xl cursor-pointer group mx-2 ${collapsed ? 'justify-center p-3 my-3' : 'px-3 pt-4 pb-5 mb-2'}`}
             >
-                <div className="w-10 h-10 rounded-xl shrink-0 border border-line overflow-hidden bg-surface group-hover:border-brand/40 transition-colors">
-                    <Image src={avatarUrl} alt="Avatar" width={40} height={40} className="w-full h-full object-cover" />
+                <div className="w-10 h-10 rounded-xl shrink-0 border border-line overflow-hidden bg-surface group-hover:border-brand/40 transition-colors flex items-center justify-center">
+                    {isSuperAdmin ? (
+                        <ShieldAlert className="w-6 h-6 text-brand" />
+                    ) : (
+                        <Image src={avatarUrl} alt="Avatar" width={40} height={40} className="w-full h-full object-cover" />
+                    )}
                 </div>
                 {!collapsed && (
                     <div className="flex flex-col overflow-hidden">
                         <h2 className="text-sm font-bold text-ink truncate group-hover:text-brand transition-colors">
-                            {profile.displayName}
+                            {isSuperAdmin ? 'Super Admin' : profile.displayName}
                         </h2>
                         <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand truncate mt-0.5">
-                            {profile.role === 'gm' ? 'Game Master' : profile.title || `Lv. ${profile.level || 1} Hero`}
+                            {isSuperAdmin ? 'System Control' : profile.role === 'gm' ? 'Game Master' : profile.title || `Lv. ${profile.level || 1} Hero`}
                         </span>
                     </div>
                 )}

@@ -100,7 +100,7 @@ export function ExpGrowthChart({ data }: { data: ExpPoint[] }) {
             {data.length === 0 ? (
                 <p className="text-ink-muted text-sm py-10 text-center">Belum ada data EXP</p>
             ) : mode === 'cumulative' ? (
-                <ResponsiveContainer width="100%" height={220} style={{ touchAction: 'pan-y' }}>
+                <ResponsiveContainer width="100%" height={220} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
                     <AreaChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="expCumulGrad" x1="0" y1="0" x2="0" y2="1">
@@ -135,7 +135,7 @@ export function ExpGrowthChart({ data }: { data: ExpPoint[] }) {
                 </ResponsiveContainer>
             ) : (
                 <>
-                    <ResponsiveContainer width="100%" height={220} style={{ touchAction: 'pan-y' }}>
+                    <ResponsiveContainer width="100%" height={220} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
                         <BarChart
                             data={data}
                             margin={{ top: 4, right: 8, left: 0, bottom: 0 }}

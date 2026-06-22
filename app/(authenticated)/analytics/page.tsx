@@ -84,7 +84,7 @@ export default function AnalyticsPage() {
             {!noActivity && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <ChartCard title="Mood & Energi" sub="Rata-rata harian (skala 1–5)">
-                        <ResponsiveContainer width="100%" height={200} style={{ touchAction: 'pan-y' }}>
+                        <ResponsiveContainer width="100%" height={200} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
                             <LineChart data={moodEnergyData}>
                                 <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                                 <YAxis domain={[1, 5]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} />
@@ -101,7 +101,7 @@ export default function AnalyticsPage() {
                             <p className="text-ink-muted text-sm py-8 text-center">Belum ada data</p>
                         ) : (
                             <div className="flex items-center gap-4">
-                                <ResponsiveContainer width="60%" height={200} style={{ touchAction: 'pan-y' }}>
+                                <ResponsiveContainer width="60%" height={200} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
                                     <PieChart>
                                         <Pie data={categoryData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
                                             {categoryData.map((e, i) => <Cell key={i} fill={e.color} />)}
@@ -127,7 +127,7 @@ export default function AnalyticsPage() {
             {!noActivity && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <ChartCard title="Peak Hours" sub="Jam kamu paling sering mulai aktivitas">
-                        <ResponsiveContainer width="100%" height={180} style={{ touchAction: 'pan-y' }}>
+                        <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
                             <BarChart data={peakHoursData} barSize={8}>
                                 <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={2} />
                                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
@@ -138,7 +138,7 @@ export default function AnalyticsPage() {
                     </ChartCard>
 
                     <ChartCard title="Hari Terbaik" sub="Hari dalam seminggu yang paling aktif">
-                        <ResponsiveContainer width="100%" height={180} style={{ touchAction: 'pan-y' }}>
+                        <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
                             <BarChart data={bestDayData} barSize={24}>
                                 <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
@@ -165,7 +165,7 @@ export default function AnalyticsPage() {
                     {radarData.every(r => r.score === 0) ? (
                         <p className="text-ink-muted text-sm py-8 text-center">Selesaikan quest untuk melihat kekuatanmu</p>
                     ) : (
-                        <ResponsiveContainer width="100%" height={220} style={{ touchAction: 'pan-y' }}>
+                        <ResponsiveContainer width="100%" height={220} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
                             <RadarChart data={radarData}>
                                 <PolarGrid stroke="#e3e9f3" />
                                 <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: '#586484' }} />
@@ -201,7 +201,7 @@ export default function AnalyticsPage() {
 
             {moodVsQuestData.length > 0 && (
                 <ChartCard title="Mood vs Output" sub="Korelasi rata-rata mood dengan quest selesai per hari">
-                    <ResponsiveContainer width="100%" height={200} style={{ touchAction: 'pan-y' }}>
+                    <ResponsiveContainer width="100%" height={200} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
                         <LineChart data={moodVsQuestData}>
                             <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                             <YAxis yAxisId="mood"   domain={[1,5]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} />

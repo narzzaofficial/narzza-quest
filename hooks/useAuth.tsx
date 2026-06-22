@@ -66,7 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribe = onAuthStateChanged(auth, async (u) => {
         setUser(u);
         if (u) {
-          const p = await getUserProfile(u.uid);
+          let p = await getUserProfile(u.uid);
+          if (!p) {
+              p = await createUserProfile(u.uid, {
+                  email: u.email || "",
+                  displayName: u.displayName || "User",
+                  role: "player"
+              });
+          }
           setProfile(p);
         } else {
           setProfile(null);

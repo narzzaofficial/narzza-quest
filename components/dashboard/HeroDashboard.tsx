@@ -109,7 +109,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                     <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-1">Experience</p>
                     <p className="text-ink font-bold text-sm mb-1">Level {profile.level || 1} → {(profile.level || 1) + 1}</p>
                     <div className="relative mx-auto" style={{ height: 180 }}>
-                        <ResponsiveContainer width="100%" height={180}>
+                        <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={1}>
                             <RadialBarChart innerRadius="74%" outerRadius="100%" data={[{ value: d.expPercent }]} startAngle={90} endAngle={-270}>
                                 <defs>
                                     <linearGradient id="radialGrad" x1="0" y1="0" x2="1" y2="1">
@@ -162,7 +162,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                         </div>
                     </div>
                     <div className="relative" style={{ height: 200 }}>
-                        <ResponsiveContainer width="100%" height={200}>
+                        <ResponsiveContainer width="100%" height={200} minWidth={1} minHeight={1}>
                             <ComposedChart data={d.activity7d} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={2}>
                                 <defs>
                                     <linearGradient id="expLineGrad" x1="0" y1="0" x2="0" y2="1">

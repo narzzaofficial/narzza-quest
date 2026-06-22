@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFinance } from '@/hooks/useFinance';
-import { Landmark, Plus, ArrowUpRight, ArrowDownRight, Wallet, Banknote, LineChart, Loader2, Target } from 'lucide-react';
+import { Landmark, Plus, ArrowUpRight, ArrowDownRight, Wallet, Banknote, LineChart, Loader2, Target, PieChart } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import SectionLabel from '@/components/ui/SectionLabel';
@@ -27,17 +27,17 @@ export default function FinancePage() {
     const [newGoal, setNewGoal] = useState({ title: '', targetAmount: 0, currentAmount: 0, currency: 'IDR' });
 
     const [isAddingTx, setIsAddingTx] = useState(false);
-    const [newTx, setNewTx] = useState({ 
-        type: 'expense' as 'income' | 'expense' | 'transfer', 
-        amount: 0, 
+    const [newTx, setNewTx] = useState({
+        type: 'expense' as 'income' | 'expense' | 'transfer',
+        amount: 0,
         toAmount: 0,
         txCurrency: '',
-        assetId: '', 
+        assetId: '',
         toAssetId: '',
         toGoalId: '',
-        category: '', 
-        title: '', 
-        merchant: '', 
+        category: '',
+        title: '',
+        merchant: '',
         context: '',
         isRecurring: false,
         hasTransferFee: false,
@@ -108,13 +108,13 @@ export default function FinancePage() {
             if (newTx.type === 'transfer') {
                 if (newTx.toAssetId) txData.toAssetId = newTx.toAssetId;
                 if (newTx.toGoalId) txData.toGoalId = newTx.toGoalId;
-                
+
                 const toCurrency = newTx.toAssetId ? assets.find(a => a.id === newTx.toAssetId)?.currency : goals.find(g => g.id === newTx.toGoalId)?.currency;
                 let receivedAmount = finalAmount;
                 if (assetCurrency !== toCurrency && toCurrency && exchangeRates[assetCurrency] && exchangeRates[toCurrency]) {
                     receivedAmount = finalAmount * (exchangeRates[toCurrency] / exchangeRates[assetCurrency]);
                 }
-                
+
                 if (newTx.hasTransferFee && newTx.transferFee > 0) {
                     if (newTx.transferFeeType === 'add_to_source') {
                         txData.amount = finalAmount + newTx.transferFee;
@@ -139,7 +139,7 @@ export default function FinancePage() {
             }
 
             await recordTransaction(profile.uid, txData);
-            
+
             setIsAddingTx(false);
             setNewTx({ type: 'expense', amount: 0, toAmount: 0, txCurrency: '', assetId: assets[0]?.id || '', toAssetId: '', toGoalId: '', category: '', title: '', merchant: '', context: '', isRecurring: false, hasTransferFee: false, transferFee: 0, transferFeeType: 'add_to_source' });
             showToast('Transaksi berhasil dicatat!');
@@ -171,16 +171,17 @@ export default function FinancePage() {
                 <div className="absolute top-0 right-0 p-8 opacity-5">
                     <Landmark className="w-32 h-32" />
                 </div>
-                <div className="relative z-10">
-                    <p className="text-ink-muted text-[10px] md:text-xs uppercase tracking-widest font-bold mb-1">Total Net Worth (Estimasi IDR)</p>
-                    <h2 className="text-4xl md:text-5xl font-black text-brand tracking-tight">
-                        Rp {Math.round(totalNetWorthIDR).toLocaleString('id-ID')}
-                    </h2>
+                <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <p className="text-ink-muted text-[10px] md:text-xs uppercase tracking-widest font-bold mb-1">Total Net Worth (Estimasi IDR)</p>
+                        <h2 className="text-4xl md:text-5xl font-black text-brand tracking-tight">
+                            Rp {Math.round(totalNetWorthIDR).toLocaleString('id-ID')}
+                        </h2>
+                    </div>
                 </div>
             </GlassCard>
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* KIRI: Daftar Aset */}
                 <div className="lg:col-span-1 space-y-4">
                     <div className="flex items-center justify-between">
@@ -271,11 +272,11 @@ export default function FinancePage() {
                             <div>
                                 <label className="text-[10px] font-bold text-ink-muted uppercase tracking-widest mb-1 block">Mata Uang</label>
                                 <select value={newGoal.currency} onChange={e => setNewGoal({ ...newGoal, currency: e.target.value })} className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand">
-                                        <option value="IDR">IDR</option>
-                                        <option value="MYR">MYR</option>
-                                        <option value="USD">USD</option>
-                                        <option value="EUR">EUR</option>
-                                        <option value="BTC">BTC</option>
+                                    <option value="IDR">IDR</option>
+                                    <option value="MYR">MYR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="BTC">BTC</option>
                                 </select>
                             </div>
                             <button onClick={handleAddGoal} disabled={!newGoal.title || newGoal.targetAmount <= 0} className="w-full bg-brand text-white font-bold py-2 rounded-lg text-sm disabled:opacity-50 hover:brightness-110 transition-all">Simpan Target</button>
@@ -289,7 +290,7 @@ export default function FinancePage() {
                             {goals.map(goal => {
                                 const progress = Math.min(100, Math.max(0, (goal.currentAmount / goal.targetAmount) * 100));
                                 const isCompleted = goal.currentAmount >= goal.targetAmount;
-                                
+
                                 return (
                                     <GlassCard key={goal.id} className="p-5 flex flex-col gap-3 group hover:border-brand/30 transition-all hover:-translate-y-0.5">
                                         <div className="flex items-start justify-between">
@@ -320,10 +321,10 @@ export default function FinancePage() {
 
                 {/* KANAN: Transaksi & Goals */}
                 <div className="lg:col-span-2 space-y-6">
-                    
+
                     <div className="flex items-center justify-between">
                         <SectionLabel className="flex items-center gap-1.5 m-0"><Banknote className="w-4 h-4" /> Transaksi Terakhir</SectionLabel>
-                        <button onClick={() => { setIsAddingTx(!isAddingTx); if(!newTx.assetId && assets.length>0) setNewTx({...newTx, assetId: assets[0].id}); }} className="text-[10px] font-bold uppercase tracking-widest text-brand bg-brand-soft px-3 py-1.5 rounded-lg hover:bg-brand hover:text-white transition-colors">
+                        <button onClick={() => { setIsAddingTx(!isAddingTx); if (!newTx.assetId && assets.length > 0) setNewTx({ ...newTx, assetId: assets[0].id }); }} className="text-[10px] font-bold uppercase tracking-widest text-brand bg-brand-soft px-3 py-1.5 rounded-lg hover:bg-brand hover:text-white transition-colors">
                             {isAddingTx ? 'Batal' : '+ Catat Transaksi'}
                         </button>
                     </div>
@@ -331,11 +332,11 @@ export default function FinancePage() {
                     {isAddingTx && (
                         <GlassCard className="p-5 border-brand/20 bg-surface animate-in fade-in slide-in-from-top-2">
                             <div className="flex gap-2 mb-4">
-                                <button onClick={() => setNewTx({...newTx, type: 'expense', category: ''})} className={`flex-1 py-2 rounded-lg font-bold text-xs border transition-colors ${newTx.type === 'expense' ? 'bg-danger-soft text-danger border-danger/30' : 'bg-surface-2 text-ink-muted border-transparent hover:bg-surface-3'}`}>Pengeluaran</button>
-                                <button onClick={() => setNewTx({...newTx, type: 'income', category: ''})} className={`flex-1 py-2 rounded-lg font-bold text-xs border transition-colors ${newTx.type === 'income' ? 'bg-success-soft text-success border-success/30' : 'bg-surface-2 text-ink-muted border-transparent hover:bg-surface-3'}`}>Pemasukan</button>
-                                <button onClick={() => setNewTx({...newTx, type: 'transfer', category: 'Transfer / Convert'})} className={`flex-1 py-2 rounded-lg font-bold text-xs border transition-colors ${newTx.type === 'transfer' ? 'bg-brand-soft text-brand border-brand/30' : 'bg-surface-2 text-ink-muted border-transparent hover:bg-surface-3'}`}>Transfer / Beli Aset</button>
+                                <button onClick={() => setNewTx({ ...newTx, type: 'expense', category: '' })} className={`flex-1 py-2 rounded-lg font-bold text-xs border transition-colors ${newTx.type === 'expense' ? 'bg-danger-soft text-danger border-danger/30' : 'bg-surface-2 text-ink-muted border-transparent hover:bg-surface-3'}`}>Pengeluaran</button>
+                                <button onClick={() => setNewTx({ ...newTx, type: 'income', category: '' })} className={`flex-1 py-2 rounded-lg font-bold text-xs border transition-colors ${newTx.type === 'income' ? 'bg-success-soft text-success border-success/30' : 'bg-surface-2 text-ink-muted border-transparent hover:bg-surface-3'}`}>Pemasukan</button>
+                                <button onClick={() => setNewTx({ ...newTx, type: 'transfer', category: 'Transfer / Convert' })} className={`flex-1 py-2 rounded-lg font-bold text-xs border transition-colors ${newTx.type === 'transfer' ? 'bg-brand-soft text-brand border-brand/30' : 'bg-surface-2 text-ink-muted border-transparent hover:bg-surface-3'}`}>Transfer / Beli Aset</button>
                             </div>
-                            
+
                             <div className="space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
@@ -347,14 +348,14 @@ export default function FinancePage() {
                                     {newTx.type === 'transfer' ? (
                                         <div>
                                             <label className="text-[10px] font-bold text-ink-muted uppercase tracking-widest mb-1 block">Ke Tujuan</label>
-                                            <select 
-                                                value={newTx.toAssetId ? `asset_${newTx.toAssetId}` : newTx.toGoalId ? `goal_${newTx.toGoalId}` : ''} 
+                                            <select
+                                                value={newTx.toAssetId ? `asset_${newTx.toAssetId}` : newTx.toGoalId ? `goal_${newTx.toGoalId}` : ''}
                                                 onChange={e => {
                                                     const val = e.target.value;
                                                     if (val.startsWith('asset_')) setNewTx({ ...newTx, toAssetId: val.replace('asset_', ''), toGoalId: '' });
                                                     else if (val.startsWith('goal_')) setNewTx({ ...newTx, toGoalId: val.replace('goal_', ''), toAssetId: '' });
                                                     else setNewTx({ ...newTx, toAssetId: '', toGoalId: '' });
-                                                }} 
+                                                }}
                                                 className="w-full bg-surface-2 border border-line rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand"
                                             >
                                                 <option value="">-- Pilih Tujuan --</option>
@@ -415,7 +416,7 @@ export default function FinancePage() {
                                                     </div>
                                                 </div>
                                                 <p className="text-[10px] text-ink-muted leading-relaxed">
-                                                    {newTx.transferFeeType === 'add_to_source' 
+                                                    {newTx.transferFeeType === 'add_to_source'
                                                         ? 'Biaya akan dibebankan ke aset pengirim (menambah total pengeluaran).'
                                                         : 'Biaya akan dipotong dari uang yang ditransfer (mengurangi uang yang diterima target).'}
                                                 </p>
@@ -423,7 +424,7 @@ export default function FinancePage() {
                                         )}
                                     </>
                                 )}
-                                
+
                                 {newTx.type !== 'transfer' && (
                                     <>
                                         <div className="grid grid-cols-2 gap-3">
@@ -515,8 +516,8 @@ export default function FinancePage() {
                     )}
                 </div>
             </div>
-            
-            <Toast isVisible={toast.show} message={toast.msg} type={toast.type} onClose={() => setToast(p => ({...p, show: false}))} />
+
+            <Toast isVisible={toast.show} message={toast.msg} type={toast.type} onClose={() => setToast(p => ({ ...p, show: false }))} />
         </div>
     );
 }
