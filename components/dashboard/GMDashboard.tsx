@@ -5,6 +5,7 @@ import { Crown, Swords, Users, Compass } from 'lucide-react';
 import { GRAD } from '@/constants/ui';
 import { PendingBanner } from '@/components/dashboard/PendingBanner';
 import { HeroCard } from '@/components/dashboard/HeroCard';
+import { MenuGrid } from '@/components/dashboard/MenuGrid';
 import type { useDashboard } from '@/hooks/useDashboard';
 
 type DashboardData = ReturnType<typeof useDashboard>;
@@ -42,6 +43,8 @@ export function GMDashboard({ d }: { d: DashboardData }) {
                     </div>
                 </div>
             </header>
+
+            <MenuGrid role="gm" />
 
             <div>
                 <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-3">Pantauan Hero</p>

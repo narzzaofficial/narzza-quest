@@ -40,7 +40,27 @@ export default function QuestBoardPage() {
             </div>
 
             {board.loading ? (
-                <div className="text-center py-20 text-ink-muted font-bold">Mengumpulkan quest…</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} className="glass p-5 rounded-card space-y-4">
+                            <div className="flex justify-between items-start">
+                                <div className="space-y-2 flex-1 mr-4">
+                                    <div className="animate-pulse h-5 bg-brand-soft/50 rounded w-3/4"></div>
+                                    <div className="animate-pulse h-3 bg-brand-soft/50 rounded w-1/2"></div>
+                                </div>
+                                <div className="animate-pulse h-8 w-8 bg-brand-soft/50 rounded-lg"></div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="animate-pulse h-3 bg-brand-soft/50 rounded w-full"></div>
+                                <div className="animate-pulse h-3 bg-brand-soft/50 rounded w-5/6"></div>
+                            </div>
+                            <div className="flex justify-between items-center pt-2 border-t border-line">
+                                <div className="animate-pulse h-4 bg-brand-soft/50 rounded w-16"></div>
+                                <div className="animate-pulse h-8 w-24 bg-brand-soft/50 rounded-lg"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             ) : board.quests.length === 0 ? (
                 <EmptyState
                     icon={Inbox}

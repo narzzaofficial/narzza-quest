@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    LayoutDashboard, ScrollText, Bot, Activity, Bell,
-    ListTodo, ClipboardCheck, HeartHandshake,
+    LayoutDashboard, ScrollText, Landmark, User, ListTodo, Receipt
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBadges } from '@/hooks/useBadges';
@@ -17,19 +16,17 @@ interface TabItem {
 }
 
 const heroTabs: TabItem[] = [
-    { name: 'Home',        href: '/dashboard',   icon: LayoutDashboard },
-    { name: 'Quest',       href: '/quest-board', icon: ScrollText,      badgeKey: 'questBoard' },
-    { name: 'AI GM',       href: '/ai-gm',       icon: Bot },
-    { name: 'Life Log',    href: '/life-log',    icon: Activity },
-    { name: 'Notif',       href: '/notifications', icon: Bell,           badgeKey: 'notifications' },
+    { name: 'Home',    href: '/dashboard',   icon: LayoutDashboard },
+    { name: 'Quest',   href: '/quest-board', icon: ScrollText,      badgeKey: 'questBoard' },
+    { name: 'Finance', href: '/finance',     icon: Landmark },
+    { name: 'Profile', href: '/profile',     icon: User },
 ];
 
 const gmTabs: TabItem[] = [
     { name: 'Home',     href: '/dashboard',   icon: LayoutDashboard },
     { name: 'Quests',   href: '/gm/quests',   icon: ListTodo,         badgeKey: 'manageQuests' },
-    { name: 'Review',   href: '/gm/review',   icon: ClipboardCheck,   badgeKey: 'reviewSubmissions' },
-    { name: 'Cheer',    href: '/gm/encourage',icon: HeartHandshake,   badgeKey: 'encourage' },
-    { name: 'Notif',    href: '/notifications',icon: Bell,             badgeKey: 'notifications' },
+    { name: 'Payouts',  href: '/gm/payouts',  icon: Receipt },
+    { name: 'Profile',  href: '/profile',     icon: User },
 ];
 
 export function BottomNav() {
@@ -40,6 +37,9 @@ export function BottomNav() {
     if (!profile) return null;
 
     const tabs = profile.role === 'gm' ? gmTabs : heroTabs;
+    const isTopLevel = tabs.some(tab => pathname === tab.href);
+
+    if (!isTopLevel) return null;
 
     return (
         <nav

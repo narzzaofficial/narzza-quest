@@ -181,6 +181,7 @@ export default function FinancePage() {
                     ...prev,
                     type: data.type === 'income' ? 'income' : data.type === 'transfer' ? 'transfer' : 'expense',
                     amount: data.amount || 0,
+                    txCurrency: data.currency || prev.txCurrency,
                     merchant: data.merchant || '',
                     title: data.title || '',
                     category: data.category || '',
@@ -206,8 +207,68 @@ export default function FinancePage() {
 
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-brand animate-spin" />
+            <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6 md:space-y-8">
+                {/* Header Skeleton */}
+                <div className="flex gap-4 items-center">
+                    <div className="animate-pulse w-12 h-12 rounded-2xl bg-brand-soft/50"></div>
+                    <div className="space-y-2 flex-1">
+                        <div className="animate-pulse h-6 w-48 bg-brand-soft/50 rounded"></div>
+                        <div className="animate-pulse h-4 w-72 bg-brand-soft/50 rounded"></div>
+                    </div>
+                </div>
+
+                {/* Net Worth Card Skeleton */}
+                <div className="relative overflow-hidden p-6 md:p-8 rounded-card border border-brand/20 bg-surface">
+                    <div className="animate-pulse h-4 w-32 bg-brand-soft/50 rounded mb-2"></div>
+                    <div className="animate-pulse h-12 w-64 bg-brand-soft/50 rounded"></div>
+                </div>
+
+                {/* Main Content Skeleton */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* KIRI: Daftar Aset Skeleton */}
+                    <div className="lg:col-span-1 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div className="animate-pulse h-5 w-24 bg-brand-soft/50 rounded"></div>
+                            <div className="animate-pulse h-6 w-16 bg-brand-soft/50 rounded"></div>
+                        </div>
+                        <div className="space-y-3">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="p-4 rounded-card border border-line bg-surface flex justify-between">
+                                    <div className="space-y-2">
+                                        <div className="animate-pulse h-4 w-20 bg-brand-soft/50 rounded"></div>
+                                        <div className="animate-pulse h-3 w-12 bg-brand-soft/50 rounded"></div>
+                                    </div>
+                                    <div className="animate-pulse h-5 w-24 bg-brand-soft/50 rounded mt-1"></div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* KANAN: Transaksi Skeleton */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="flex justify-between items-center">
+                            <div className="animate-pulse h-5 w-40 bg-brand-soft/50 rounded"></div>
+                            <div className="animate-pulse h-6 w-32 bg-brand-soft/50 rounded"></div>
+                        </div>
+                        <div className="space-y-3">
+                            {[1, 2, 3, 4, 5].map(i => (
+                                <div key={i} className="p-4 rounded-card border border-line bg-surface flex justify-between items-center">
+                                    <div className="flex gap-4 items-center">
+                                        <div className="animate-pulse w-10 h-10 rounded-xl bg-brand-soft/50"></div>
+                                        <div className="space-y-2">
+                                            <div className="animate-pulse h-4 w-32 bg-brand-soft/50 rounded"></div>
+                                            <div className="animate-pulse h-3 w-20 bg-brand-soft/50 rounded"></div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 text-right flex flex-col items-end">
+                                        <div className="animate-pulse h-4 w-24 bg-brand-soft/50 rounded"></div>
+                                        <div className="animate-pulse h-3 w-16 bg-brand-soft/50 rounded"></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -400,7 +461,7 @@ export default function FinancePage() {
                                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-brand/40 bg-brand-soft/30 hover:bg-brand-soft/50 text-brand font-bold text-sm transition-all disabled:opacity-50"
                                 >
                                     {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
-                                    {isScanning ? 'AI Sedang Membaca...' : '🪄 Auto Scan Struk dengan AI'}
+                                    {isScanning ? 'AI Sedang Membaca...' : 'Auto Scan Struk dengan AI'}
                                 </button>
                             </div>
 

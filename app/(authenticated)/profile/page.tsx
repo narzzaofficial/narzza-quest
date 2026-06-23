@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import { useProfileSettings } from '@/hooks/useProfileSettings';
 import { GRAD } from '@/constants/ui';
 import GlassCard from '@/components/ui/GlassCard';
@@ -20,10 +21,13 @@ import {
     Clock,
     Flame,
     CheckCircle2,
+    LogOut,
 } from 'lucide-react';
 import { dicebearAvatar } from '@/lib/avatar';
 
 export default function ProfilePage() {
+    const router = useRouter();
+    const { logout } = useAuth();
     const { profile, loading, isSaving, isUploading, uploadAvatar, saveName } = useProfileSettings();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,6 +63,16 @@ export default function ProfilePage() {
             notify('Profil berhasil diperbarui! ✨');
         } catch {
             notify('Terjadi kesalahan saat menyimpan profil.', 'error');
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            router.push('/login');
+        } catch (e) {
+            console.error('Logout error:', e);
+            notify('Gagal log out', 'error');
         }
     };
 
@@ -186,6 +200,13 @@ export default function ProfilePage() {
                     </Button>
                 </form>
             </GlassCard>
+
+            <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 p-4 rounded-card text-danger font-bold hover:bg-danger-soft transition-colors border border-danger/20 bg-surface shadow-sm"
+            >
+                <LogOut className="w-5 h-5" /> Keluar dari Akun
+            </button>
 
             <Toast isVisible={toast.show} onClose={() => setToast((t) => ({ ...t, show: false }))} message={toast.message} type={toast.type} />
         </div>

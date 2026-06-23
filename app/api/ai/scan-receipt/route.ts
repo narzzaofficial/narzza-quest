@@ -18,6 +18,7 @@ Format JSON wajib:
 {
   "type": "expense" | "income" | "transfer",
   "amount": number,
+  "currency": "IDR" | "USD" | "EUR" | "MYR" | "BTC",
   "merchant": "string",
   "title": "string",
   "category": "string",
@@ -29,6 +30,7 @@ Format JSON wajib:
 
 Aturan:
 - amount: Angka bulat positif (Nominal pokok transfer/belanja, BUKAN total termasuk admin fee jika dipisah). Hilangkan Rp, koma, titik.
+- currency: Pilih mata uang transaksi. Opsinya: "IDR", "USD", "EUR", "MYR", "BTC". Default: "IDR".
 - type: 'transfer' jika ini murni transfer antar rekening bank (misal dari BCA ke Mandiri). 'expense' jika user membayar/jajan (misal struk Alfamart, GoFood, QRIS). 'income' jika ada dana masuk. Default: expense.
 - title: Deskripsi maksimal 4 kata (contoh: "Makan Siang", "Bayar Listrik", "Transfer Ke Budi").
 - category: Pilih kategori logis. Jika transfer antar bank, isi "Transfer / Convert".
@@ -49,7 +51,7 @@ Aturan:
             }
         ];
 
-        const result = await ai.generateJSON<{ type: string; amount: number; merchant: string; title: string; category: string; context: string; transferFee: number; assetName: string; toAssetName: string }>({
+        const result = await ai.generateJSON<{ type: string; amount: number; currency: string; merchant: string; title: string; category: string; context: string; transferFee: number; assetName: string; toAssetName: string }>({
             system,
             messages,
             maxTokens: 500,

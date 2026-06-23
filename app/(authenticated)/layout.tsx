@@ -7,7 +7,6 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
-import Footer from '@/components/layout/Footer';
 import Toast from '@/components/ui/Toast';
 import GoalOnboarding from '@/components/system/GoalOnboarding';
 import { HapticProvider } from '@/components/system/HapticProvider';
@@ -76,6 +75,9 @@ export default function AuthenticatedLayout({
         return <Loading />;
     }
 
+    const topLevelPaths = ['/dashboard', '/quest-board', '/finance', '/profile', '/gm/quests', '/gm/payouts'];
+    const isTopLevel = topLevelPaths.includes(pathname);
+
     return (
         <div className="flex h-screen overflow-hidden bg-transparent">
             <Sidebar />
@@ -83,11 +85,10 @@ export default function AuthenticatedLayout({
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
                 <TopBar />
 
-                <main className={`flex-1 overflow-x-hidden relative scroll-smooth flex flex-col ${isFullscreen ? 'overflow-hidden' : 'overflow-y-auto'} pb-18 md:pb-0`}>
+                <main className={`flex-1 overflow-x-hidden relative scroll-smooth flex flex-col ${isFullscreen ? 'overflow-hidden' : 'overflow-y-auto'} ${isTopLevel ? 'pb-20 md:pb-0' : ''}`}>
                     <div className={isFullscreen ? 'flex-1 flex flex-col overflow-hidden' : 'flex-1'}>
                         {children}
                     </div>
-                    {!isFullscreen && <Footer />}
                 </main>
             </div>
 

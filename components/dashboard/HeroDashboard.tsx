@@ -17,6 +17,7 @@ import { GRAD } from '@/constants/ui';
 import { GMBanner } from '@/components/gm/GMBanner';
 import { ArcCard } from '@/components/gm/ArcCard';
 import { PendingBanner } from '@/components/dashboard/PendingBanner';
+import { MenuGrid } from '@/components/dashboard/MenuGrid';
 import { ChartTooltip } from '@/components/dashboard/ChartTooltip';
 import { dicebearAvatar } from '@/lib/avatar';
 import type { useDashboard } from '@/hooks/useDashboard';
@@ -102,6 +103,9 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                     </div>
                 </div>
             </header>
+
+            {/* Menu Grid */}
+            <MenuGrid role="hero" />
 
             {/* XP + Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
