@@ -305,7 +305,7 @@ export async function approveQuest(
     let newStreak = playerProfile.streak || 0;
 
     if (lastActive === todayStr) {
-        // Sudah aktif hari ini – streak tidak berubah
+        // Sudah aktif hari ini - streak tidak berubah
     } else if (lastActive) {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
@@ -496,8 +496,8 @@ export async function getMissedQuestsInRange(
         .map(d => {
             const data = d.data();
             return {
-                date:       localDateStr((data.deadline || data.missedAt || data.updatedAt || '') as string),
-                penalty:    (data.deadlinePenaltyExp as number) || 0,
+                date: localDateStr((data.deadline || data.missedAt || data.updatedAt || '') as string),
+                penalty: (data.deadlinePenaltyExp as number) || 0,
                 questTitle: (data.title as string) || 'Quest',
             };
         })
@@ -538,7 +538,7 @@ export async function sendNotification(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid: notif.toUid, title: notif.title, body: notif.message }),
-    }).catch(() => {});
+    }).catch(() => { });
 }
 
 export async function getNotifications(uid: string): Promise<Notification[]> {
@@ -823,7 +823,7 @@ export function subscribeToOpenGuildQuests(
 ) {
     if (!gmUids.length) {
         callback([]);
-        return () => {};
+        return () => { };
     }
 
     const q = query(
@@ -1058,7 +1058,7 @@ import type {
 // Close any currently-active entry then create a new one
 export async function logActivity(
     uid: string,
-    data: { title: string; category: ActivityCategory; mood: 1|2|3|4|5; energy: 1|2|3|4|5; note?: string }
+    data: { title: string; category: ActivityCategory; mood: 1 | 2 | 3 | 4 | 5; energy: 1 | 2 | 3 | 4 | 5; note?: string }
 ): Promise<string> {
     const now = new Date().toISOString();
 
@@ -1126,7 +1126,7 @@ export async function getActivitiesRange(
     toDate: string
 ): Promise<ActivityEntry[]> {
     const from = `${fromDate}T00:00:00.000Z`;
-    const to   = `${toDate}T23:59:59.999Z`;
+    const to = `${toDate}T23:59:59.999Z`;
     const q = query(
         collection(db, "activities"),
         where("uid", "==", uid),

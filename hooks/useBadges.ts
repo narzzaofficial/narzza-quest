@@ -56,7 +56,7 @@ export function useBadges(): BadgeCounts {
             })
         );
 
-        // ── 2. Network – pending connection requests ───────────────────────
+        // ── 2. Network - pending connection requests ───────────────────────
         const networkQ = query(
             collection(db, 'connections'),
             where('toUid', '==', uid),
@@ -70,7 +70,7 @@ export function useBadges(): BadgeCounts {
 
         // ── PLAYER-only badges ─────────────────────────────────────────────
         if (profile.role === 'player') {
-            // Quest Board – quest baru yang belum dimulai (status pending)
+            // Quest Board - quest baru yang belum dimulai (status pending)
             const questBoardQ = query(
                 collection(db, 'quests'),
                 where('assignedTo', '==', uid),
@@ -82,7 +82,7 @@ export function useBadges(): BadgeCounts {
                 })
             );
 
-            // War Room – quest yang sudah di-submit, menunggu GM review
+            // War Room - quest yang sudah di-submit, menunggu GM review
             const warRoomQ = query(
                 collection(db, 'quests'),
                 where('assignedTo', '==', uid),
@@ -94,7 +94,7 @@ export function useBadges(): BadgeCounts {
                 })
             );
 
-            // Wallet – GM sudah upload bukti transfer, menunggu konfirmasi player
+            // Wallet - GM sudah upload bukti transfer, menunggu konfirmasi player
             const walletQ = query(
                 collection(db, 'withdrawals'),
                 where('heroUid', '==', uid),
@@ -106,7 +106,7 @@ export function useBadges(): BadgeCounts {
                 })
             );
 
-            // Guild Quest – open guild quests from linked GMs that hero hasn't claimed
+            // Guild Quest - open guild quests from linked GMs that hero hasn't claimed
             if (profile.partnerIds && profile.partnerIds.length > 0) {
                 const gmUids = profile.partnerIds.slice(0, 10); // Firestore 'in' max 10
                 const guildQuestQ = query(
@@ -129,7 +129,7 @@ export function useBadges(): BadgeCounts {
 
         // ── GM-only badges ─────────────────────────────────────────────────
         if (profile.role === 'gm') {
-            // Review Submissions – quest yang sudah di-submit oleh hero
+            // Review Submissions - quest yang sudah di-submit oleh hero
             const reviewQ = query(
                 collection(db, 'quests'),
                 where('createdBy', '==', uid),
@@ -141,7 +141,7 @@ export function useBadges(): BadgeCounts {
                 })
             );
 
-            // Manage Quests – quests flagged needsReview
+            // Manage Quests - quests flagged needsReview
             const gmQuestQ = query(
                 collection(db, 'quests'),
                 where('createdBy', '==', uid),
@@ -153,7 +153,7 @@ export function useBadges(): BadgeCounts {
                 })
             );
 
-            // Encourage – heroes that need encouragement
+            // Encourage - heroes that need encouragement
             const encourageQ = query(
                 collection(db, 'users'),
                 where('role', '==', 'player'),
@@ -165,7 +165,7 @@ export function useBadges(): BadgeCounts {
                 })
             );
 
-            // Roadmap – quest aktif (pending/in_progress) di kalender GM yang deadlinenya
+            // Roadmap - quest aktif (pending/in_progress) di kalender GM yang deadlinenya
             // sudah lewat atau hari ini (overdue/urgent)
             const today = new Date();
             today.setHours(23, 59, 59, 999);
@@ -186,7 +186,7 @@ export function useBadges(): BadgeCounts {
                 })
             );
 
-            // Payouts/Wallet GM – withdrawal request pending dari hero
+            // Payouts/Wallet GM - withdrawal request pending dari hero
             const payoutQ = query(
                 collection(db, 'withdrawals'),
                 where('gmUid', '==', uid),

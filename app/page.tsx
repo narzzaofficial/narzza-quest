@@ -4,7 +4,7 @@ import { FiArrowRight, FiCheck } from "react-icons/fi";
 import { PiScrollLight, PiCrownSimpleLight, PiSwordLight, PiSparkleLight } from "react-icons/pi";
 
 const features = [
-  { icon: PiScrollLight, title: "Sistem Quest Harian", desc: "Ubah tugas menumpuk jadi misi berperingkat E–S. Kumpulkan EXP dan capai level tertinggimu.", accent: "#3b82f6", tint: "rgba(59,130,246,0.10)" },
+  { icon: PiScrollLight, title: "Sistem Quest Harian", desc: "Ubah tugas menumpuk jadi misi berperingkat E-S. Kumpulkan EXP dan capai level tertinggimu.", accent: "#3b82f6", tint: "rgba(59,130,246,0.10)" },
   { icon: PiCrownSimpleLight, title: "Game Master Mode", desc: "Undang pasangan/teman sebagai GM untuk memberi misi, memvalidasi laporan, dan mengirim semangat.", accent: "#06b6d4", tint: "rgba(6,182,212,0.10)" },
   { icon: PiSwordLight, title: "Arena Pelatihan", desc: "Asah otak di waktu luang. Selesaikan mini-game seperti Speed Math & tebak Vocab untuk EXP tambahan.", accent: "#18a06b", tint: "rgba(24,160,107,0.10)" },
 ];

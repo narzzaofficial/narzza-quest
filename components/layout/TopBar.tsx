@@ -39,9 +39,7 @@ export default function TopBar() {
                     <h1 className="text-xl font-extrabold text-brand">Narzza Quest</h1>
                 </Link>
 
-                <Link href="/profile" className="w-10 h-10 rounded-xl border border-line overflow-hidden shadow-sm bg-surface active:scale-90 transition-transform">
-                    <img src={avatarUrl} alt="PP" className="w-full h-full object-cover" />
-                </Link>
+                <div className="w-10 h-10"></div>
             </header>
         </>
     );

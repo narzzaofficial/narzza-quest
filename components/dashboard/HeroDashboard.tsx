@@ -25,27 +25,29 @@ import type { useDashboard } from '@/hooks/useDashboard';
 type DashboardData = ReturnType<typeof useDashboard>;
 
 export function HeroDashboard({ d }: { d: DashboardData }) {
-    const profile     = d.profile!;
+    const profile = d.profile!;
     const hasActivity = d.activity7d.some((p) => p.exp > 0 || p.penalty > 0);
     const [chartType, setChartType] = useState<'bar' | 'line'>('line');
     const [displayPct, setDisplayPct] = useState(0);
+    const [smoothPct, setSmoothPct] = useState(0);
     const rafRef = useRef<number | null>(null);
     useEffect(() => {
-        const target   = d.expPercent;
-        const duration = 800;
-        const start    = performance.now();
+        const target = d.expPercent;
+        const duration = 1200;
+        const start = performance.now();
         const tick = (now: number) => {
             const t = Math.min(1, (now - start) / duration);
             // ease-out cubic
             const eased = 1 - Math.pow(1 - t, 3);
+            setSmoothPct(eased * target);
             setDisplayPct(Math.round(eased * target));
             if (t < 1) rafRef.current = requestAnimationFrame(tick);
         };
         rafRef.current = requestAnimationFrame(tick);
         return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
     }, [d.expPercent]);
-    const ai         = useAIGameMaster();
-    const gm         = useGMMessages(profile.uid);
+    const ai = useAIGameMaster();
+    const gm = useGMMessages(profile.uid);
     const activityLog = useActivityLog(profile.uid);
 
     const totalMinutesToday = activityLog.entries.reduce(
@@ -56,16 +58,16 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
         : totalMinutesToday > 0 ? `${Math.round(totalMinutesToday)}m` : '—';
 
     const stats = [
-        { label: 'Quest Selesai',      value: profile.totalQuestsCompleted || 0, icon: CheckCircle2, grad: GRAD.brand },
-        { label: 'Jam Aktif Hari Ini', value: jamAktifLabel,                     icon: Clock,        grad: GRAD.sky   },
-        { label: 'Day Streak',         value: d.streak,                          icon: Flame,        grad: GRAD.amber },
-        { label: 'Total Level',        value: profile.level || 1,                icon: Trophy,       grad: GRAD.green },
+        { label: 'Quest Selesai', value: profile.totalQuestsCompleted || 0, icon: CheckCircle2, grad: GRAD.brand },
+        { label: 'Jam Aktif Hari Ini', value: jamAktifLabel, icon: Clock, grad: GRAD.sky },
+        { label: 'Day Streak', value: d.streak, icon: Flame, grad: GRAD.amber },
+        { label: 'Total Level', value: profile.level || 1, icon: Trophy, grad: GRAD.green },
     ];
 
     const actions = [
-        { href: '/quest-board',  tag: 'Misi Aktif', title: 'Quest Board', desc: 'Lihat & submit semua misi dari GM',           icon: ScrollText, grad: GRAD.brand },
-        { href: '/guild-quest',  tag: 'Kompetisi',  title: 'Guild Quest', desc: 'Quest terbuka — siapa cepat, dia dapat',      icon: Swords,     grad: GRAD.sky   },
-        { href: '/journal',      tag: 'Catatan',    title: 'Jurnal',      desc: 'Catat perjalananmu sebagai adventurer',       icon: BookOpen,   grad: GRAD.green },
+        { href: '/quest-board', tag: 'Misi Aktif', title: 'Quest Board', desc: 'Lihat & submit semua misi dari GM', icon: ScrollText, grad: GRAD.brand },
+        { href: '/guild-quest', tag: 'Kompetisi', title: 'Guild Quest', desc: 'Quest terbuka — siapa cepat, dia dapat', icon: Swords, grad: GRAD.sky },
+        { href: '/journal', tag: 'Catatan', title: 'Jurnal', desc: 'Catat perjalananmu sebagai adventurer', icon: BookOpen, grad: GRAD.green },
     ];
 
     return (
@@ -76,8 +78,56 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                 <GMBanner message={gm.latestHighPriority} onDismiss={gm.markRead} />
             )}
 
+            {/* Mobile Hero */}
+            <div className="md:hidden space-y-4">
+                <div className="bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-full overflow-hidden ring-4 ring-sky-50">
+                            <img src={profile.avatar || dicebearAvatar(profile.displayName)} alt={profile.displayName} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 text-sm font-medium">Selamat belajar,</p>
+                            <h1 className="text-xl font-extrabold text-slate-900">{profile.displayName}</h1>
+                        </div>
+                    </div>
+                    <div className="bg-[#eff6ff] text-[#3b82f6] px-4 py-1.5 rounded-xl font-extrabold text-sm">
+                        Lv.{profile.level || 1}
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-[24px] p-5 shadow-sm">
+                    <div className="flex items-center gap-5">
+                        <div className="relative w-[150px] h-[150px] shrink-0">
+                            <svg className="w-full h-full -rotate-90 transform drop-shadow-sm" viewBox="0 0 160 160">
+                                <circle cx="80" cy="80" r="70" fill="none" stroke="#f1f5f9" strokeWidth="12" />
+                                <circle
+                                    cx="80"
+                                    cy="80"
+                                    r="70"
+                                    fill="none"
+                                    stroke="#3b82f6"
+                                    strokeWidth="12"
+                                    strokeLinecap="round"
+                                    strokeDasharray={2 * Math.PI * 70}
+                                    strokeDashoffset={(2 * Math.PI * 70) - ((smoothPct / 100) * (2 * Math.PI * 70))}
+                                />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-1">
+                                <span className="text-[44px] leading-none font-black text-slate-900 tracking-tight">{profile.level || 1}</span>
+                                <span className="text-[#3b82f6] text-xs font-bold mt-1 px-2 text-center leading-tight truncate w-full">{profile.title || 'Pemula'}</span>
+                                <span className="text-slate-400 text-[11px] mt-0.5">{displayPct}% ke level {(profile.level || 1) + 1}</span>
+                            </div>
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-slate-900 font-extrabold text-[17px] leading-tight mb-2.5">Terus belajar dan jadi versi terbaikmu!</h3>
+                            <p className="text-slate-400 text-[13px] font-medium leading-relaxed">Konsistensi hari ini,<br />prestasi esok hari.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Hero banner */}
-            <header className="relative overflow-hidden rounded-card p-6 md:p-7 text-white shadow-card" style={{ backgroundImage: GRAD.brand }}>
+            <header className="hidden md:block relative overflow-hidden rounded-card p-6 md:p-7 text-white shadow-card" style={{ backgroundImage: GRAD.brand }}>
                 <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-white/15 blur-2xl pointer-events-none" />
                 <div className="absolute -bottom-20 left-10 w-52 h-52 rounded-full bg-white/10 blur-2xl pointer-events-none" />
                 <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-5">
@@ -109,7 +159,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
 
             {/* XP + Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <section className="glass rounded-card p-5 shadow-card">
+                <section className="hidden md:block glass rounded-card p-5 shadow-card">
                     <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-1">Experience</p>
                     <p className="text-ink font-bold text-sm mb-1">Level {profile.level || 1} → {(profile.level || 1) + 1}</p>
                     <div className="relative mx-auto" style={{ height: 180 }}>
@@ -170,11 +220,11 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                             <ComposedChart data={d.activity7d} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={2}>
                                 <defs>
                                     <linearGradient id="expLineGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.2} />
+                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
                                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                     </linearGradient>
                                     <linearGradient id="penLineGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%"  stopColor="#ef4444" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0} />
                                         <stop offset="95%" stopColor="#ef4444" stopOpacity={0.15} />
                                     </linearGradient>
                                 </defs>
@@ -185,8 +235,8 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                                 <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--color-line-strong)', strokeWidth: 1 }} />
                                 {chartType === 'bar' ? (
                                     <>
-                                        <Bar dataKey="exp"     name="Dapat"   fill="#3b82f6" radius={[4,4,0,0]} maxBarSize={32} />
-                                        <Bar dataKey="penalty" name="Penalti" fill="#ef4444" radius={[0,0,4,4]} maxBarSize={32} />
+                                        <Bar dataKey="exp" name="Dapat" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                                        <Bar dataKey="penalty" name="Penalti" fill="#ef4444" radius={[0, 0, 4, 4]} maxBarSize={32} />
                                     </>
                                 ) : (
                                     <Area type="monotone" dataKey="exp" name="Dapat" stroke="#3b82f6" strokeWidth={2.5} fill="url(#expLineGrad)" dot={{ r: 4, fill: '#3b82f6', strokeWidth: 0 }} activeDot={{ r: 5 }} />

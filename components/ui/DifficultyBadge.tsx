@@ -2,7 +2,7 @@ import React from 'react';
 import { DIFFICULTY_COLOR } from '@/constants/ui';
 import type { QuestDifficulty } from '@/types';
 
-/** Colored E–S difficulty chip. */
+/** Colored E-S difficulty chip. */
 export default function DifficultyBadge({
     difficulty,
     className = '',
