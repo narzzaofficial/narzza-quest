@@ -1,103 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useBadges } from '@/hooks/useBadges';
-import type { BadgeCounts } from '@/hooks/useBadges';
-import {
-    LayoutDashboard,
-    Bot,
-    ScrollText,
-    BookOpen,
-    Swords,
-    Bell,
-    ListTodo,
-    ClipboardCheck,
-    HeartHandshake,
-    LogOut,
-    Users,
-    Settings,
-    Menu,
-    X,
-    CalendarDays,
-    Trophy,
-    Wallet,
-    Receipt,
-    MessageCircle,
-    BookMarked,
-    Activity,
-    BarChart2,
-    Landmark,
-    ChevronLeft,
-} from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { dicebearAvatar } from '@/lib/avatar';
-
-function NavBadge({ count }: { count: number }) {
-    if (count <= 0) return null;
-    return (
-        <span className="bg-danger text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm min-w-5 text-center">
-            {count > 99 ? '99+' : count}
-        </span>
-    );
-}
-
-type LinkItem = {
-    name: string;
-    href: string;
-    icon: React.ReactNode;
-    badgeKey: keyof BadgeCounts | null;
-};
 
 export default function TopBar() {
     const pathname = usePathname();
     const router = useRouter();
 
-    const { profile, logout } = useAuth();
+    const { profile } = useAuth();
     const badges = useBadges();
-
-    const heroLinks: LinkItem[] = [
-        { name: 'Dashboard',     href: '/dashboard',     icon: <LayoutDashboard className="w-5 h-5" />, badgeKey: null },
-        { name: 'AI Game Master',href: '/ai-gm',         icon: <Bot className="w-5 h-5" />,             badgeKey: null },
-        { name: 'AI Coach',      href: '/chat',          icon: <MessageCircle className="w-5 h-5" />,   badgeKey: null },
-        { name: 'Story Arc',     href: '/story-arc',     icon: <BookMarked className="w-5 h-5" />,      badgeKey: null },
-        { name: 'Life Log',      href: '/life-log',      icon: <Activity className="w-5 h-5" />,        badgeKey: null },
-        { name: 'Analytics',     href: '/analytics',     icon: <BarChart2 className="w-5 h-5" />,       badgeKey: null },
-        { name: 'Quest Board',   href: '/quest-board',   icon: <ScrollText className="w-5 h-5" />,      badgeKey: 'questBoard' },
-        { name: 'Guild Quest',   href: '/guild-quest',   icon: <Swords className="w-5 h-5" />,          badgeKey: 'guildQuest' },
-        { name: 'Kalender',       href: '/calendar',      icon: <CalendarDays className="w-5 h-5" />,    badgeKey: null },
-        { name: 'Leaderboard',   href: '/leaderboard',   icon: <Trophy className="w-5 h-5" />,          badgeKey: null },
-        { name: 'Arena',         href: '/arena',         icon: <Swords className="w-5 h-5" />,          badgeKey: 'arena' },
-        { name: 'My Network',    href: '/network',       icon: <Users className="w-5 h-5" />,           badgeKey: 'network' },
-        { name: 'Jurnal',        href: '/journal',       icon: <BookOpen className="w-5 h-5" />,        badgeKey: 'warRoom' },
-        { name: 'Keuangan',      href: '/finance',       icon: <Landmark className="w-5 h-5" />,        badgeKey: null },
-        { name: 'Dompet Quest',  href: '/wallet',        icon: <Wallet className="w-5 h-5" />,          badgeKey: 'wallet' },
-        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />,            badgeKey: 'notifications' },
-    ];
-
-    const gmLinks: LinkItem[] = [
-        { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badgeKey: null },
-        { name: 'Manage Quests', href: '/gm/quests', icon: <ListTodo className="w-5 h-5" />, badgeKey: 'manageQuests' },
-        { name: 'Guild Quest', href: '/gm/guild-quest', icon: <Swords className="w-5 h-5" />, badgeKey: null },
-        { name: 'Kalender', href: '/calendar', icon: <CalendarDays className="w-5 h-5" />, badgeKey: 'roadmap' },
-        { name: 'Leaderboard', href: '/leaderboard', icon: <Trophy className="w-5 h-5" />, badgeKey: null },
-        { name: 'Review Submissions', href: '/gm/review', icon: <ClipboardCheck className="w-5 h-5" />, badgeKey: 'reviewSubmissions' },
-        { name: 'Send Encouragement', href: '/gm/encourage', icon: <HeartHandshake className="w-5 h-5" />, badgeKey: 'encourage' },
-        { name: 'Payouts', href: '/gm/payouts', icon: <Receipt className="w-5 h-5" />, badgeKey: 'questBoard' },
-        { name: 'My Network', href: '/network', icon: <Users className="w-5 h-5" />, badgeKey: 'network' },
-        { name: 'Notifications', href: '/notifications', icon: <Bell className="w-5 h-5" />, badgeKey: 'notifications' },
-    ];
-
-    const handleLogout = async () => {
-        try {
-            await logout();
-            setIsMenuOpen(false);
-            router.push('/login');
-        } catch (error) {
-            console.error('Gagal logout:', error);
-        }
-    };
 
     if (!profile) return null;
 
