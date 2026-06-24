@@ -23,16 +23,24 @@ import {
     Flame,
     CheckCircle2,
     LogOut,
+    Bot,
+    Key,
+    Cpu,
+    Wifi,
 } from 'lucide-react';
 import { dicebearAvatar } from '@/lib/avatar';
 
 export default function ProfilePage() {
     const router = useRouter();
     const { logout } = useAuth();
-    const { profile, loading, isSaving, isUploading, uploadAvatar, saveName } = useProfileSettings();
+    const { profile, loading, isSaving, isUploading, uploadAvatar, saveProfile } = useProfileSettings();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [displayName, setDisplayName] = useState('');
+    const [useOpenRouter, setUseOpenRouter] = useState(false);
+    const [openRouterApiKey, setOpenRouterApiKey] = useState('');
+    const [openRouterModel, setOpenRouterModel] = useState('');
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
         show: false,
         message: '',
@@ -40,7 +48,12 @@ export default function ProfilePage() {
     });
 
     useEffect(() => {
-        if (profile) setDisplayName(profile.displayName || '');
+        if (profile) {
+            setDisplayName(profile.displayName || '');
+            setUseOpenRouter(profile.aiSettings?.useOpenRouter || false);
+            setOpenRouterApiKey(profile.aiSettings?.openRouterApiKey || '');
+            setOpenRouterModel(profile.aiSettings?.openRouterModel || '');
+        }
     }, [profile]);
 
     const notify = (message: string, type: 'success' | 'error' = 'success') =>
@@ -60,10 +73,34 @@ export default function ProfilePage() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await saveName(displayName);
+            await saveProfile(displayName, { useOpenRouter, openRouterApiKey, openRouterModel });
             notify('Profil berhasil diperbarui! ✨');
         } catch {
             notify('Terjadi kesalahan saat menyimpan profil.', 'error');
+        }
+    };
+
+    const handleTestConnection = async () => {
+        if (!openRouterApiKey) {
+            notify('API Key harus diisi untuk mengetes koneksi.', 'error');
+            return;
+        }
+        setIsTestingConnection(true);
+        try {
+            const res = await fetch('/api/ai/test-connection', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    aiSettings: { openRouterApiKey, openRouterModel }
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error || 'Gagal terhubung.');
+            notify('Koneksi sukses! Model siap digunakan. 🚀', 'success');
+        } catch (e) {
+            notify(e instanceof Error ? e.message : 'Koneksi gagal.', 'error');
+        } finally {
+            setIsTestingConnection(false);
         }
     };
 
@@ -199,6 +236,85 @@ export default function ProfilePage() {
                     <Button type="submit" variant="primary" isLoading={isSaving} className="w-full">
                         <Save className="w-4 h-4 mr-2" /> Simpan Perubahan
                     </Button>
+                </form>
+            </GlassCard>
+
+            {/* ── AI Configuration ── */}
+            <GlassCard className="p-5 md:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <Bot className="w-4 h-4 text-brand" />
+                    <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold">Konfigurasi AI (Opsional)</p>
+                </div>
+                
+                <form onSubmit={handleSave} className="space-y-4">
+                    <label className="flex items-center gap-3 p-3 rounded-xl border border-line bg-surface cursor-pointer hover:bg-surface-2 transition-colors">
+                        <input 
+                            type="checkbox" 
+                            checked={useOpenRouter}
+                            onChange={(e) => setUseOpenRouter(e.target.checked)}
+                            className="w-4 h-4 rounded border-line text-brand focus:ring-brand/20"
+                        />
+                        <span className="text-sm font-bold text-ink flex-1">Gunakan OpenRouter</span>
+                    </label>
+
+                    {useOpenRouter && (
+                        <div className="space-y-4 p-4 rounded-xl bg-surface-2 border border-line">
+                            <div>
+                                <label className="flex items-center gap-1.5 text-xs font-extrabold text-ink-soft mb-1.5 uppercase tracking-widest">
+                                    <Key className="w-3.5 h-3.5" /> API Key
+                                </label>
+                                <input
+                                    type="password"
+                                    value={openRouterApiKey}
+                                    onChange={(e) => setOpenRouterApiKey(e.target.value)}
+                                    placeholder="sk-or-v1-..."
+                                    className="w-full px-4 py-2.5 rounded-xl border border-line bg-surface font-bold text-sm text-ink outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 transition"
+                                />
+                                <p className="text-[10px] text-ink-muted mt-1.5 font-medium leading-relaxed">
+                                    Akan disimpan aman di database profilmu. Kosongkan jika ingin fallback ke default sistem.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="flex items-center gap-1.5 text-xs font-extrabold text-ink-soft mb-1.5 uppercase tracking-widest">
+                                    <Cpu className="w-3.5 h-3.5" /> Model ID
+                                </label>
+                                <input
+                                    type="text"
+                                    value={openRouterModel}
+                                    onChange={(e) => setOpenRouterModel(e.target.value)}
+                                    placeholder="google/gemini-2.5-flash"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-line bg-surface font-bold text-sm text-ink outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 transition"
+                                />
+                                <p className="text-[10px] text-ink-muted mt-1.5 font-medium leading-relaxed">
+                                    Secara default sistem menggunakan "google/gemini-2.5-flash".
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row items-center gap-3 mt-4">
+                        <Button 
+                            type="button" 
+                            variant="secondary" 
+                            isLoading={isTestingConnection} 
+                            onClick={handleTestConnection} 
+                            className="w-full sm:w-1/3 whitespace-nowrap" 
+                            disabled={!openRouterApiKey}
+                            leftIcon={<Wifi className="w-4 h-4" />}
+                        >
+                            Test Koneksi
+                        </Button>
+                        <Button 
+                            type="submit" 
+                            variant="primary" 
+                            isLoading={isSaving} 
+                            className="w-full sm:w-2/3 whitespace-nowrap"
+                            leftIcon={<Save className="w-4 h-4" />}
+                        >
+                            Simpan Pengaturan
+                        </Button>
+                    </div>
                 </form>
             </GlassCard>
 

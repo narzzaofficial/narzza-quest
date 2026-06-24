@@ -91,6 +91,7 @@ export function useStoryArcManager(profile: UserProfile | null) {
                         questsCompleted: previousArc.questsCompleted,
                     } : undefined,
                     arcHistory: arcHistory.length > 0 ? arcHistory : undefined,
+                    aiSettings: profile.aiSettings,
                 }),
             });
 

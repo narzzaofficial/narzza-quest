@@ -60,6 +60,7 @@ export function useAIQuests(profile: UserProfile | null, journals: JournalEntry[
                     arcNarrative,
                     arcWeeklyGoals,
                     ...lifeContext,
+                    aiSettings: profile.aiSettings,
                 }),
             });
 

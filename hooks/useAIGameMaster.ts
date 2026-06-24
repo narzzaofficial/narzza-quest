@@ -145,6 +145,7 @@ export function useAIGameMaster() {
                     recentJournalTitles: journals.slice(0, 8).map((j) => j.questTitle || '').filter(Boolean),
                     goals: [formatGoal(profile.goal), goals].filter(Boolean).join(' — ') || undefined,
                     previousSummary: memory?.summary,
+                    aiSettings: profile.aiSettings,
                 }),
             });
             const data = await res.json();
@@ -180,6 +181,7 @@ export function useAIGameMaster() {
                     completedTitles: todays.map((j) => j.questTitle || '').filter(Boolean),
                     memorySummary: memory?.summary,
                     goalSummary: formatGoal(profile.goal) || undefined,
+                    aiSettings: profile.aiSettings,
                 }),
             });
             const data = await res.json();

@@ -2,22 +2,16 @@
 
 import { Loader2, Bot, Sparkles, Target, ListChecks, CheckCircle2 } from 'lucide-react';
 import { useAIGameMaster } from '@/hooks/useAIGameMaster';
-import { useWorkTasks } from '@/hooks/useWorkTasks';
-import { useSituation } from '@/hooks/useSituation';
 import { AI_GM } from '@/constants/ai';
 import { GRAD } from '@/constants/ui';
 import PageHeader from '@/components/ui/PageHeader';
 import { GoalCard } from '@/components/ai-gm/GoalCard';
 import { DailyReviewCard } from '@/components/ai-gm/DailyReviewCard';
 import { MemoryCard } from '@/components/ai-gm/MemoryCard';
-import { SituationRoom } from '@/components/ai-gm/SituationRoom';
-import { WorkTasksSection } from '@/components/ai-gm/WorkTasksSection';
 import { QuestRow } from '@/components/ai-gm/QuestRow';
 
 export default function AIGameMasterPage() {
     const ai  = useAIGameMaster();
-    const wt  = useWorkTasks(ai.profile?.uid);
-    const sit = useSituation(ai.profile?.uid);
 
     if (!ai.profile) {
         return (
@@ -49,11 +43,7 @@ export default function AIGameMasterPage() {
             {/* ── North Star goal ── */}
             <GoalCard />
 
-            {/* ── Situation Room + Work Tasks ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <SituationRoom sit={sit} />
-                <WorkTasksSection wt={wt} />
-            </div>
+
 
             {/* ── Generate card ── */}
             <section className="glass rounded-card p-5 md:p-6 shadow-card">

@@ -22,7 +22,9 @@ function fromStored(m: StoredChatMessage): ChatMessage {
     return { role: m.role, content: m.content, timestamp: new Date(m.timestamp) };
 }
 
-export function useAIChat(context: ChatContext | null, uid?: string) {
+import type { UserProfile } from '@/types';
+
+export function useAIChat(context: ChatContext | null, uid?: string, aiSettings?: UserProfile['aiSettings']) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -74,7 +76,7 @@ export function useAIChat(context: ChatContext | null, uid?: string) {
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: history, context }),
+                body: JSON.stringify({ messages: history, context, aiSettings }),
             });
 
             const data = await res.json();

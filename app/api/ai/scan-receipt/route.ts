@@ -4,13 +4,13 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
     try {
-        const { imageBase64 }: { imageBase64: string } = await req.json();
+        const { imageBase64, aiSettings }: { imageBase64: string; aiSettings?: any } = await req.json();
 
         if (!imageBase64) {
             return Response.json({ error: 'Gambar tidak ditemukan.' }, { status: 400 });
         }
 
-        const ai = getAIProvider();
+        const ai = getAIProvider(aiSettings);
 
         const system = `Kamu adalah AI Akuntan Forensik tingkat lanjut.
 Tugasmu adalah membaca gambar struk belanja atau screenshot bukti transfer bank, lalu mengekstrak informasinya menjadi format JSON.

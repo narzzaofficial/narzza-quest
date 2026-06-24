@@ -1,5 +1,5 @@
 import {
-    collection, doc, getDoc, setDoc, updateDoc, addDoc,
+    collection, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc,
     query, where, orderBy, getDocs, onSnapshot,
     writeBatch, increment
 } from "firebase/firestore";
@@ -37,6 +37,10 @@ export function subscribeToAssets(uid: string, callback: (assets: FinancialAsset
     return onSnapshot(q, (snap) => {
         callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as FinancialAsset)));
     });
+}
+
+export async function deleteAsset(id: string): Promise<void> {
+    await deleteDoc(doc(db, "financial_assets", id));
 }
 
 // ─────────────────────────────────────────
@@ -102,6 +106,49 @@ export function subscribeToTransactions(uid: string, limitCount: number, callbac
     });
 }
 
+export async function deleteTransaction(tx: FinancialTransaction): Promise<void> {
+    const batch = writeBatch(db);
+    const now = new Date().toISOString();
+    
+    // Delete the transaction doc
+    const txRef = doc(db, "financial_transactions", tx.id);
+    batch.delete(txRef);
+
+    // Revert the main asset balance
+    const assetRef = doc(db, "financial_assets", tx.assetId);
+    let amountChange = tx.amount;
+    
+    if (tx.type === 'expense' || tx.type === 'transfer') {
+        amountChange = tx.amount; // Add it back
+    } else if (tx.type === 'income') {
+        amountChange = -tx.amount; // Subtract it back
+    }
+    batch.update(assetRef, {
+        balance: increment(amountChange),
+        updatedAt: now,
+    });
+
+    // If it's a transfer, revert the target asset or goal balance
+    if (tx.type === 'transfer') {
+        const receivedAmount = tx.toAmount !== undefined ? tx.toAmount : tx.amount;
+        if (tx.toAssetId) {
+            const toAssetRef = doc(db, "financial_assets", tx.toAssetId);
+            batch.update(toAssetRef, {
+                balance: increment(-receivedAmount),
+                updatedAt: now,
+            });
+        } else if (tx.toGoalId) {
+            const toGoalRef = doc(db, "financial_goals", tx.toGoalId);
+            batch.update(toGoalRef, {
+                currentAmount: increment(-receivedAmount),
+                updatedAt: now,
+            });
+        }
+    }
+
+    await batch.commit();
+}
+
 // ─────────────────────────────────────────
 // GOALS / WISHLIST
 // ─────────────────────────────────────────
@@ -135,4 +182,8 @@ export function subscribeToGoals(uid: string, callback: (goals: FinancialGoal[])
     return onSnapshot(q, (snap) => {
         callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as FinancialGoal)));
     });
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+    await deleteDoc(doc(db, "financial_goals", id));
 }

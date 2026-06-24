@@ -86,7 +86,7 @@ export default function ChatPage() {
         arcNarrative: ai.storyArc.arc?.narrative,
     } : null;
 
-    const chat = useAIChat(chatContext, profile?.uid);
+    const chat = useAIChat(chatContext, profile?.uid, profile?.aiSettings);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

@@ -24,6 +24,12 @@ export interface ArcGenContext {
     };
     // Compact history of all past arcs so AI knows the full journey
     arcHistory?: PreviousArcSummary[];
+    // User AI Settings
+    aiSettings?: {
+        useOpenRouter: boolean;
+        openRouterApiKey: string;
+        openRouterModel: string;
+    };
 }
 
 export interface ArcDraft {
@@ -34,7 +40,7 @@ export interface ArcDraft {
 }
 
 export async function generateArcDraft(ctx: ArcGenContext): Promise<ArcDraft> {
-    const ai = getAIProvider();
+    const ai = getAIProvider(ctx.aiSettings);
 
     const isFirstArc = ctx.arcNumber === 1 || !ctx.previousArc;
 

@@ -11,6 +11,12 @@ export interface QuestReviewContext {
     hasProof?: boolean;
     playerLevel?: number;
     goalSummary?: string;
+    // User AI Settings
+    aiSettings?: {
+        useOpenRouter: boolean;
+        openRouterApiKey: string;
+        openRouterModel: string;
+    };
 }
 
 export interface QuestReviewResult {
@@ -49,7 +55,7 @@ function buildUserPrompt(ctx: QuestReviewContext): string {
 }
 
 export async function reviewQuestSubmission(ctx: QuestReviewContext): Promise<QuestReviewResult> {
-    const ai = getAIProvider();
+    const ai = getAIProvider(ctx.aiSettings);
 
     const res = await ai.generateJSON<Partial<QuestReviewResult>>({
         system: buildSystemPrompt(),

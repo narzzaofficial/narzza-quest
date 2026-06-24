@@ -61,13 +61,13 @@ export interface ChatContext {
 
 export async function POST(req: Request) {
     try {
-        const { messages, context }: { messages: AIMessage[]; context: ChatContext } = await req.json();
+        const { messages, context, aiSettings }: { messages: AIMessage[]; context: ChatContext; aiSettings?: any } = await req.json();
 
         if (!messages?.length || !context?.displayName) {
             return Response.json({ error: 'Request tidak lengkap.' }, { status: 400 });
         }
 
-        const ai = getAIProvider();
+        const ai = getAIProvider(aiSettings);
 
         // ── Build rich context ───────────────────────────────
         const lines: string[] = [

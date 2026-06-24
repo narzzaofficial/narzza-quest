@@ -13,6 +13,12 @@ export interface MemoryContext {
     recentJournalTitles?: string[];
     goals?: string;
     previousSummary?: string;
+    // User AI Settings
+    aiSettings?: {
+        useOpenRouter: boolean;
+        openRouterApiKey: string;
+        openRouterModel: string;
+    };
 }
 
 export interface MemoryResult {
@@ -21,7 +27,7 @@ export interface MemoryResult {
 }
 
 export async function generateMemory(ctx: MemoryContext): Promise<MemoryResult> {
-    const ai = getAIProvider();
+    const ai = getAIProvider(ctx.aiSettings);
 
     const system = [
         'Kamu adalah AI Game Master yang memelihara "memory" tentang seorang user di aplikasi RPG kehidupan.',

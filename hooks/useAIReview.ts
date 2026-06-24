@@ -35,6 +35,7 @@ export async function runAIReview(
             hasProof,
             playerLevel: profile.level,
             goalSummary: formatGoal(profile.goal) || undefined,
+            aiSettings: profile.aiSettings,
         }),
     });
 

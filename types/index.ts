@@ -43,6 +43,13 @@ export interface UserProfile {
     hearts?: number;
     missStrikeCount?: number;
     heartRecoveryStreak?: number;
+
+    // AI Configuration (OpenRouter)
+    aiSettings?: {
+        useOpenRouter: boolean;
+        openRouterApiKey: string;
+        openRouterModel: string;
+    };
 }
 
 export interface GoalProfile {

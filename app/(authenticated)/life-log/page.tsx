@@ -6,6 +6,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useActivityHistory } from '@/hooks/useActivityHistory';
 import { useHabits } from '@/hooks/useHabits';
+import { useWorkTasks } from '@/hooks/useWorkTasks';
+import { useSituation } from '@/hooks/useSituation';
 import { GRAD } from '@/constants/ui';
 import { formatDuration } from '@/constants/life-log';
 import { LogForm }             from '@/components/life-log/LogForm';
@@ -14,12 +16,16 @@ import { TimelineEntry }       from '@/components/life-log/TimelineEntry';
 import { HabitRow }            from '@/components/life-log/HabitRow';
 import { AddHabitForm }        from '@/components/life-log/AddHabitForm';
 import { ActivityHistory }     from '@/components/life-log/ActivityHistory';
+import { SituationRoom } from '@/components/ai-gm/SituationRoom';
+import { WorkTasksSection } from '@/components/ai-gm/WorkTasksSection';
 
 export default function LifeLogPage() {
     const { profile } = useAuth();
     const log     = useActivityLog(profile?.uid);
     const habits  = useHabits(profile?.uid);
     const history = useActivityHistory(profile?.uid);
+    const wt  = useWorkTasks(profile?.uid);
+    const sit = useSituation(profile?.uid);
 
     const [showLogForm,   setShowLogForm]   = useState(false);
     const [showHabitForm, setShowHabitForm] = useState(false);
@@ -100,6 +106,11 @@ export default function LifeLogPage() {
                     </div>
                 </section>
             )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <SituationRoom sit={sit} />
+                <WorkTasksSection wt={wt} />
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <section className="glass rounded-card shadow-card">

@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFinance } from '@/hooks/useFinance';
-import { Landmark, Plus, ArrowUpRight, ArrowDownRight, Wallet, Banknote, LineChart, Loader2, Target, PieChart, ScanLine } from 'lucide-react';
+import { Landmark, Plus, ArrowUpRight, ArrowDownRight, Wallet, Banknote, LineChart, Loader2, Target, PieChart, ScanLine, Trash2 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import SectionLabel from '@/components/ui/SectionLabel';
 import EmptyState from '@/components/ui/EmptyState';
-import { createAsset, recordTransaction, createGoal } from '@/lib/financeDb';
+import { createAsset, recordTransaction, createGoal, deleteAsset, deleteGoal, deleteTransaction } from '@/lib/financeDb';
 import { AssetType } from '@/types';
 import Toast from '@/components/ui/Toast';
 
@@ -205,6 +205,36 @@ export default function FinancePage() {
         }
     };
 
+    const handleDeleteAsset = async (id: string) => {
+        if (!confirm('Apakah kamu yakin ingin menghapus aset ini?')) return;
+        try {
+            await deleteAsset(id);
+            showToast('Aset berhasil dihapus');
+        } catch (error) {
+            showToast('Gagal menghapus aset', 'error');
+        }
+    };
+
+    const handleDeleteGoal = async (id: string) => {
+        if (!confirm('Apakah kamu yakin ingin menghapus target ini?')) return;
+        try {
+            await deleteGoal(id);
+            showToast('Target berhasil dihapus');
+        } catch (error) {
+            showToast('Gagal menghapus target', 'error');
+        }
+    };
+
+    const handleDeleteTx = async (tx: any) => {
+        if (!confirm('Apakah kamu yakin ingin menghapus transaksi ini? Saldo akan dikembalikan.')) return;
+        try {
+            await deleteTransaction(tx);
+            showToast('Transaksi berhasil dihapus');
+        } catch (error) {
+            showToast('Gagal menghapus transaksi', 'error');
+        }
+    };
+
     if (loading) {
         return (
             <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6 md:space-y-8">
@@ -353,8 +383,11 @@ export default function FinancePage() {
                                         <p className="text-sm font-bold text-ink">{asset.name}</p>
                                         <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">{asset.type}</p>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-right flex items-center gap-3">
                                         <p className="text-sm font-black text-ink">{asset.currency} {asset.balance.toLocaleString('id-ID')}</p>
+                                        <button onClick={() => handleDeleteAsset(asset.id)} className="text-ink-muted hover:text-danger transition-colors p-1" title="Hapus Aset">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 </GlassCard>
                             ))}
@@ -419,10 +452,13 @@ export default function FinancePage() {
                                                     {goal.currency} {goal.currentAmount.toLocaleString('id-ID', { maximumFractionDigits: 2 })} / {goal.targetAmount.toLocaleString('id-ID', { maximumFractionDigits: 2 })}
                                                 </p>
                                             </div>
-                                            <div className="text-right">
+                                            <div className="text-right flex items-center gap-3">
                                                 <p className={`text-xl font-black tracking-tighter ${isCompleted ? 'text-success' : 'text-brand'}`}>
                                                     {Math.floor(progress)}%
                                                 </p>
+                                                <button onClick={() => handleDeleteGoal(goal.id)} className="text-ink-muted hover:text-danger transition-colors p-1" title="Hapus Target">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </div>
                                         <div className="w-full h-2 bg-surface-2 border border-line rounded-full overflow-hidden">
@@ -628,14 +664,19 @@ export default function FinancePage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="text-right shrink-0">
-                                            <p className={`text-sm font-black ${isTransfer ? 'text-brand' : isExpense ? 'text-danger' : 'text-success'}`}>
-                                                {isTransfer ? '' : isExpense ? '-' : '+'} {tx.originalCurrency || asset?.currency || 'IDR'} {(tx.originalAmount || tx.amount).toLocaleString('id-ID', { maximumFractionDigits: 2 })}
-                                            </p>
-                                            <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest mt-0.5">
-                                                {isTransfer ? `${asset?.name} ➔ ${targetName}` : asset?.name}
-                                                {tx.originalCurrency && tx.originalCurrency !== asset?.currency && ` (~${asset?.currency} ${tx.amount.toLocaleString('id-ID', { maximumFractionDigits: 0 })})`}
-                                            </p>
+                                        <div className="text-right shrink-0 flex items-center gap-3">
+                                            <div>
+                                                <p className={`text-sm font-black ${isTransfer ? 'text-brand' : isExpense ? 'text-danger' : 'text-success'}`}>
+                                                    {isTransfer ? '' : isExpense ? '-' : '+'} {tx.originalCurrency || asset?.currency || 'IDR'} {(tx.originalAmount || tx.amount).toLocaleString('id-ID', { maximumFractionDigits: 2 })}
+                                                </p>
+                                                <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest mt-0.5">
+                                                    {isTransfer ? `${asset?.name} ➔ ${targetName}` : asset?.name}
+                                                    {tx.originalCurrency && tx.originalCurrency !== asset?.currency && ` (~${asset?.currency} ${tx.amount.toLocaleString('id-ID', { maximumFractionDigits: 0 })})`}
+                                                </p>
+                                            </div>
+                                            <button onClick={() => handleDeleteTx(tx)} className="text-ink-muted hover:text-danger transition-colors p-1" title="Hapus Transaksi">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </GlassCard>
                                 );

@@ -5,6 +5,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
+import type { UserProfile } from '@/types';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2MB
 
@@ -35,16 +36,19 @@ export function useProfileSettings() {
         }
     }
 
-    async function saveName(displayName: string): Promise<void> {
+    async function saveProfile(displayName: string, aiSettings?: UserProfile['aiSettings']): Promise<void> {
         if (!profile) return;
         setIsSaving(true);
         try {
-            await updateDoc(doc(db, 'users', profile.uid), { displayName });
+            await updateDoc(doc(db, 'users', profile.uid), { 
+                displayName,
+                ...(aiSettings !== undefined ? { aiSettings } : {})
+            });
             await refreshProfile();
         } finally {
             setIsSaving(false);
         }
     }
 
-    return { profile, loading, isSaving, isUploading, uploadAvatar, saveName };
+    return { profile, loading, isSaving, isUploading, uploadAvatar, saveProfile };
 }

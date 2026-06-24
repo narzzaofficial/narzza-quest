@@ -89,6 +89,7 @@ export function useStoryArc({ profile, memory, approvedQuests }: UseStoryArcOpti
                         questsCompleted: previousArc.questsCompleted,
                     } : undefined,
                     arcHistory: arcHistory.length > 0 ? arcHistory : undefined,
+                    aiSettings: profile.aiSettings,
                 }),
             });
             const draft = await res.json();

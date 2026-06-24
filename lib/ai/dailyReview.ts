@@ -11,6 +11,12 @@ export interface DailyReviewContext {
     completedTitles?: string[];
     memorySummary?: string;
     goalSummary?: string;
+    // User AI Settings
+    aiSettings?: {
+        useOpenRouter: boolean;
+        openRouterApiKey: string;
+        openRouterModel: string;
+    };
 }
 
 export interface DailyReviewResult {
@@ -21,7 +27,7 @@ export interface DailyReviewResult {
 }
 
 export async function generateDailyReview(ctx: DailyReviewContext): Promise<DailyReviewResult> {
-    const ai = getAIProvider();
+    const ai = getAIProvider(ctx.aiSettings);
 
     const system = [
         'Kamu adalah AI Game Master yang memberi review harian untuk user aplikasi RPG kehidupan.',

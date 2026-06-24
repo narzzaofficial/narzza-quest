@@ -26,6 +26,12 @@ export interface QuestGenContext {
     weekFocus?: string;
     activeWorkTasks?: string[];
     todayActivitiesSummary?: string;
+    // User AI Settings
+    aiSettings?: {
+        useOpenRouter: boolean;
+        openRouterApiKey: string;
+        openRouterModel: string;
+    };
 }
 
 export interface QuestDraft {
@@ -113,7 +119,7 @@ function normalizeDraft(q: any): QuestDraft {
 }
 
 export async function generateQuestDrafts(ctx: QuestGenContext): Promise<QuestDraft[]> {
-    const ai = getAIProvider();
+    const ai = getAIProvider(ctx.aiSettings);
     const count = ctx.count ?? 4;
 
     const res = await ai.generateJSON<{ quests?: unknown[] }>({

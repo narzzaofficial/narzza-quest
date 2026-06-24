@@ -1,24 +1,27 @@
 import type { AIProvider } from "./types";
 import { createOpenAIProvider } from "./openai";
+import { createOpenRouterProvider } from "./openrouter";
 
 export * from "./types";
 
-export type AIProviderName = "openai" | "claude";
+export type AIProviderName = "openai" | "claude" | "openrouter";
 
 let cached: AIProvider | null = null;
 
-/**
- * Returns the configured AI provider (singleton).
- * Controlled by the AI_PROVIDER env var (default: "openai").
- *
- * To add Claude later:
- *   1. npm install @anthropic-ai/sdk
- *   2. create lib/ai/claude.ts exporting createClaudeProvider(): AIProvider
- *   3. wire the "claude" case below
- *   4. set AI_PROVIDER=claude
- * No feature code needs to change.
- */
-export function getAIProvider(): AIProvider {
+interface AISettings {
+    useOpenRouter?: boolean;
+    openRouterApiKey?: string;
+    openRouterModel?: string;
+}
+
+export function getAIProvider(settings?: AISettings): AIProvider {
+    if (settings?.useOpenRouter && settings?.openRouterApiKey) {
+        return createOpenRouterProvider(
+            settings.openRouterApiKey,
+            settings.openRouterModel || "google/gemini-2.5-flash"
+        );
+    }
+
     if (cached) return cached;
 
     const provider = (process.env.AI_PROVIDER || "openai").toLowerCase();

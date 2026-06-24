@@ -82,7 +82,7 @@ function gmMessageTitle(type: GMMessageType): string {
 }
 
 async function generateGMMessage(type: GMMessageType, profile: UserProfile, extra?: string): Promise<string> {
-    const ai = getAIProvider();
+    const ai = getAIProvider(profile.aiSettings);
 
     const prompts: Record<GMMessageType, string> = {
         streak_warning: `Kamu adalah AI Game Master yang peduli. User "${profile.displayName}" sedang di streak ${profile.streak} hari dan belum aktif hari ini — hari hampir habis. Tulis pesan singkat (2-3 kalimat) yang memotivasi mereka untuk menyelesaikan minimal satu quest sebelum tengah malam. Nada: hangat, sedikit urgen tapi tidak menakut-nakuti. Bahasa Indonesia. Jangan lebih dari 3 kalimat.`,

@@ -246,7 +246,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                         {!hasActivity && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                 <p className="text-ink-muted text-sm font-semibold">Belum ada aktivitas minggu ini</p>
-                                <p className="text-ink-muted/70 text-xs">Selesaikan quest untuk mulai mengisi grafik ✨</p>
+                                <p className="text-ink-muted/70 text-xs">Selesaikan quest untuk mulai mengisi grafik</p>
                             </div>
                         )}
                     </div>
