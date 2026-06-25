@@ -5,6 +5,7 @@ import GlassCard from '@/components/ui/GlassCard';
 import DifficultyBadge from '@/components/ui/DifficultyBadge';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { CATEGORY_LABEL } from '@/constants/ui';
+import { formatDateTimeID } from '@/lib/dateUtils';
 import type { Quest } from '@/types';
 
 interface Props {
@@ -36,7 +37,7 @@ export function GMQuestCard({ quest, onDelete }: Props) {
             </div>
             <div className="pt-3 border-t border-line text-xs text-ink-muted font-medium flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
-                {new Date(quest.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {formatDateTimeID(quest.deadline)}
             </div>
         </GlassCard>
     );

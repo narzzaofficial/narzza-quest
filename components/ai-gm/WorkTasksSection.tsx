@@ -1,18 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Loader2, Briefcase, Plus, Clock, Activity, CheckCheck, Ban, Trash2 } from 'lucide-react';
-import { PRIORITY_META } from '@/constants/ui';
+import { Loader2, Briefcase, Plus, Trash2 } from 'lucide-react';
+import { PRIORITY_META, WORK_TASK_STATUS_ICON } from '@/constants/ui';
+import { formatDeadlineShort } from '@/lib/dateUtils';
 import type { WorkTask, WorkTaskPriority, WorkTaskStatus } from '@/types';
 import type { useWorkTasks } from '@/hooks/useWorkTasks';
 
 type WtData = ReturnType<typeof useWorkTasks>;
 
-const TASK_STATUS_ICON: Record<WorkTaskStatus, React.ReactNode> = {
-    todo:        <Clock      className="w-3.5 h-3.5" />,
-    in_progress: <Activity   className="w-3.5 h-3.5" />,
-    done:        <CheckCheck className="w-3.5 h-3.5" />,
-    blocked:     <Ban        className="w-3.5 h-3.5" />,
+const NEXT_STATUS: Record<WorkTaskStatus, WorkTaskStatus> = {
+    todo: 'in_progress', in_progress: 'done', done: 'todo', blocked: 'in_progress',
 };
 
 type TaskForm = {
@@ -27,23 +25,21 @@ function WorkTaskRow({ task, onStatusChange, onDelete }: {
     onDelete: (id: string) => void;
 }) {
     const p = PRIORITY_META[task.priority];
-    const nextStatus: Record<WorkTaskStatus, WorkTaskStatus> = {
-        todo: 'in_progress', in_progress: 'done', done: 'todo', blocked: 'in_progress',
-    };
+    const StatusIcon = WORK_TASK_STATUS_ICON[task.status];
     return (
         <div className={`flex items-start gap-2.5 p-2.5 rounded-xl border group ${task.status === 'done' ? 'opacity-50 border-line' : 'border-line bg-surface-2 hover:border-brand/20'} transition`}>
             <button
-                onClick={() => onStatusChange(task.id, nextStatus[task.status])}
+                onClick={() => onStatusChange(task.id, NEXT_STATUS[task.status])}
                 className={`mt-0.5 shrink-0 ${task.status === 'done' ? 'text-success' : task.status === 'in_progress' ? 'text-brand' : task.status === 'blocked' ? 'text-danger' : 'text-ink-muted'} hover:scale-110 transition-transform`}
                 title={`Status: ${task.status} → klik ubah`}
             >
-                {TASK_STATUS_ICON[task.status]}
+                <StatusIcon className="w-3.5 h-3.5" />
             </button>
             <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold ${task.status === 'done' ? 'line-through text-ink-muted' : 'text-ink'}`}>{task.title}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     {task.project && <span className="text-[10px] text-ink-muted font-bold">{task.project}</span>}
-                    {task.deadline && <span className="text-[10px] text-ink-muted">📅 {new Date(task.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>}
+                    {task.deadline && <span className="text-[10px] text-ink-muted">📅 {formatDeadlineShort(task.deadline)}</span>}
                     {task.estimatedHours && <span className="text-[10px] text-ink-muted">⏱ {task.estimatedHours}j</span>}
                 </div>
                 {task.blocker && <p className="text-[10px] text-danger mt-0.5">🚧 {task.blocker}</p>}

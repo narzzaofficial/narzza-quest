@@ -3,6 +3,8 @@
 import { Swords, Users, CheckCircle2, Lock, Zap, Wallet, Clock, Loader2 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import DifficultyBadge from '@/components/ui/DifficultyBadge';
+import { formatRupiah } from '@/lib/currency';
+import { formatDeadlineShort } from '@/lib/dateUtils';
 import type { GuildQuest } from '@/types';
 
 interface Props {
@@ -47,10 +49,10 @@ export function GuildQuestCard({ gq, uid, claimingId, onClaim }: Props) {
             <div className="flex flex-wrap gap-2 mb-4">
                 <span className="text-[10px] font-bold text-brand bg-brand-soft px-2.5 py-1 rounded-lg">+{gq.expReward} EXP</span>
                 {gq.moneyReward && gq.moneyReward > 0 ? (
-                    <span className="text-[10px] font-bold text-success bg-success-soft px-2.5 py-1 rounded-lg inline-flex items-center gap-1"><Wallet className="w-3 h-3" /> Rp {gq.moneyReward.toLocaleString('id-ID')}</span>
+                    <span className="text-[10px] font-bold text-success bg-success-soft px-2.5 py-1 rounded-lg inline-flex items-center gap-1"><Wallet className="w-3 h-3" /> {formatRupiah(gq.moneyReward)}</span>
                 ) : null}
                 <span className="text-[10px] font-bold text-ink-soft bg-surface-2 px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {new Date(gq.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                    <Clock className="w-3 h-3" /> {formatDeadlineShort(gq.deadline)}
                 </span>
             </div>
 

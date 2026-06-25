@@ -1,4 +1,6 @@
-import type { QuestCategory, QuestDifficulty, QuestStatus, UserStatusType, WorkloadLevel, WorkTaskPriority } from '@/types';
+import { Clock, Activity, CheckCheck, Ban } from 'lucide-react';
+import type { ElementType } from 'react';
+import type { QuestCategory, QuestDifficulty, QuestStatus, UserStatusType, WorkloadLevel, WorkTaskPriority, WorkTaskStatus } from '@/types';
 
 // Shared gradients for headers / icon chips / accents.
 export const GRAD = {
@@ -57,6 +59,12 @@ export const PRIORITY_META: Record<WorkTaskPriority, { label: string; color: str
     medium: { label: 'Sedang', color: 'text-brand',     bg: 'bg-brand-soft' },
     high:   { label: 'Tinggi', color: 'text-warn',      bg: 'bg-warn-soft'  },
     urgent: { label: 'Urgent', color: 'text-danger',    bg: 'bg-danger-soft'},
+};
+export const WORK_TASK_STATUS_ICON: Record<WorkTaskStatus, ElementType> = {
+    todo:        Clock,
+    in_progress: Activity,
+    done:        CheckCheck,
+    blocked:     Ban,
 };
 
 // ── Date / time labels (Indonesian) ───────────────────────────

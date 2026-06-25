@@ -2,7 +2,7 @@
 
 import { Crown, Shield } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
-import { dicebearAvatar } from '@/lib/avatar';
+import { getAvatarUrl } from '@/lib/avatar';
 import type { UserProfile } from '@/types';
 
 export function MemberCard({ member }: { member: UserProfile }) {
@@ -10,7 +10,7 @@ export function MemberCard({ member }: { member: UserProfile }) {
     return (
         <GlassCard className="flex items-center gap-4 p-4">
             <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-line bg-surface shrink-0">
-                <img src={member.avatar || dicebearAvatar(member.displayName)} alt={member.displayName} className="w-full h-full object-cover" />
+                <img src={getAvatarUrl(member.avatar, member.displayName)} alt={member.displayName} className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-ink truncate leading-snug">{member.displayName}</h3>

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useBadges } from '@/hooks/useBadges';
 import { ChevronLeft } from 'lucide-react';
-import { dicebearAvatar } from '@/lib/avatar';
+import { getAvatarUrl } from '@/lib/avatar';
 
 export default function TopBar() {
     const pathname = usePathname();
@@ -16,7 +16,7 @@ export default function TopBar() {
 
     if (!profile) return null;
 
-    const avatarUrl = profile.avatar || dicebearAvatar(profile.displayName);
+    const avatarUrl = getAvatarUrl(profile.avatar, profile.displayName);
     const topLevelPaths = ['/dashboard', '/quest-board', '/finance', '/profile', '/gm/quests', '/gm/payouts'];
     const isTopLevel = topLevelPaths.includes(pathname);
 

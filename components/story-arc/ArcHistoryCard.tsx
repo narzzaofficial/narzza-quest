@@ -3,11 +3,9 @@
 import { useState } from 'react';
 import { CheckCircle2, Circle, Clock, Sparkles, Swords, Trash2 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
+import { formatShortDateID } from '@/lib/dateUtils';
+import { computeArcProgress } from '@/lib/storyArc';
 import type { StoryArc } from '@/types';
-
-function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 interface Props {
     arc: StoryArc;
@@ -20,11 +18,7 @@ export function ArcHistoryCard({ arc, defaultOpen, isDeletable = false, onDelete
     const [open, setOpen] = useState(defaultOpen);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const isActive = arc.status === 'active';
-
-    const daysRemaining = isActive
-        ? Math.max(0, Math.ceil((new Date(arc.endDate).getTime() - Date.now()) / 86_400_000))
-        : 0;
-    const progressPct = isActive ? Math.min(100, ((14 - daysRemaining) / 14) * 100) : 100;
+    const { daysRemaining, progressPct } = computeArcProgress(arc.endDate, isActive);
 
     return (
         <GlassCard className={isActive ? 'ring-2 ring-brand/25' : ''}>
@@ -61,7 +55,7 @@ export function ArcHistoryCard({ arc, defaultOpen, isDeletable = false, onDelete
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-ink-muted text-xs">
                             <span className="flex items-center gap-1 whitespace-nowrap">
                                 <Clock className="w-3 h-3 shrink-0" />
-                                {formatDate(arc.startDate)} — {formatDate(arc.endDate)}
+                                {formatShortDateID(arc.startDate)} — {formatShortDateID(arc.endDate)}
                             </span>
                             <span className="flex items-center gap-1 whitespace-nowrap">
                                 <Swords className="w-3 h-3 shrink-0" />

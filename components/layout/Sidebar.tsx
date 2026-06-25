@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { dicebearAvatar } from '@/lib/avatar';
+import { getAvatarUrl } from '@/lib/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useBadges } from '@/hooks/useBadges';
 import {
@@ -83,6 +83,7 @@ function NavGroupSection({
                             <Link
                                 key={link.name}
                                 href={link.href}
+                                data-tour={`nav-${link.href.replace(/\//g, '')}`}
                                 title={collapsed ? link.name : undefined}
                                 className={[
                                     'relative flex items-center transition-colors duration-150 font-bold rounded-xl border',
@@ -236,7 +237,7 @@ export default function Sidebar() {
     }
     
     const isSuperAdmin = profile.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
-    const avatarUrl = profile.avatar || dicebearAvatar(profile.displayName);
+    const avatarUrl = getAvatarUrl(profile.avatar, profile.displayName);
 
     return (
         <aside className={`hidden md:flex flex-col h-screen border-r border-line glass-soft transition-all duration-300 ease-in-out ${collapsed ? 'w-17' : 'w-64'}`}>

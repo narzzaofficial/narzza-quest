@@ -9,6 +9,8 @@ import { GoalCard } from '@/components/ai-gm/GoalCard';
 import { DailyReviewCard } from '@/components/ai-gm/DailyReviewCard';
 import { MemoryCard } from '@/components/ai-gm/MemoryCard';
 import { QuestRow } from '@/components/ai-gm/QuestRow';
+import OnboardingTour from '@/components/system/OnboardingTour';
+import { AI_GM_TOUR_STEPS } from '@/constants/onboardingTours';
 
 export default function AIGameMasterPage() {
     const ai = useAIGameMaster();
@@ -32,22 +34,26 @@ export default function AIGameMasterPage() {
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+            <OnboardingTour tourKey="ai-gm" steps={AI_GM_TOUR_STEPS} />
+
             {/* ── Persona header ── */}
-            <PageHeader
-                icon={<Bot className="w-8 h-8 text-white" />}
-                title={AI_GM.name}
-                subtitle={AI_GM.tagline}
-                badge="Solo Mode"
-                grad="brand"
-            />
+            <div data-tour="ai-gm-header">
+                <PageHeader
+                    icon={<Bot className="w-8 h-8 text-white" />}
+                    title={AI_GM.name}
+                    subtitle={AI_GM.tagline}
+                    badge="Solo Mode"
+                    grad="brand"
+                />
+            </div>
 
             {/* ── North Star goal ── */}
-            <GoalCard />
-
-
+            <div data-tour="ai-gm-goal">
+                <GoalCard />
+            </div>
 
             {/* ── Generate card ── */}
-            <section className="glass rounded-card p-5 md:p-6 shadow-card">
+            <section data-tour="ai-gm-generate" className="glass rounded-card p-5 md:p-6 shadow-card">
                 <div className="flex items-center gap-2 mb-3">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm" style={{ backgroundImage: GRAD.brand }}>
                         <Target className="w-5 h-5 text-white" />
@@ -92,12 +98,16 @@ export default function AIGameMasterPage() {
 
             {/* ── Daily Review + Memory ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <DailyReviewCard ai={ai} />
-                <MemoryCard ai={ai} />
+                <div data-tour="ai-gm-daily-review">
+                    <DailyReviewCard ai={ai} />
+                </div>
+                <div data-tour="ai-gm-memory">
+                    <MemoryCard ai={ai} />
+                </div>
             </div>
 
             {/* ── Stats ── */}
-            <section className="grid grid-cols-3 gap-4">
+            <section data-tour="ai-gm-stats" className="grid grid-cols-3 gap-4">
                 {stats.map((s) => (
                     <div key={s.label} className="glass rounded-card p-4 shadow-card">
                         <s.icon className="w-5 h-5 text-brand mb-2" />
@@ -108,7 +118,7 @@ export default function AIGameMasterPage() {
             </section>
 
             {/* ── AI quest list ── */}
-            <section>
+            <section data-tour="ai-gm-quest-list">
                 <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-3">Misi dari AI</p>
                 {aiQuests.length === 0 ? (
                     <div className="glass rounded-card p-10 text-center shadow-card">

@@ -2,17 +2,12 @@
 
 import { useState } from 'react';
 import { Zap, Star, Clock, AlertTriangle } from 'lucide-react';
+import { formatFullDateID } from '@/lib/dateUtils';
 import type { DayXP } from '@/hooks/useXPHistory';
 
 function shortDate(dateStr: string) {
     const d = new Date(dateStr + 'T12:00:00Z');
     return d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' });
-}
-
-function fullDate(dateStr: string) {
-    return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('id-ID', {
-        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-    });
 }
 
 function fmtTime(sec: number) {
@@ -153,7 +148,7 @@ export function XPHistory({ days, loading, totalEarned, totalPenalty, totalNet, 
                         {selectedDay ? (
                             <div className="border border-line rounded-xl overflow-hidden">
                                 <div className="px-4 py-3 bg-surface-2 border-b border-line flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                                    <p className="text-ink font-bold text-sm flex-1 min-w-0">{fullDate(selectedDay.date)}</p>
+                                    <p className="text-ink font-bold text-sm flex-1 min-w-0">{formatFullDateID(selectedDay.date)}</p>
                                     <div className="flex items-center gap-2 sm:gap-3 text-sm font-extrabold shrink-0">
                                         {selectedDay.earned  > 0 && <span className="text-brand">+{selectedDay.earned.toLocaleString()}</span>}
                                         {selectedDay.penalty > 0 && <span className="text-danger">−{selectedDay.penalty.toLocaleString()}</span>}

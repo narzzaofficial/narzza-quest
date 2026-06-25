@@ -1,59 +1,25 @@
 'use client';
 
-import { useState } from 'react';
 import { Calendar, MessageSquare, Award, Feather, Wallet, Sparkles, Pencil, Loader2 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import DifficultyBadge from '@/components/ui/DifficultyBadge';
 import { CATEGORY_LABEL } from '@/constants/ui';
-import { updateQuestReflection } from '@/lib/db';
 import { useAuth } from '@/hooks/useAuth';
+import { useJournalReflection } from '@/hooks/useJournalReflection';
+import { formatRupiah } from '@/lib/currency';
+import { formatShortDateID } from '@/lib/dateUtils';
 import type { Quest } from '@/types';
 
 export function JournalEntry({ quest }: { quest: Quest }) {
     const { profile } = useAuth();
-    const [isEditing, setIsEditing] = useState(false);
-    const [note, setNote] = useState(quest.submissionNote || '');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [currentQuest, setCurrentQuest] = useState<Quest>(quest);
+    const { currentQuest, isEditing, setIsEditing, note, setNote, isSubmitting, save, cancelEdit } = useJournalReflection(quest, profile?.level);
 
     const handleSave = async () => {
-        if (!note.trim()) {
-            setIsEditing(false);
-            return;
-        }
-        setIsSubmitting(true);
         try {
-            const res = await fetch('/api/ai/review-quest', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: currentQuest.title,
-                    description: currentQuest.description,
-                    difficulty: currentQuest.difficulty,
-                    expReward: currentQuest.expReward,
-                    submissionNote: note,
-                    hasProof: !!currentQuest.submissionUrls?.length,
-                    playerLevel: profile?.level,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || 'Gagal mereview');
-
-            const aiReview = data.feedback || 'Kerja bagus!';
-
-            await updateQuestReflection(currentQuest.id, note, aiReview);
-            
-            setCurrentQuest(prev => ({
-                ...prev,
-                submissionNote: note,
-                reviewNote: aiReview,
-            }));
-            setIsEditing(false);
+            await save();
         } catch (err) {
             console.error(err);
             alert('Gagal menyimpan refleksi.');
-        } finally {
-            setIsSubmitting(false);
         }
     };
 
@@ -68,7 +34,7 @@ export function JournalEntry({ quest }: { quest: Quest }) {
                 </span>
                 <span className="text-xs font-bold text-ink-muted flex items-center gap-1 ml-auto">
                     <Calendar className="w-3.5 h-3.5" />
-                    {new Date(currentQuest.reviewedAt || currentQuest.updatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {formatShortDateID(currentQuest.reviewedAt || currentQuest.updatedAt)}
                 </span>
             </div>
 
@@ -79,7 +45,7 @@ export function JournalEntry({ quest }: { quest: Quest }) {
                 </span>
                 {currentQuest.moneyReward && currentQuest.moneyReward > 0 ? (
                     <span className="bg-success-soft text-success font-black text-[10px] px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-                        <Wallet className="w-3 h-3" /> Rp {currentQuest.moneyReward.toLocaleString('id-ID')}
+                        <Wallet className="w-3 h-3" /> {formatRupiah(currentQuest.moneyReward)}
                     </span>
                 ) : null}
             </div>
@@ -112,10 +78,7 @@ export function JournalEntry({ quest }: { quest: Quest }) {
                             />
                             <div className="flex items-center gap-2 justify-end mt-2">
                                 <button
-                                    onClick={() => {
-                                        setIsEditing(false);
-                                        setNote(currentQuest.submissionNote || '');
-                                    }}
+                                    onClick={cancelEdit}
                                     disabled={isSubmitting}
                                     className="px-3 py-1.5 text-xs font-bold text-ink-muted hover:text-ink transition-colors"
                                 >
@@ -164,4 +127,3 @@ export function JournalEntry({ quest }: { quest: Quest }) {
         </GlassCard>
     );
 }
-

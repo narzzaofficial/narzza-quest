@@ -19,6 +19,8 @@ import { ExpGrowthChart } from '@/components/analytics/ExpGrowthChart';
 import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
 import { HABIT_ICON_MAP, HABIT_ICON_COLORS } from '@/components/life-log/activityMeta';
 import { FaBullseye } from 'react-icons/fa6';
+import OnboardingTour from '@/components/system/OnboardingTour';
+import { ANALYTICS_TOUR_STEPS } from '@/constants/onboardingTours';
 
 export default function AnalyticsPage() {
     const [tab, setTab] = useState<'life' | 'finance'>('life');
@@ -44,7 +46,8 @@ export default function AnalyticsPage() {
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <OnboardingTour tourKey="analytics" steps={ANALYTICS_TOUR_STEPS} />
+            <header data-tour="analytics-header" className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-extrabold text-ink">Analytics</h1>
                     <p className="text-ink-muted text-sm mt-0.5">Pola hidup & finansialmu</p>
@@ -69,7 +72,7 @@ export default function AnalyticsPage() {
                 <FinanceAnalytics />
             ) : (
                 <>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div data-tour="analytics-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <StatCard icon={Activity} label="Jam Tercatat" value={`${totalHoursLogged}j`} sub="30 hari" trend={{ pct: periodComparison.hoursPct, periodLabel: 'vs minggu lalu' }} />
                         <StatCard icon={Zap} label="Rata-rata Mood" value={avgMood} sub="(1-5)" color="text-xp" bg="bg-xp-soft" trend={{ pct: periodComparison.moodPct, periodLabel: 'vs minggu lalu' }} />
                         <StatCard icon={Clock} label="Peak Hour" value={peakHour} sub="paling aktif" color="text-purple-600" bg="bg-purple-50" />
@@ -117,6 +120,7 @@ export default function AnalyticsPage() {
                         </ChartCard>
                     )}
 
+                    <div data-tour="analytics-charts" className="space-y-6">
                     {noActivity && (
                         <div className="glass rounded-card shadow-card p-8 text-center">
                             <BarChart2 className="w-10 h-10 text-ink-muted mx-auto mb-3" />
@@ -203,8 +207,9 @@ export default function AnalyticsPage() {
                     {!noActivity && (
                         <ExpGrowthChart data={expData} />
                     )}
+                    </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div data-tour="analytics-radar" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <ChartCard title="Strength Radar" sub="Kekuatanmu berdasarkan quest yang diselesaikan">
                             {radarData.every(r => r.score === 0) ? (
                                 <p className="text-ink-muted text-sm py-8 text-center">Selesaikan quest untuk melihat kekuatanmu</p>
@@ -259,14 +264,16 @@ export default function AnalyticsPage() {
                         </ChartCard>
                     )}
 
-                    <XPHistory
-                        days={days}
-                        loading={xpLoading}
-                        totalEarned={totalEarned}
-                        totalPenalty={totalPenalty}
-                        totalNet={totalNet}
-                        maxAbs={maxAbs}
-                    />
+                    <div data-tour="analytics-xp-history">
+                        <XPHistory
+                            days={days}
+                            loading={xpLoading}
+                            totalEarned={totalEarned}
+                            totalPenalty={totalPenalty}
+                            totalNet={totalNet}
+                            maxAbs={maxAbs}
+                        />
+                    </div>
                 </>
             )}
         </div>

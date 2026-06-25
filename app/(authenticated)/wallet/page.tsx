@@ -9,7 +9,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Toast from '@/components/ui/Toast';
 import { WithdrawalRow } from '@/components/wallet/WithdrawalRow';
-import { dicebearAvatar } from '@/lib/avatar';
+import { getAvatarUrl } from '@/lib/avatar';
 
 export default function WalletPage() {
     const w = useWallet();
@@ -59,7 +59,7 @@ export default function WalletPage() {
                                 <GlassCard key={gmUid} className={`p-5 ${isZero ? 'opacity-70' : ''}`}>
                                     <div className="flex items-center gap-3 mb-4">
                                         <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-success/15 bg-surface shrink-0">
-                                            <img src={gm?.avatar || dicebearAvatar(gm?.displayName || 'GM')} alt="GM" className="w-full h-full object-cover" />
+                                            <img src={getAvatarUrl(gm?.avatar, gm?.displayName || 'GM')} alt="GM" className="w-full h-full object-cover" />
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Sponsor Quest</p>

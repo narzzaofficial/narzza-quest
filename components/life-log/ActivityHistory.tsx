@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CalendarDays, ChevronDown, ChevronUp, Clock, Activity, SortAsc, SortDesc, Check, X, Target } from 'lucide-react';
 import { MOOD_ICONS, MOOD_COLORS, HABIT_ICON_MAP, HABIT_ICON_COLORS } from '@/components/life-log/activityMeta';
 import { formatDuration } from '@/constants/life-log';
+import { formatFullDateID } from '@/lib/dateUtils';
 import { TimelineEntry } from '@/components/life-log/TimelineEntry';
 import type { DayActivity } from '@/hooks/useActivityHistory';
 import type { ActivityEntry, Habit } from '@/types';
@@ -21,12 +22,6 @@ function DayCardSkeleton() {
             </div>
         </div>
     );
-}
-
-function formatDate(dateStr: string) {
-    return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('id-ID', {
-        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-    });
 }
 
 interface Props {
@@ -97,7 +92,7 @@ export function ActivityHistory({ days, loading, habits, getDurationMinutes }: P
                                         className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-surface-2 transition text-left"
                                     >
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-ink font-bold text-sm">{formatDate(day.date)}</p>
+                                            <p className="text-ink font-bold text-sm">{formatFullDateID(day.date)}</p>
                                             <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                                                 {day.totalMinutes > 0 && (
                                                     <span className="text-ink-muted text-xs flex items-center gap-1">

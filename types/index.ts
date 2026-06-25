@@ -53,6 +53,9 @@ export interface UserProfile {
 
     // Telegram notifications/reports
     telegramChatId?: string;
+
+    // Per-page onboarding tours the user has already seen (e.g. "dashboard", "ai-gm")
+    completedOnboardingTours?: string[];
 }
 
 export interface GoalProfile {

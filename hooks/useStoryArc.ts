@@ -10,6 +10,7 @@ import {
 } from '@/lib/db';
 import type { Quest, StoryArc, UserProfile, AIMemory } from '@/types';
 import { formatGoal, hasGoal } from '@/constants/goal';
+import { computeArcProgress } from '@/lib/storyArc';
 
 interface UseStoryArcOptions {
     profile: UserProfile | null;
@@ -129,13 +130,7 @@ export function useStoryArc({ profile, memory, approvedQuests }: UseStoryArcOpti
         }).catch(() => {});
     }, [arc, generateNewArc]);
 
-    const daysRemaining = arc
-        ? Math.max(0, Math.ceil((new Date(arc.endDate).getTime() - Date.now()) / 86_400_000))
-        : 0;
-
-    const daysTotal = 14;
-    const daysElapsed = arc ? daysTotal - daysRemaining : 0;
-    const progressPct = arc ? Math.min(100, (daysElapsed / daysTotal) * 100) : 0;
+    const { daysRemaining, progressPct } = computeArcProgress(arc?.endDate ?? '', !!arc);
 
     return {
         arc,

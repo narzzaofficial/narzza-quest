@@ -2,6 +2,7 @@
 
 import { Bot } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
+import { formatTimeOnlyID } from '@/lib/dateUtils';
 import type { GMMessage } from '@/types';
 
 interface Props {
@@ -29,7 +30,7 @@ export function GMMessageRow({ message, onRead }: Props) {
                         )}
                     </p>
                     <span className="text-[10px] text-ink-muted whitespace-nowrap">
-                        {new Date(message.createdAt).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                        {formatTimeOnlyID(message.createdAt)}
                     </span>
                 </div>
                 <p className="text-sm text-ink-soft leading-relaxed">{message.content}</p>

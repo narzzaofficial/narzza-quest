@@ -1,297 +1,32 @@
-import React, { useMemo } from 'react';
-import { useFinance } from '@/hooks/useFinance';
+import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { 
+import { useFinanceAnalytics } from '@/hooks/useFinanceAnalytics';
+import {
     BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
-    LineChart, Line, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar, ComposedChart, CartesianGrid
+    LineChart, Line, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, Radar, RadialBarChart, RadialBar
 } from 'recharts';
+import type { ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import { ChartCard } from './ChartCard';
 import { StatCard } from './StatCard';
-import { Landmark, TrendingDown, TrendingUp, Wallet, Target, PieChart as PieChartIcon, AlertCircle } from 'lucide-react';
+import { Landmark, TrendingDown, TrendingUp, Wallet, AlertCircle } from 'lucide-react';
 import EmptyState from '../ui/EmptyState';
 
 const COLORS = ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 const EXPENSE_COLOR = '#f43f5e';
 const INCOME_COLOR = '#10b981';
 
+const formatIDR = (value: number) => `Rp ${value.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
+
 export function FinanceAnalytics() {
     const { profile } = useAuth();
-    const { transactions, goals, assets, totalNetWorthIDR, exchangeRates } = useFinance(profile?.uid);
-
-    // --- Helper: Convert any amount to IDR ---
-    const toIDR = (amount: number, currency: string) => {
-        if (!currency || currency === 'IDR') return amount;
-        if (exchangeRates[currency] && exchangeRates['IDR']) {
-            return amount * (exchangeRates['IDR'] / exchangeRates[currency]);
-        }
-        return amount; // Fallback
-    };
-
-    const formatIDR = (value: number) => `Rp ${value.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
-
-    // Hitung total income & expense bulan ini vs bulan lalu
-    const now = new Date();
-    const startOfMonthStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const startOfLastMonthStr = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-
-    let totalIncomeThisMonth = 0;
-    let totalExpenseThisMonth = 0;
-    let totalExpenseLastMonth = 0;
-
-    transactions.forEach(tx => {
-        const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-        if (tx.timestamp >= startOfMonthStr) {
-            if (tx.type === 'income') totalIncomeThisMonth += amountIDR;
-            if (tx.type === 'expense') totalExpenseThisMonth += amountIDR;
-        } else if (tx.timestamp >= startOfLastMonthStr && tx.type === 'expense') {
-            totalExpenseLastMonth += amountIDR;
-        }
-    });
-
-    const expensePct = totalExpenseLastMonth > 0 ? ((totalExpenseThisMonth - totalExpenseLastMonth) / totalExpenseLastMonth) * 100 : null;
-
-    // --- 1. Cash Flow (Income vs Expense total) ---
-    const cashFlowData = useMemo(() => {
-        let totalIncome = 0;
-        let totalExpense = 0;
-        
-        transactions.forEach(tx => {
-            const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-            if (tx.type === 'income') totalIncome += amountIDR;
-            if (tx.type === 'expense') totalExpense += amountIDR;
-        });
-
-        return [
-            { name: 'Pemasukan', value: totalIncome, fill: INCOME_COLOR },
-            { name: 'Pengeluaran', value: totalExpense, fill: EXPENSE_COLOR }
-        ];
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 2. Category Breakdown (Expenses only) ---
-    const categoryData = useMemo(() => {
-        const catMap: Record<string, number> = {};
-        transactions.filter(t => t.type === 'expense').forEach(tx => {
-            const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-            catMap[tx.category] = (catMap[tx.category] || 0) + amountIDR;
-        });
-        return Object.entries(catMap)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value); // Sort largest first
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 3. Behavioral Analytics (Context/Mood) ---
-    const behavioralData = useMemo(() => {
-        const moodMap: Record<string, number> = {};
-        transactions.filter(t => t.type === 'expense' && t.context).forEach(tx => {
-            const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-            const label = tx.context === 'necessity' ? 'Kebutuhan Pokok' :
-                          tx.context === 'reward' ? 'Self Reward' :
-                          tx.context === 'stress-relief' ? 'Pelampiasan Stres' :
-                          tx.context === 'investment' ? 'Investasi Masa Depan' :
-                          tx.context === 'impulse' ? 'Impulsif' : (tx.context || 'Lainnya');
-            moodMap[label] = (moodMap[label] || 0) + amountIDR;
-        });
-        return Object.entries(moodMap)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value);
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 4. Hidden Fees (Transfer Fees) ---
-    const totalFees = useMemo(() => {
-        let total = 0;
-        transactions.filter(t => t.type === 'transfer' && t.transferFee && t.transferFee > 0).forEach(tx => {
-            const assetCurrency = assets.find(a => a.id === tx.assetId)?.currency || 'IDR';
-            const amountIDR = toIDR(tx.transferFee!, assetCurrency);
-            total += amountIDR;
-        });
-        return total;
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 5. Top Merchants ---
-    const merchantData = useMemo(() => {
-        const merchantMap: Record<string, number> = {};
-        transactions.filter(t => t.type === 'expense' && t.merchant).forEach(tx => {
-            const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-            merchantMap[tx.merchant!] = (merchantMap[tx.merchant!] || 0) + amountIDR;
-        });
-        return Object.entries(merchantMap)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 5); // Top 5
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 6. Currency Exposure (Assets) ---
-    const currencyExposureData = useMemo(() => {
-        const currMap: Record<string, number> = {};
-        assets.forEach(asset => {
-            const amountIDR = toIDR(asset.balance, asset.currency);
-            currMap[asset.currency] = (currMap[asset.currency] || 0) + amountIDR;
-        });
-        return Object.entries(currMap)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value);
-    }, [assets, exchangeRates]);
-
-
-    // --- 7. Trend Cash Flow Harian (LineChart) ---
-    const dailyCashFlowData = useMemo(() => {
-        const daysMap: Record<string, any> = {};
-        for(let i=29; i>=0; i--) {
-            const d = new Date(now.getTime() - i*24*60*60*1000);
-            const key = d.toISOString().split('T')[0];
-            daysMap[key] = { name: key.substring(5), income: 0, expense: 0 };
-        }
-        transactions.forEach(tx => {
-            const txDate = tx.timestamp.split('T')[0];
-            if(daysMap[txDate]) {
-                const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-                if(tx.type === 'income') daysMap[txDate].income += amountIDR;
-                if(tx.type === 'expense') daysMap[txDate].expense += amountIDR;
-            }
-        });
-        return Object.values(daysMap);
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 8. Pertumbuhan Net Worth Kumulatif (AreaChart) ---
-    const netWorthTrendData = useMemo(() => {
-        const daysMap: Record<string, any> = {};
-        for(let i=29; i>=0; i--) {
-            const d = new Date(now.getTime() - i*24*60*60*1000);
-            const key = d.toISOString().split('T')[0];
-            daysMap[key] = { name: key.substring(5), change: 0 };
-        }
-        transactions.forEach(tx => {
-            const txDate = tx.timestamp.split('T')[0];
-            if(daysMap[txDate]) {
-                const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-                if(tx.type === 'income') daysMap[txDate].change += amountIDR;
-                if(tx.type === 'expense') daysMap[txDate].change -= amountIDR;
-            }
-        });
-        let currentW = totalNetWorthIDR;
-        const trend = [];
-        const values = Object.values(daysMap);
-        for(let i = values.length - 1; i >= 0; i--) {
-            trend.unshift({ name: values[i].name, netWorth: currentW });
-            currentW -= values[i].change;
-        }
-        return trend;
-    }, [transactions, assets, exchangeRates, totalNetWorthIDR]);
-
-    // --- 9. Frekuensi vs Nominal (ComposedChart) ---
-    const freqNominalData = useMemo(() => {
-        let incomeCount = 0, expenseCount = 0, transferCount = 0;
-        let incomeTotal = 0, expenseTotal = 0, transferTotal = 0;
-        transactions.forEach(tx => {
-            const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-            if(tx.type === 'income') { incomeCount++; incomeTotal += amountIDR; }
-            if(tx.type === 'expense') { expenseCount++; expenseTotal += amountIDR; }
-            if(tx.type === 'transfer') { transferCount++; transferTotal += amountIDR; }
-        });
-        return [
-            { name: 'Pemasukan', nominal: incomeTotal, freq: incomeCount },
-            { name: 'Pengeluaran', nominal: expenseTotal, freq: expenseCount },
-            { name: 'Transfer', nominal: transferTotal, freq: transferCount }
-        ];
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 10. Pemasukan Berdasarkan Sumber (Donut PieChart) ---
-    const incomeSourceData = useMemo(() => {
-        const sourceMap: Record<string, number> = {};
-        transactions.filter(t => t.type === 'income').forEach(tx => {
-            const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-            const cat = tx.category || 'Lainnya';
-            sourceMap[cat] = (sourceMap[cat] || 0) + amountIDR;
-        });
-        return Object.entries(sourceMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 11. Distribusi Tipe Aset (RadarChart) ---
-    const assetTypeData = useMemo(() => {
-        const typeMap: Record<string, number> = {};
-        assets.forEach(asset => {
-            const amountIDR = toIDR(asset.balance, asset.currency);
-            const t = asset.type || 'Lainnya';
-            typeMap[t] = (typeMap[t] || 0) + amountIDR;
-        });
-        return Object.entries(typeMap).map(([name, value]) => ({ name, value }));
-    }, [assets, exchangeRates]);
-
-    // --- 12. Rasio Tabungan (RadialBarChart) ---
-    const savingsRateData = useMemo(() => {
-        if(totalIncomeThisMonth === 0) return [];
-        const saved = Math.max(0, totalIncomeThisMonth - totalExpenseThisMonth);
-        return [
-            { name: 'Pengeluaran', value: totalExpenseThisMonth, fill: EXPENSE_COLOR },
-            { name: 'Tersimpan', value: saved, fill: INCOME_COLOR }
-        ];
-    }, [totalIncomeThisMonth, totalExpenseThisMonth]);
-
-    // --- 13. Kebutuhan Pokok vs Keinginan (Stacked Bar) ---
-    const needsVsWantsData = useMemo(() => {
-        let needs = 0, wants = 0;
-        transactions.filter(t => t.type === 'expense').forEach(tx => {
-            const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-            if(tx.context === 'necessity') needs += amountIDR;
-            else wants += amountIDR;
-        });
-        return [{ name: 'Bulan Ini', Kebutuhan: needs, Keinginan: wants }];
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 14. Rata-Rata Nominal Pengeluaran (LineChart) ---
-    const avgExpenseData = useMemo(() => {
-        const daysMap: Record<string, any> = {};
-        for(let i=29; i>=0; i--) {
-            const d = new Date(now.getTime() - i*24*60*60*1000);
-            const key = d.toISOString().split('T')[0];
-            daysMap[key] = { name: key.substring(5), total: 0, count: 0 };
-        }
-        transactions.filter(t => t.type === 'expense').forEach(tx => {
-            const txDate = tx.timestamp.split('T')[0];
-            if(daysMap[txDate]) {
-                const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-                daysMap[txDate].total += amountIDR;
-                daysMap[txDate].count += 1;
-            }
-        });
-        return Object.values(daysMap).map((d:any) => ({
-            name: d.name,
-            avg: d.count > 0 ? (d.total / d.count) : 0
-        }));
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 15. Intensitas Pengeluaran per Hari (BarChart Vertikal) ---
-    const dayOfWeekData = useMemo(() => {
-        const days = ['Mgg', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-        const data = days.map(day => ({ name: day, total: 0 }));
-        transactions.filter(t => t.type === 'expense').forEach(tx => {
-            const d = new Date(tx.timestamp);
-            const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
-            data[d.getDay()].total += amountIDR;
-        });
-        return data;
-    }, [transactions, assets, exchangeRates]);
-
-    // --- 16. Biaya Siluman / Transfer Fees Over Time (AreaChart) ---
-    const feeTrendData = useMemo(() => {
-        const daysMap: Record<string, any> = {};
-        for(let i=29; i>=0; i--) {
-            const d = new Date(now.getTime() - i*24*60*60*1000);
-            const key = d.toISOString().split('T')[0];
-            daysMap[key] = { name: key.substring(5), fee: 0 };
-        }
-        transactions.filter(t => t.type === 'transfer' && t.transferFee && t.transferFee > 0).forEach(tx => {
-            const txDate = tx.timestamp.split('T')[0];
-            if(daysMap[txDate]) {
-                const assetCurrency = assets.find(a => a.id === tx.assetId)?.currency || 'IDR';
-                const amountIDR = toIDR(tx.transferFee!, assetCurrency);
-                daysMap[txDate].fee += amountIDR;
-            }
-        });
-        return Object.values(daysMap);
-    }, [transactions, assets, exchangeRates]);
-
-    const noData = transactions.length === 0;
+    const {
+        goals, totalNetWorthIDR,
+        totalIncomeThisMonth, totalExpenseThisMonth, totalFees, expensePct,
+        noData,
+        cashFlowData, categoryData, behavioralData, merchantData, currencyExposureData,
+        dailyCashFlowData, netWorthTrendData, freqNominalData, incomeSourceData, assetTypeData,
+        savingsRateData, needsVsWantsData, avgExpenseData, dayOfWeekData, feeTrendData,
+    } = useFinanceAnalytics(profile?.uid);
 
     return (
         <div className="space-y-6">
@@ -309,13 +44,13 @@ export function FinanceAnalytics() {
             {!noData && (
                 <>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        
+
                         <ChartCard title="Pemasukan vs Pengeluaran" sub="Total Sepanjang Waktu">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <BarChart data={cashFlowData}>
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#8b949e' }} />
-                                        <RechartsTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} formatter={(value: any) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                        <RechartsTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                         <Bar dataKey="value" radius={[8, 8, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -323,7 +58,7 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Psikologi Pengeluaran" sub="Kategori Mood & Context">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 {behavioralData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                         <PieChart>
@@ -332,7 +67,7 @@ export function FinanceAnalytics() {
                                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                                 ))}
                                             </Pie>
-                                            <RechartsTooltip formatter={(value: any) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                            <RechartsTooltip formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                             <Legend wrapperStyle={{ fontSize: '11px' }} />
                                         </PieChart>
                                     </ResponsiveContainer>
@@ -343,13 +78,13 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Pengeluaran per Kategori" sub="Berdasarkan kategori">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 {categoryData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                         <BarChart data={categoryData} layout="vertical" margin={{ left: 50 }}>
                                             <XAxis type="number" hide />
                                             <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: '#8b949e' }} />
-                                            <RechartsTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} formatter={(value: any) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                            <RechartsTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                             <Bar dataKey="value" fill="#6366f1" radius={[0, 8, 8, 0]}>
                                                 {categoryData.map((entry, index) => (
                                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -364,7 +99,7 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Eksposur Mata Uang" sub="Berdasarkan saldo aset">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 {currencyExposureData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                         <PieChart>
@@ -373,7 +108,7 @@ export function FinanceAnalytics() {
                                                     <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
                                                 ))}
                                             </Pie>
-                                            <RechartsTooltip formatter={(value: any) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                            <RechartsTooltip formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                             <Legend wrapperStyle={{ fontSize: '11px' }} />
                                         </PieChart>
                                     </ResponsiveContainer>
@@ -386,7 +121,7 @@ export function FinanceAnalytics() {
                         <ChartCard title="Top 5 Merchant" sub="Tempat pengeluaran terbesar">
                             <div className="flex-1 w-full mt-2 space-y-4">
                                 {merchantData.length > 0 ? (
-                                    merchantData.map((merchant, index) => {
+                                    merchantData.map((merchant) => {
                                         const maxVal = merchantData[0].value;
                                         const progress = (merchant.value / maxVal) * 100;
                                         return (
@@ -411,7 +146,7 @@ export function FinanceAnalytics() {
                             {goals.length === 0 ? (
                                 <p className="text-ink-muted text-sm py-8 text-center">Belum ada target menabung</p>
                             ) : (
-                                <div className="space-y-4 max-h-[250px] overflow-y-auto custom-scrollbar pr-2 mt-2">
+                                <div className="space-y-4 max-h-62.5 overflow-y-auto custom-scrollbar pr-2 mt-2">
                                     {goals.map(goal => {
                                         const progress = Math.min(100, Math.max(0, (goal.currentAmount / goal.targetAmount) * 100));
                                         return (
@@ -434,12 +169,12 @@ export function FinanceAnalytics() {
                             )}
                         </ChartCard>
                         <ChartCard title="Trend Cash Flow Harian" sub="30 Hari Terakhir">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <LineChart data={dailyCashFlowData}>
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: '#8b949e' }} />
                                         <YAxis hide />
-                                        <RechartsTooltip cursor={{ stroke: 'rgba(99, 102, 241, 0.2)', strokeWidth: 2 }} formatter={(value: any) => [formatIDR(Number(value) || 0), '']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                        <RechartsTooltip cursor={{ stroke: 'rgba(99, 102, 241, 0.2)', strokeWidth: 2 }} formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), '']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                         <Line type="monotone" dataKey="income" name="Pemasukan" stroke={INCOME_COLOR} strokeWidth={3} dot={false} />
                                         <Line type="monotone" dataKey="expense" name="Pengeluaran" stroke={EXPENSE_COLOR} strokeWidth={3} dot={false} />
                                     </LineChart>
@@ -448,7 +183,7 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Pertumbuhan Kekayaan Bersih" sub="Estimasi Net Worth 30 Hari">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <AreaChart data={netWorthTrendData}>
                                         <defs>
@@ -459,7 +194,7 @@ export function FinanceAnalytics() {
                                         </defs>
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: '#8b949e' }} />
                                         <YAxis hide domain={['dataMin', 'dataMax']} />
-                                        <RechartsTooltip cursor={{ stroke: 'rgba(99, 102, 241, 0.2)' }} formatter={(value: any) => [formatIDR(Number(value) || 0), 'Net Worth']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                        <RechartsTooltip cursor={{ stroke: 'rgba(99, 102, 241, 0.2)' }} formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Net Worth']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                         <Area baseValue="dataMin" type="monotone" dataKey="netWorth" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorNetWorth)" />
                                     </AreaChart>
                                 </ResponsiveContainer>
@@ -467,12 +202,12 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Frekuensi Transaksi" sub="Jumlah Transaksi Berdasarkan Tipe">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <BarChart data={freqNominalData}>
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#8b949e' }} />
                                         <YAxis hide />
-                                        <RechartsTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} formatter={(value: any) => [value, 'Kali']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                        <RechartsTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} formatter={(value: ValueType | undefined) => [value, 'Kali']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                         <Bar dataKey="freq" name="Frekuensi" barSize={50} fill="#a78bfa" radius={[8, 8, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -480,7 +215,7 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Pemasukan Berdasarkan Sumber" sub="Kategori Pendapatan">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 {incomeSourceData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                         <PieChart>
@@ -489,7 +224,7 @@ export function FinanceAnalytics() {
                                                     <Cell key={`cell-${index}`} fill={COLORS[(index + 5) % COLORS.length]} />
                                                 ))}
                                             </Pie>
-                                            <RechartsTooltip formatter={(value: any) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                            <RechartsTooltip formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                             <Legend wrapperStyle={{ fontSize: '11px' }} />
                                         </PieChart>
                                     </ResponsiveContainer>
@@ -500,14 +235,14 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Distribusi Tipe Aset" sub="Struktur Portofolio Finansial">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 {assetTypeData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={assetTypeData}>
                                             <PolarGrid stroke="rgba(139, 148, 158, 0.2)" />
                                             <PolarAngleAxis dataKey="name" tick={{ fill: '#8b949e', fontSize: 11, fontWeight: 'bold' }} />
                                             <Radar name="Aset" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
-                                            <RechartsTooltip formatter={(value: any) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                            <RechartsTooltip formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                         </RadarChart>
                                     </ResponsiveContainer>
                                 ) : (
@@ -517,13 +252,13 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Rasio Tabungan (Savings Rate)" sub="Pengeluaran vs Tersisa Bulan Ini">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 {totalIncomeThisMonth > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                         <RadialBarChart cx="50%" cy="50%" innerRadius="40%" outerRadius="90%" barSize={20} data={savingsRateData}>
                                             <RadialBar background={{ fill: '#f3f4f6' }} dataKey="value" cornerRadius={10} />
                                             <Legend iconSize={10} layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: '11px' }} />
-                                            <RechartsTooltip formatter={(value: any) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                            <RechartsTooltip formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                         </RadialBarChart>
                                     </ResponsiveContainer>
                                 ) : (
@@ -533,12 +268,12 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Kebutuhan Pokok vs Keinginan" sub="Bulan Ini">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <BarChart data={needsVsWantsData} layout="vertical" margin={{ left: 20 }}>
                                         <XAxis type="number" hide />
                                         <YAxis type="category" dataKey="name" hide />
-                                        <RechartsTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} formatter={(value: any) => [formatIDR(Number(value) || 0), '']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                        <RechartsTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), '']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                         <Legend wrapperStyle={{ fontSize: '11px' }} />
                                         <Bar dataKey="Kebutuhan" stackId="a" fill="#10b981" radius={[8, 0, 0, 8]} />
                                         <Bar dataKey="Keinginan" stackId="a" fill="#f43f5e" radius={[0, 8, 8, 0]} />
@@ -548,12 +283,12 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Rata-Rata Nominal Pengeluaran" sub="Nilai rata-rata per transaksi (30 Hari)">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <LineChart data={avgExpenseData}>
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: '#8b949e' }} />
                                         <YAxis hide />
-                                        <RechartsTooltip cursor={{ stroke: 'rgba(99, 102, 241, 0.2)' }} formatter={(value: any) => [formatIDR(Number(value) || 0), 'Rata-Rata']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                        <RechartsTooltip cursor={{ stroke: 'rgba(99, 102, 241, 0.2)' }} formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Rata-Rata']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                         <Line type="monotone" dataKey="avg" stroke="#f43f5e" strokeWidth={3} strokeDasharray="5 5" dot={{ r: 3, fill: '#f43f5e' }} activeDot={{ r: 6 }} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -561,12 +296,12 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Intensitas Hari Pengeluaran" sub="Berdasarkan Hari (Sepanjang Waktu)">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <BarChart data={dayOfWeekData}>
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#8b949e' }} />
                                         <YAxis hide />
-                                        <RechartsTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} formatter={(value: any) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                        <RechartsTooltip cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Total']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                         <Bar dataKey="total" fill="#38bdf8" radius={[8, 8, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -574,7 +309,7 @@ export function FinanceAnalytics() {
                         </ChartCard>
 
                         <ChartCard title="Kebocoran Biaya Siluman" sub="Transfer Fees / Admin Bulanan (30 Hari)">
-                            <div className="flex-1 w-full mt-4 h-[250px]">
+                            <div className="flex-1 w-full mt-4 h-62.5">
                                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <AreaChart data={feeTrendData}>
                                         <defs>
@@ -585,7 +320,7 @@ export function FinanceAnalytics() {
                                         </defs>
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700, fill: '#8b949e' }} />
                                         <YAxis hide />
-                                        <RechartsTooltip cursor={{ stroke: 'rgba(236, 72, 153, 0.2)' }} formatter={(value: any) => [formatIDR(Number(value) || 0), 'Biaya Admin']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                                        <RechartsTooltip cursor={{ stroke: 'rgba(236, 72, 153, 0.2)' }} formatter={(value: ValueType | undefined) => [formatIDR(Number(value) || 0), 'Biaya Admin']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
                                         <Area type="monotone" dataKey="fee" stroke="#ec4899" strokeWidth={3} fillOpacity={1} fill="url(#colorFees)" />
                                     </AreaChart>
                                 </ResponsiveContainer>

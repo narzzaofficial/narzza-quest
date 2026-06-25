@@ -18,7 +18,7 @@ import GlassCard from '@/components/ui/GlassCard';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
-import { WITHDRAWAL_STATUS_UI, WITHDRAWAL_STATUS_UI_FALLBACK } from '@/constants/gm';
+import { WITHDRAWAL_STATUS_UI_GM, WITHDRAWAL_STATUS_UI_GM_FALLBACK } from '@/constants/gm';
 import type { Withdrawal } from '@/types';
 
 export default function GMPayoutsPage() {
@@ -86,7 +86,7 @@ export default function GMPayoutsPage() {
 type PayoutData = ReturnType<typeof useGMPayouts>;
 
 function PayoutRow({ wd, p, highlighted }: { wd: Withdrawal; p: PayoutData; highlighted?: boolean }) {
-    const status = WITHDRAWAL_STATUS_UI[wd.status] ?? { ...WITHDRAWAL_STATUS_UI_FALLBACK, text: wd.status };
+    const status = WITHDRAWAL_STATUS_UI_GM[wd.status] ?? { ...WITHDRAWAL_STATUS_UI_GM_FALLBACK, text: wd.status };
     const isPending = wd.status === 'pending';
 
     return (

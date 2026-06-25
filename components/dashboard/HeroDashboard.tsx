@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import {
     ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis,
@@ -13,14 +13,17 @@ import {
 import { useAIGameMaster } from '@/hooks/useAIGameMaster';
 import { useGMMessages } from '@/hooks/useGMMessages';
 import { useActivityLog } from '@/hooks/useActivityLog';
+import { useAnimatedPercent } from '@/hooks/useAnimatedPercent';
 import { GRAD } from '@/constants/ui';
 import { GMBanner } from '@/components/gm/GMBanner';
 import { ArcCard } from '@/components/gm/ArcCard';
 import { PendingBanner } from '@/components/dashboard/PendingBanner';
 import { MenuGrid } from '@/components/dashboard/MenuGrid';
 import { ChartTooltip } from '@/components/dashboard/ChartTooltip';
-import { dicebearAvatar } from '@/lib/avatar';
+import { getAvatarUrl } from '@/lib/avatar';
 import type { useDashboard } from '@/hooks/useDashboard';
+import OnboardingTour from '@/components/system/OnboardingTour';
+import { DASHBOARD_TOUR_STEPS } from '@/constants/onboardingTours';
 
 type DashboardData = ReturnType<typeof useDashboard>;
 
@@ -28,31 +31,12 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
     const profile = d.profile!;
     const hasActivity = d.activity7d.some((p) => p.exp > 0 || p.penalty > 0);
     const [chartType, setChartType] = useState<'bar' | 'line'>('line');
-    const [displayPct, setDisplayPct] = useState(0);
-    const [smoothPct, setSmoothPct] = useState(0);
-    const rafRef = useRef<number | null>(null);
-    useEffect(() => {
-        const target = d.expPercent;
-        const duration = 1200;
-        const start = performance.now();
-        const tick = (now: number) => {
-            const t = Math.min(1, (now - start) / duration);
-            // ease-out cubic
-            const eased = 1 - Math.pow(1 - t, 3);
-            setSmoothPct(eased * target);
-            setDisplayPct(Math.round(eased * target));
-            if (t < 1) rafRef.current = requestAnimationFrame(tick);
-        };
-        rafRef.current = requestAnimationFrame(tick);
-        return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-    }, [d.expPercent]);
+    const { displayPct, smoothPct } = useAnimatedPercent(d.expPercent);
     const ai = useAIGameMaster();
     const gm = useGMMessages(profile.uid);
     const activityLog = useActivityLog(profile.uid);
 
-    const totalMinutesToday = activityLog.entries.reduce(
-        (sum, e) => sum + activityLog.getDurationMinutes(e), 0
-    );
+    const { totalMinutesToday } = activityLog;
     const jamAktifLabel = totalMinutesToday >= 60
         ? `${(totalMinutesToday / 60).toFixed(1)}h`
         : totalMinutesToday > 0 ? `${Math.round(totalMinutesToday)}m` : '—';
@@ -72,6 +56,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+            <OnboardingTour tourKey="dashboard" steps={DASHBOARD_TOUR_STEPS} />
             <PendingBanner count={d.pendingCount} />
 
             {gm.latestHighPriority && (
@@ -83,7 +68,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                 <div className="bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-14 h-14 rounded-full overflow-hidden ring-4 ring-sky-50">
-                            <img src={profile.avatar || dicebearAvatar(profile.displayName)} alt={profile.displayName} className="w-full h-full object-cover" />
+                            <img src={getAvatarUrl(profile.avatar, profile.displayName)} alt={profile.displayName} className="w-full h-full object-cover" />
                         </div>
                         <div>
                             <p className="text-slate-400 text-sm font-medium">Selamat belajar,</p>
@@ -127,13 +112,13 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
             </div>
 
             {/* Hero banner */}
-            <header className="hidden md:block relative overflow-hidden rounded-card p-6 md:p-7 text-white shadow-card" style={{ backgroundImage: GRAD.brand }}>
+            <header data-tour="hero-banner" className="hidden md:block relative overflow-hidden rounded-card p-6 md:p-7 text-white shadow-card" style={{ backgroundImage: GRAD.brand }}>
                 <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-white/15 blur-2xl pointer-events-none" />
                 <div className="absolute -bottom-20 left-10 w-52 h-52 rounded-full bg-white/10 blur-2xl pointer-events-none" />
                 <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-5">
                     <div className="relative shrink-0">
                         <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden ring-4 ring-white/40 bg-white/20">
-                            <img src={profile.avatar || dicebearAvatar(profile.displayName)} alt={profile.displayName} className="w-full h-full object-cover" />
+                            <img src={getAvatarUrl(profile.avatar, profile.displayName)} alt={profile.displayName} className="w-full h-full object-cover" />
                         </div>
                         <span className="absolute -bottom-2 -right-2 bg-white text-brand text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-card">
                             LV {profile.level || 1}
@@ -159,7 +144,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
 
             {/* XP + Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <section className="hidden md:block glass rounded-card p-5 shadow-card">
+                <section data-tour="xp-card" className="hidden md:block glass rounded-card p-5 shadow-card">
                     <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-1">Experience</p>
                     <p className="text-ink font-bold text-sm mb-1">Level {profile.level || 1} → {(profile.level || 1) + 1}</p>
                     <div className="relative mx-auto" style={{ height: 180 }}>
@@ -185,7 +170,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                     </p>
                 </section>
 
-                <section className="glass rounded-card p-5 shadow-card lg:col-span-2">
+                <section data-tour="activity-card" className="glass rounded-card p-5 shadow-card lg:col-span-2">
                     <div className="flex items-center justify-between mb-3">
                         <div>
                             <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-0.5">Aktivitas</p>
@@ -254,7 +239,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
             </div>
 
             {/* Stats row */}
-            <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <section data-tour="stats-row" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((s) => (
                     <div key={s.label} className="glass rounded-card p-4 shadow-card">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 shadow-sm" style={{ backgroundImage: s.grad }}>
@@ -267,20 +252,22 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
             </section>
 
             {/* Story Arc */}
-            <ArcCard
-                arc={ai.storyArc.arc}
-                loading={ai.storyArc.loading}
-                generating={ai.storyArc.generating}
-                daysRemaining={ai.storyArc.daysRemaining}
-                progressPct={ai.storyArc.progressPct}
-                justCompleted={ai.storyArc.justCompleted}
-                onDismissCompleted={ai.storyArc.dismissCompleted}
-                arcQuests={ai.storyArc.arc
-                    ? ai.aiQuests
-                        .filter(q => (q.createdAt || '') >= ai.storyArc.arc!.startDate)
-                        .map(q => ({ id: q.id, title: q.title, status: q.status }))
-                    : []}
-            />
+            <div data-tour="story-arc-card">
+                <ArcCard
+                    arc={ai.storyArc.arc}
+                    loading={ai.storyArc.loading}
+                    generating={ai.storyArc.generating}
+                    daysRemaining={ai.storyArc.daysRemaining}
+                    progressPct={ai.storyArc.progressPct}
+                    justCompleted={ai.storyArc.justCompleted}
+                    onDismissCompleted={ai.storyArc.dismissCompleted}
+                    arcQuests={ai.storyArc.arc
+                        ? ai.aiQuests
+                            .filter(q => (q.createdAt || '') >= ai.storyArc.arc!.startDate)
+                            .map(q => ({ id: q.id, title: q.title, status: q.status }))
+                        : []}
+                />
+            </div>
 
             {/* AI Game Master */}
             <section className="glass rounded-card p-5 md:p-6 shadow-card">
@@ -297,6 +284,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                     </div>
                     <button
                         type="button"
+                        data-tour="generate-quest-btn"
                         onClick={() => ai.generate()}
                         disabled={ai.generating}
                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-white font-bold shadow-card hover:bg-brand-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
@@ -316,7 +304,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
             </section>
 
             {/* Quick actions */}
-            <section>
+            <section data-tour="quick-actions">
                 <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-3">Quick Actions</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {actions.map((a) => (

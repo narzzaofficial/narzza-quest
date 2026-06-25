@@ -16,6 +16,8 @@ import { MarkdownMessage } from '@/components/ai/MarkdownMessage';
 import { TypingIndicator } from '@/components/ai/TypingIndicator';
 import { GRAD } from '@/constants/ui';
 import { CHAT_SUGGESTED_PROMPTS } from '@/constants/ai';
+import OnboardingTour from '@/components/system/OnboardingTour';
+import { CHAT_TOUR_STEPS } from '@/constants/onboardingTours';
 
 export default function ChatPage() {
     const { profile } = useAuth();
@@ -64,7 +66,8 @@ export default function ChatPage() {
 
     return (
         <div className="flex flex-col h-full max-h-screen bg-transparent">
-            <header className="flex items-center gap-4 px-6 py-4 shrink-0" style={{ backgroundImage: GRAD.brand }}>
+            <OnboardingTour tourKey="chat" steps={CHAT_TOUR_STEPS} />
+            <header data-tour="chat-header" className="flex items-center gap-4 px-6 py-4 shrink-0" style={{ backgroundImage: GRAD.brand }}>
                 <div className="w-10 h-10 rounded-xl bg-white/20 ring-1 ring-white/30 flex items-center justify-center shrink-0">
                     <Bot className="w-5 h-5 text-white" />
                 </div>
@@ -82,7 +85,7 @@ export default function ChatPage() {
                 </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-5 custom-scrollbar">
+            <div data-tour="chat-messages" className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-5 custom-scrollbar">
                 {isEmpty && (
                     <div className="flex flex-col items-center justify-center h-full gap-6 text-center py-16">
                         <div className="relative">
@@ -154,7 +157,7 @@ export default function ChatPage() {
 
             <div className="shrink-0 px-4 md:px-10 pb-5 pt-3">
                 <div className="max-w-3xl mx-auto">
-                    <div className="flex items-center gap-2 bg-white/80 border border-line rounded-full px-3 py-2 shadow-card backdrop-blur-sm focus-within:border-brand/40 focus-within:ring-2 focus-within:ring-brand/10 transition-all">
+                    <div data-tour="chat-input" className="flex items-center gap-2 bg-white/80 border border-line rounded-full px-3 py-2 shadow-card backdrop-blur-sm focus-within:border-brand/40 focus-within:ring-2 focus-within:ring-brand/10 transition-all">
                         <button className="w-7 h-7 rounded-full flex items-center justify-center text-ink-muted hover:bg-surface-2 transition-colors shrink-0">
                             <Plus className="w-4 h-4" />
                         </button>

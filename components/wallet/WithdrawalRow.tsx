@@ -2,18 +2,15 @@
 
 import React from 'react';
 import {
-    AlertCircle, Clock, CheckCircle2, FileText, ExternalLink, XCircle, Loader2,
+    CheckCircle2, ExternalLink, XCircle, Loader2,
 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import Button from '@/components/ui/Button';
+import { WITHDRAWAL_STATUS_UI_HERO, WITHDRAWAL_STATUS_UI_HERO_FALLBACK } from '@/constants/gm';
+import { formatRupiah } from '@/lib/currency';
+import { formatDateTimeID } from '@/lib/dateUtils';
 import type { useWallet } from '@/hooks/useWallet';
 import type { Withdrawal } from '@/types';
-
-const STATUS_UI: Record<string, { soft: string; color: string; icon: React.ElementType; text: string }> = {
-    pending:            { soft: 'bg-warn-soft',    color: 'var(--color-warn)',    icon: Clock,        text: 'Menunggu Transfer GM'     },
-    transfer_submitted: { soft: 'bg-brand-soft',   color: 'var(--color-brand)',   icon: FileText,     text: 'Menunggu Konfirmasimu'    },
-    completed:          { soft: 'bg-success-soft',  color: 'var(--color-success)', icon: CheckCircle2, text: 'Berhasil Dicairkan'        },
-};
 
 type WalletData = ReturnType<typeof useWallet>;
 
@@ -23,7 +20,7 @@ interface Props {
 }
 
 export function WithdrawalRow({ wd, w }: Props) {
-    const status     = STATUS_UI[wd.status] ?? { soft: 'bg-surface-2', color: 'var(--color-ink-soft)', icon: AlertCircle, text: wd.status };
+    const status     = WITHDRAWAL_STATUS_UI_HERO[wd.status] ?? { ...WITHDRAWAL_STATUS_UI_HERO_FALLBACK, text: wd.status };
     const isActionable = wd.status === 'transfer_submitted';
     const gmName     = w.gmProfiles[wd.gmUid]?.displayName || 'GM';
 
@@ -34,11 +31,11 @@ export function WithdrawalRow({ wd, w }: Props) {
                     <span className={`${status.soft} inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-2`} style={{ color: status.color }}>
                         <status.icon className="w-3.5 h-3.5" /> {status.text}
                     </span>
-                    <h3 className="text-xl font-black text-ink">Rp {wd.amount.toLocaleString('id-ID')}</h3>
+                    <h3 className="text-xl font-black text-ink">{formatRupiah(wd.amount)}</h3>
                     <p className="text-xs text-ink-soft">Tagihan ke: <span className="font-bold text-ink">{gmName}</span></p>
                 </div>
                 <p className="text-[10px] font-bold text-ink-muted whitespace-nowrap bg-surface-2 px-3 py-1.5 rounded-lg">
-                    {new Date(wd.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {formatDateTimeID(wd.createdAt)}
                 </p>
             </div>
 

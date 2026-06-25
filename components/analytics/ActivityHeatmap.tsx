@@ -1,6 +1,6 @@
 'use client';
 
-import { MONTH_NAMES_SHORT, DAY_NAMES_SHORT } from '@/constants/ui';
+import { MONTH_NAMES_SHORT } from '@/constants/ui';
 import type { ActivityEntry } from '@/types';
 
 function dateKey(iso: string) { return iso.split('T')[0]; }
@@ -144,5 +144,3 @@ export function ActivityHeatmap({ activities }: { activities: ActivityEntry[] })
         </div>
     );
 }
-
-export { DAY_NAMES_SHORT };

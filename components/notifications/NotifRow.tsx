@@ -1,29 +1,11 @@
 'use client';
 
 import React from 'react';
-import {
-    Bell, Heart, CheckCircle2, AlertTriangle, ScrollText,
-    Wallet, Swords, ChevronRight,
-} from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
+import { getNotifStyle } from '@/lib/notifications';
+import { formatTimeOnlyID } from '@/lib/dateUtils';
 import type { Notification } from '@/types';
-
-function notifStyle(type: string): { Icon: React.ElementType; soft: string; color: string } {
-    switch (type) {
-        case 'encouragement':       return { Icon: Heart,        soft: 'bg-danger-soft',  color: 'var(--color-danger)'  };
-        case 'quest_approved':      return { Icon: CheckCircle2, soft: 'bg-success-soft', color: 'var(--color-success)' };
-        case 'quest_rejected':      return { Icon: AlertTriangle, soft: 'bg-danger-soft', color: 'var(--color-danger)'  };
-        case 'quest_assigned':
-        case 'quest_created':       return { Icon: ScrollText,   soft: 'bg-brand-soft',   color: 'var(--color-brand)'   };
-        case 'guild_quest_open':
-        case 'guild_quest_claimed': return { Icon: Swords,       soft: 'bg-info-soft',    color: 'var(--color-info)'    };
-        case 'withdrawal_requested':
-        case 'withdrawal_transferred':
-        case 'withdrawal_confirmed':
-        case 'withdrawal_rejected': return { Icon: Wallet,       soft: 'bg-success-soft', color: 'var(--color-success)' };
-        default:                    return { Icon: Bell,          soft: 'bg-surface-2',    color: 'var(--color-ink-soft)' };
-    }
-}
 
 interface Props {
     notif: Notification;
@@ -32,7 +14,7 @@ interface Props {
 }
 
 export function NotifRow({ notif, href, onActivate }: Props) {
-    const { Icon, soft, color } = notifStyle(notif.type);
+    const { Icon, soft, color } = getNotifStyle(notif.type);
     return (
         <GlassCard
             onClick={onActivate}
@@ -45,7 +27,7 @@ export function NotifRow({ notif, href, onActivate }: Props) {
                 <div className="flex justify-between items-start mb-1 gap-2">
                     <h3 className={`text-base font-bold truncate ${notif.isRead ? 'text-ink-soft' : 'text-ink'}`}>{notif.title}</h3>
                     <span className="text-[10px] font-bold text-ink-muted whitespace-nowrap pt-1">
-                        {new Date(notif.createdAt).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                        {formatTimeOnlyID(notif.createdAt)}
                     </span>
                 </div>
                 <p className={`text-sm leading-relaxed break-words ${notif.type === 'encouragement' ? 'text-danger italic font-semibold' : 'text-ink-soft'}`}>

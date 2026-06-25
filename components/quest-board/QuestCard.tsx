@@ -7,6 +7,8 @@ import DifficultyBadge from '@/components/ui/DifficultyBadge';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { CATEGORY_LABEL } from '@/constants/ui';
 import { isAIQuest, AI_GM } from '@/constants/ai';
+import { formatRupiah } from '@/lib/currency';
+import { formatDeadlineShort } from '@/lib/dateUtils';
 import type { Quest, QuestStatus } from '@/types';
 
 interface Props {
@@ -28,7 +30,7 @@ export function QuestCard({ quest, queued, gmName }: Props) {
                 <div className="flex flex-wrap items-center gap-1.5 justify-end">
                     {quest.moneyReward && quest.moneyReward > 0 ? (
                         <span className="bg-success-soft text-success font-black text-[10px] px-2.5 py-1 rounded-full flex items-center gap-1">
-                            <Wallet className="w-3 h-3" /> Rp {quest.moneyReward.toLocaleString('id-ID')}
+                            <Wallet className="w-3 h-3" /> {formatRupiah(quest.moneyReward)}
                         </span>
                     ) : null}
                     <span className="bg-brand-soft text-brand font-black text-[10px] px-2.5 py-1 rounded-full">
@@ -53,7 +55,7 @@ export function QuestCard({ quest, queued, gmName }: Props) {
                 <div className="flex flex-wrap items-center gap-2">
                     <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-surface-2 text-ink-soft">
                         <Clock className="w-3.5 h-3.5" />
-                        {new Date(quest.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                        {formatDeadlineShort(quest.deadline)}
                     </span>
                     <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-surface-2 text-ink-soft">
                         {CATEGORY_LABEL[quest.category]}

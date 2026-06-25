@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { GRAD } from '@/constants/ui';
-import { dicebearAvatar } from '@/lib/avatar';
+import { getAvatarUrl } from '@/lib/avatar';
 import type { UserProfile } from '@/types';
 
 export function HeroCard({ hero }: { hero: UserProfile }) {
@@ -11,7 +11,7 @@ export function HeroCard({ hero }: { hero: UserProfile }) {
     return (
         <div className="glass rounded-card p-5 shadow-card flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-brand/15 bg-surface mb-3">
-                <img src={hero.avatar || dicebearAvatar(hero.displayName)} alt={hero.displayName} className="w-full h-full object-cover" />
+                <img src={getAvatarUrl(hero.avatar, hero.displayName)} alt={hero.displayName} className="w-full h-full object-cover" />
             </div>
             <h3 className="font-bold text-lg text-ink">{hero.displayName}</h3>
             <p className="text-ink-muted text-xs mb-4 truncate w-full px-2">{hero.email}</p>

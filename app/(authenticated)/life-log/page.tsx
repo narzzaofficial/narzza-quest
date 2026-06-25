@@ -18,6 +18,8 @@ import { AddHabitForm }        from '@/components/life-log/AddHabitForm';
 import { ActivityHistory }     from '@/components/life-log/ActivityHistory';
 import { SituationRoom } from '@/components/ai-gm/SituationRoom';
 import { WorkTasksSection } from '@/components/ai-gm/WorkTasksSection';
+import OnboardingTour from '@/components/system/OnboardingTour';
+import { LIFE_LOG_TOUR_STEPS } from '@/constants/onboardingTours';
 
 export default function LifeLogPage() {
     const { profile } = useAuth();
@@ -42,7 +44,8 @@ export default function LifeLogPage() {
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
-            <header className="relative overflow-hidden rounded-card p-6 md:p-7 text-white shadow-card" style={{ backgroundImage: GRAD.brand }}>
+            <OnboardingTour tourKey="life-log" steps={LIFE_LOG_TOUR_STEPS} />
+            <header data-tour="life-log-header" className="relative overflow-hidden rounded-card p-6 md:p-7 text-white shadow-card" style={{ backgroundImage: GRAD.brand }}>
                 <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-white/15 blur-2xl pointer-events-none" />
                 <div className="relative flex items-center gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-white/20 ring-1 ring-white/30 flex items-center justify-center shrink-0">
@@ -66,53 +69,55 @@ export default function LifeLogPage() {
                 </div>
             </header>
 
-            {currentActivity && !showLogForm ? (
-                <CurrentActivityCard
-                    entry={currentActivity}
-                    duration={getDurationMinutes(currentActivity)}
-                    onSwitch={() => setShowLogForm(true)}
-                    onStop={stopCurrent}
-                    saving={saving}
-                />
-            ) : showLogForm ? (
-                <section className="glass rounded-card shadow-card p-5 md:p-6">
-                    <h2 className="text-ink font-extrabold text-lg mb-4">
-                        {currentActivity ? 'Ganti Aktivitas' : 'Mulai Aktivitas Baru'}
-                    </h2>
-                    <LogForm
-                        onSave={handleSwitch}
-                        onCancel={() => setShowLogForm(false)}
+            <div data-tour="life-log-current">
+                {currentActivity && !showLogForm ? (
+                    <CurrentActivityCard
+                        entry={currentActivity}
+                        duration={getDurationMinutes(currentActivity)}
+                        onSwitch={() => setShowLogForm(true)}
+                        onStop={stopCurrent}
                         saving={saving}
-                        label={currentActivity ? 'Ganti Sekarang' : 'Mulai Sekarang'}
                     />
-                </section>
-            ) : (
-                <section className="glass rounded-card shadow-card">
-                    <div className="p-6 flex flex-col items-center gap-3 text-center">
-                        <div className="w-14 h-14 rounded-2xl bg-brand-soft flex items-center justify-center">
-                            <Plus className="w-7 h-7 text-brand" />
+                ) : showLogForm ? (
+                    <section className="glass rounded-card shadow-card p-5 md:p-6">
+                        <h2 className="text-ink font-extrabold text-lg mb-4">
+                            {currentActivity ? 'Ganti Aktivitas' : 'Mulai Aktivitas Baru'}
+                        </h2>
+                        <LogForm
+                            onSave={handleSwitch}
+                            onCancel={() => setShowLogForm(false)}
+                            saving={saving}
+                            label={currentActivity ? 'Ganti Sekarang' : 'Mulai Sekarang'}
+                        />
+                    </section>
+                ) : (
+                    <section className="glass rounded-card shadow-card">
+                        <div className="p-6 flex flex-col items-center gap-3 text-center">
+                            <div className="w-14 h-14 rounded-2xl bg-brand-soft flex items-center justify-center">
+                                <Plus className="w-7 h-7 text-brand" />
+                            </div>
+                            <div>
+                                <p className="text-ink font-extrabold text-base">Catat Aktivitas Sekarang</p>
+                                <p className="text-ink-muted text-sm mt-0.5">Lagi ngapain? Coding, meeting, gym, istirahat...</p>
+                            </div>
+                            <button
+                                onClick={() => setShowLogForm(true)}
+                                className="mt-1 inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-white text-sm font-bold hover:bg-brand-hover shadow-card transition-colors"
+                            >
+                                <Activity className="w-4 h-4" /> Mulai Catat
+                            </button>
                         </div>
-                        <div>
-                            <p className="text-ink font-extrabold text-base">Catat Aktivitas Sekarang</p>
-                            <p className="text-ink-muted text-sm mt-0.5">Lagi ngapain? Coding, meeting, gym, istirahat...</p>
-                        </div>
-                        <button
-                            onClick={() => setShowLogForm(true)}
-                            className="mt-1 inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-white text-sm font-bold hover:bg-brand-hover shadow-card transition-colors"
-                        >
-                            <Activity className="w-4 h-4" /> Mulai Catat
-                        </button>
-                    </div>
-                </section>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <SituationRoom sit={sit} />
-                <WorkTasksSection wt={wt} />
+                    </section>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <section className="glass rounded-card shadow-card">
+                <div data-tour="life-log-situation"><SituationRoom sit={sit} /></div>
+                <div data-tour="life-log-tasks"><WorkTasksSection wt={wt} /></div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <section data-tour="life-log-timeline" className="glass rounded-card shadow-card">
                     <div className="p-5">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-8 h-8 rounded-xl bg-brand-soft flex items-center justify-center shrink-0">
@@ -135,7 +140,7 @@ export default function LifeLogPage() {
                     </div>
                 </section>
 
-                <section className="glass rounded-card shadow-card">
+                <section data-tour="life-log-habits" className="glass rounded-card shadow-card">
                     <div className="p-5 space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -205,12 +210,14 @@ export default function LifeLogPage() {
                 </section>
             </div>
 
-            <ActivityHistory
-                days={historyDays}
-                loading={historyLoading}
-                habits={habits.habits}
-                getDurationMinutes={getHistoryDurationMinutes}
-            />
+            <div data-tour="life-log-history">
+                <ActivityHistory
+                    days={historyDays}
+                    loading={historyLoading}
+                    habits={habits.habits}
+                    getDurationMinutes={getHistoryDurationMinutes}
+                />
+            </div>
         </div>
     );
 }

@@ -37,7 +37,7 @@ import {
     ExternalLink,
 } from 'lucide-react';
 import { FaTelegram } from 'react-icons/fa6';
-import { dicebearAvatar } from '@/lib/avatar';
+import { getAvatarUrl } from '@/lib/avatar';
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -155,7 +155,7 @@ export default function ProfilePage() {
         );
     }
 
-    const avatarUrl = profile.avatar || dicebearAvatar(profile.displayName);
+    const avatarUrl = getAvatarUrl(profile.avatar, profile.displayName);
     const isGm = profile.role === 'gm';
 
     const stats = [

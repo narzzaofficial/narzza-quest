@@ -10,6 +10,8 @@ import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import StatTile from '@/components/ui/StatTile';
 import { ArcHistoryCard } from '@/components/story-arc/ArcHistoryCard';
+import OnboardingTour from '@/components/system/OnboardingTour';
+import { STORY_ARC_TOUR_STEPS } from '@/constants/onboardingTours';
 import type { Quest } from '@/types';
 
 const ACTIVE_STATUSES = ['pending', 'in_progress', 'submitted', 'active'];
@@ -50,21 +52,24 @@ export default function StoryArcPage() {
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
-            <PageHeader
-                icon={<BookMarked className="w-6 h-6 text-white" />}
-                title="Story Arc"
-                subtitle="Setiap arc adalah chapter 14 hari dalam hidupmu — dibuat AI Game Master dari tujuan & konteksmu."
-                grad="brand"
-            />
+            <OnboardingTour tourKey="story-arc" steps={STORY_ARC_TOUR_STEPS} />
+            <div data-tour="story-arc-header">
+                <PageHeader
+                    icon={<BookMarked className="w-6 h-6 text-white" />}
+                    title="Story Arc"
+                    subtitle="Setiap arc adalah chapter 14 hari dalam hidupmu — dibuat AI Game Master dari tujuan & konteksmu."
+                    grad="brand"
+                />
+            </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div data-tour="story-arc-stats" className="grid grid-cols-3 gap-2 sm:gap-4">
                 <StatTile icon={BookOpen}     label="Total Arc"          value={arcs.length}  grad="brand" />
                 <StatTile icon={Trophy}       label="Quest Diselesaikan" value={totalQuests}       grad="amber" />
                 <StatTile icon={CheckCircle2} label="Arc Selesai"        value={completedArcs.length} grad="green" />
             </div>
 
             {/* Generate / status panel */}
-            <GlassCard className="p-5">
+            <GlassCard data-tour="story-arc-generate" className="p-5">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className="flex-1">
                         <p className="text-brand text-[10px] uppercase tracking-widest font-bold">AI Game Master</p>
@@ -113,13 +118,13 @@ export default function StoryArcPage() {
             </GlassCard>
 
             {sortedArcs.length === 0 ? (
-                <GlassCard className="p-12 text-center">
+                <GlassCard data-tour="story-arc-history" className="p-12 text-center">
                     <BookOpen className="w-8 h-8 text-ink-muted mx-auto mb-3" />
                     <p className="text-ink font-bold">Belum ada arc</p>
                     <p className="text-ink-soft text-sm mt-1">Generate arc pertamamu di atas.</p>
                 </GlassCard>
             ) : (
-                <div className="space-y-3">
+                <div data-tour="story-arc-history" className="space-y-3">
                     <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold">
                         Semua Chapter · {sortedArcs.length} arc
                     </p>

@@ -62,6 +62,10 @@ export async function updateUserProfile(
     await updateDoc(doc(db, "users", uid), { ...data });
 }
 
+export async function markOnboardingTourSeen(uid: string, tourKey: string): Promise<void> {
+    await updateDoc(doc(db, "users", uid), { completedOnboardingTours: arrayUnion(tourKey) });
+}
+
 export async function saveUserGoal(
     uid: string,
     goal: { aspiration: string; focusAreas: string[]; timeframe?: string }

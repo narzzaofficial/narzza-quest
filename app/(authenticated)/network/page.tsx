@@ -10,7 +10,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Toast from '@/components/ui/Toast';
 import { MemberCard } from '@/components/network/MemberCard';
-import { dicebearAvatar } from '@/lib/avatar';
+import { getAvatarUrl } from '@/lib/avatar';
 
 export default function NetworkPage() {
     const {
@@ -40,7 +40,7 @@ export default function NetworkPage() {
                     <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
                         <div className="flex items-center gap-4">
                             <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-success/20 bg-surface shrink-0">
-                                <img src={profile.pendingPartnerRequest.avatar || dicebearAvatar(profile.pendingPartnerRequest.displayName)} alt="Avatar" className="w-full h-full object-cover" />
+                                <img src={getAvatarUrl(profile.pendingPartnerRequest.avatar, profile.pendingPartnerRequest.displayName)} alt="Avatar" className="w-full h-full object-cover" />
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-ink mb-0.5">Ada Permintaan Baru!</h2>
