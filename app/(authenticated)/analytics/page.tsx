@@ -6,7 +6,7 @@ import {
     RadarChart, Radar, PolarGrid, PolarAngleAxis,
     XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { Loader2, Activity, Clock, Zap, Target, BarChart2 } from 'lucide-react';
+import { Loader2, Activity, Clock, Zap, Target, BarChart2, Flame } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useXPHistory } from '@/hooks/useXPHistory';
@@ -17,6 +17,8 @@ import { ChartCard } from '@/components/analytics/ChartCard';
 import { ActivityHeatmap } from '@/components/analytics/ActivityHeatmap';
 import { ExpGrowthChart } from '@/components/analytics/ExpGrowthChart';
 import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
+import { HABIT_ICON_MAP, HABIT_ICON_COLORS } from '@/components/life-log/activityMeta';
+import { FaBullseye } from 'react-icons/fa6';
 
 export default function AnalyticsPage() {
     const [tab, setTab] = useState<'life' | 'finance'>('life');
@@ -27,7 +29,8 @@ export default function AnalyticsPage() {
         moodEnergyData, categoryData, peakHoursData, bestDayData,
         radarData, expData, moodVsQuestData, habitRate,
         totalHoursLogged, avgMood, peakHour, questsDone,
-    } = useAnalytics(profile?.uid);
+        periodComparison, goalAlignment, habitStreaks,
+    } = useAnalytics(profile?.uid, profile?.goal?.focusAreas);
 
     if (loading) {
         return (
@@ -67,11 +70,52 @@ export default function AnalyticsPage() {
             ) : (
                 <>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <StatCard icon={Activity} label="Jam Tercatat" value={`${totalHoursLogged}j`} sub="30 hari" />
-                        <StatCard icon={Zap} label="Rata-rata Mood" value={avgMood} sub="(1-5)" color="text-xp" bg="bg-xp-soft" />
+                        <StatCard icon={Activity} label="Jam Tercatat" value={`${totalHoursLogged}j`} sub="30 hari" trend={{ pct: periodComparison.hoursPct, periodLabel: 'vs minggu lalu' }} />
+                        <StatCard icon={Zap} label="Rata-rata Mood" value={avgMood} sub="(1-5)" color="text-xp" bg="bg-xp-soft" trend={{ pct: periodComparison.moodPct, periodLabel: 'vs minggu lalu' }} />
                         <StatCard icon={Clock} label="Peak Hour" value={peakHour} sub="paling aktif" color="text-purple-600" bg="bg-purple-50" />
                         <StatCard icon={Target} label="Quest Selesai" value={questsDone} sub="total" color="text-success" bg="bg-success-soft" />
                     </div>
+
+                    {goalAlignment && (
+                        <ChartCard title="Goal Alignment" sub={`Fokus kamu: ${goalAlignment.focusAreas.join(', ')}`}>
+                            <div className="flex items-center gap-6">
+                                <p className="text-4xl font-extrabold text-brand">{goalAlignment.pct}%</p>
+                                <div className="flex-1">
+                                    <div className="h-3 bg-surface-2 rounded-full overflow-hidden border border-line">
+                                        <div className="h-full rounded-full bg-brand transition-all duration-700" style={{ width: `${goalAlignment.pct}%` }} />
+                                    </div>
+                                    <p className="text-ink-muted text-xs mt-2">
+                                        {goalAlignment.alignedHours}j dari {goalAlignment.totalHours}j total aktivitas sejalan dengan fokus yang kamu tulis di goal.
+                                    </p>
+                                </div>
+                            </div>
+                        </ChartCard>
+                    )}
+
+                    {habitStreaks.length > 0 && (
+                        <ChartCard title="Streak Habit" sub="Konsistensi tiap habit yang kamu lacak">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {habitStreaks.map(h => {
+                                    const HabitIcon = HABIT_ICON_MAP[h.icon] ?? FaBullseye;
+                                    const iconColor = HABIT_ICON_COLORS[h.icon] ?? '#ef4444';
+                                    return (
+                                        <div key={h.habitId} className="flex items-center gap-3 p-3 rounded-xl bg-surface-2 border border-line">
+                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: iconColor + '20' }}>
+                                                <HabitIcon className="w-4 h-4" style={{ color: iconColor }} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold text-ink truncate">{h.name}</p>
+                                                <p className="text-ink-muted text-xs">Terlama: {h.longest} hari</p>
+                                            </div>
+                                            <p className="flex items-center gap-1 text-lg font-extrabold text-brand whitespace-nowrap">
+                                                <Flame className="w-4 h-4" /> {h.current}
+                                            </p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </ChartCard>
+                    )}
 
                     {noActivity && (
                         <div className="glass rounded-card shadow-card p-8 text-center">
@@ -131,7 +175,7 @@ export default function AnalyticsPage() {
                                     <BarChart data={peakHoursData} barSize={8}>
                                         <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={2} />
                                         <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
-                                        <Tooltip content={<ChartTip />} isAnimationActive={false} />
+                                        <Tooltip content={<ChartTip />} cursor={false} isAnimationActive={false} />
                                         <Bar dataKey="count" name="Aktivitas" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -142,7 +186,7 @@ export default function AnalyticsPage() {
                                     <BarChart data={bestDayData} barSize={24}>
                                         <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                                         <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
-                                        <Tooltip content={<ChartTip />} isAnimationActive={false} />
+                                        <Tooltip content={<ChartTip />} cursor={false} isAnimationActive={false} />
                                         <Bar dataKey="count" name="Aktivitas" fill="#10b981" radius={[4, 4, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -187,8 +231,8 @@ export default function AnalyticsPage() {
                                         <div className="h-4 bg-surface-2 rounded-full overflow-hidden border border-line">
                                             <div className="h-full rounded-full transition-all duration-700" style={{ width: `${habitRate}%`, background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' }} />
                                         </div>
-                                        <p className="text-ink-muted text-xs mt-2">
-                                            {habitRate >= 80 ? '🔥 Konsistensi luar biasa!' :
+                                        <p className="text-ink-muted text-xs mt-2 flex items-center gap-1">
+                                            {habitRate >= 80 ? <><Flame className="w-3.5 h-3.5 text-danger shrink-0" /> Konsistensi luar biasa!</> :
                                                 habitRate >= 60 ? '👍 Cukup bagus, terus tingkatkan!' :
                                                     habitRate >= 40 ? '⚡ Masih perlu usaha lebih.' :
                                                         '💪 Mulai bangun konsistensi sekarang.'}

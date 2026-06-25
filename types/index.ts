@@ -50,6 +50,9 @@ export interface UserProfile {
         openRouterApiKey: string;
         openRouterModel: string;
     };
+
+    // Telegram notifications/reports
+    telegramChatId?: string;
 }
 
 export interface GoalProfile {

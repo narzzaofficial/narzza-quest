@@ -29,20 +29,26 @@ export function FinanceAnalytics() {
 
     const formatIDR = (value: number) => `Rp ${value.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
 
-    // Hitung total income & expense bulan ini
+    // Hitung total income & expense bulan ini vs bulan lalu
     const now = new Date();
     const startOfMonthStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    
+    const startOfLastMonthStr = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+
     let totalIncomeThisMonth = 0;
     let totalExpenseThisMonth = 0;
-    
+    let totalExpenseLastMonth = 0;
+
     transactions.forEach(tx => {
+        const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
         if (tx.timestamp >= startOfMonthStr) {
-            const amountIDR = toIDR(tx.originalAmount || tx.amount, tx.originalCurrency || assets.find(a => a.id === tx.assetId)?.currency || 'IDR');
             if (tx.type === 'income') totalIncomeThisMonth += amountIDR;
             if (tx.type === 'expense') totalExpenseThisMonth += amountIDR;
+        } else if (tx.timestamp >= startOfLastMonthStr && tx.type === 'expense') {
+            totalExpenseLastMonth += amountIDR;
         }
     });
+
+    const expensePct = totalExpenseLastMonth > 0 ? ((totalExpenseThisMonth - totalExpenseLastMonth) / totalExpenseLastMonth) * 100 : null;
 
     // --- 1. Cash Flow (Income vs Expense total) ---
     const cashFlowData = useMemo(() => {
@@ -291,7 +297,7 @@ export function FinanceAnalytics() {
         <div className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard icon={Landmark}     label="Total Net Worth"  value={`Rp ${(totalNetWorthIDR/1000).toLocaleString('id-ID', { maximumFractionDigits: 0 })}k`} sub="Estimasi" color="text-brand" bg="bg-brand-soft" />
-                <StatCard icon={TrendingDown} label="Pengeluaran Bulan Ini" value={`Rp ${(totalExpenseThisMonth/1000).toLocaleString('id-ID', { maximumFractionDigits: 0 })}k`}  sub="IDR" color="text-danger" bg="bg-danger-soft" />
+                <StatCard icon={TrendingDown} label="Pengeluaran Bulan Ini" value={`Rp ${(totalExpenseThisMonth/1000).toLocaleString('id-ID', { maximumFractionDigits: 0 })}k`}  sub="IDR" color="text-danger" bg="bg-danger-soft" trend={{ pct: expensePct, goodWhenUp: false, periodLabel: 'vs bulan lalu' }} />
                 <StatCard icon={TrendingUp}   label="Pemasukan Bulan Ini"   value={`Rp ${(totalIncomeThisMonth/1000).toLocaleString('id-ID', { maximumFractionDigits: 0 })}k`}   sub="IDR" color="text-success" bg="bg-success-soft" />
                 <StatCard icon={AlertCircle}  label="Biaya Admin/Transfer"  value={`Rp ${(totalFees/1000).toLocaleString('id-ID', { maximumFractionDigits: 0 })}k`} sub="Sepanjang waktu" color="text-purple-600" bg="bg-purple-50" />
             </div>

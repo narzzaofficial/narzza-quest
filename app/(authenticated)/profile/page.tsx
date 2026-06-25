@@ -27,8 +27,14 @@ import {
     Key,
     Cpu,
     Wifi,
+    Sparkles,
+    Copy,
+    Check,
+    ExternalLink,
 } from 'lucide-react';
+import { FaTelegram } from 'react-icons/fa6';
 import { dicebearAvatar } from '@/lib/avatar';
+import { auth } from '@/lib/firebase';
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -41,6 +47,19 @@ export default function ProfilePage() {
     const [openRouterApiKey, setOpenRouterApiKey] = useState('');
     const [openRouterModel, setOpenRouterModel] = useState('');
     const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [isActivating, setIsActivating] = useState(false);
+    const [isDisconnecting, setIsDisconnecting] = useState(false);
+    const [mcpCode, setMcpCode] = useState('');
+    const [codeCopied, setCodeCopied] = useState(false);
+    const [urlCopied, setUrlCopied] = useState(false);
+    const [mcpServerUrl, setMcpServerUrl] = useState('');
+    const [isTelegramActivating, setIsTelegramActivating] = useState(false);
+    const [isTelegramDisconnecting, setIsTelegramDisconnecting] = useState(false);
+    const [telegramCode, setTelegramCode] = useState('');
+
+    useEffect(() => {
+        setMcpServerUrl(`${window.location.origin}/api/mcp`);
+    }, []);
     const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
         show: false,
         message: '',
@@ -101,6 +120,95 @@ export default function ProfilePage() {
             notify(e instanceof Error ? e.message : 'Koneksi gagal.', 'error');
         } finally {
             setIsTestingConnection(false);
+        }
+    };
+
+    const handleActivateMcp = async () => {
+        setIsActivating(true);
+        setMcpCode('');
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            const res = await fetch('/api/mcp/activate', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error || 'Gagal generate kode.');
+            setMcpCode(data.code);
+            setCodeCopied(false);
+        } catch (e) {
+            notify(e instanceof Error ? e.message : 'Gagal generate kode.', 'error');
+        } finally {
+            setIsActivating(false);
+        }
+    };
+
+    const handleCopyCode = async () => {
+        await navigator.clipboard.writeText(mcpCode);
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+    };
+
+    const handleCopyUrl = async () => {
+        await navigator.clipboard.writeText(mcpServerUrl);
+        setUrlCopied(true);
+        setTimeout(() => setUrlCopied(false), 2000);
+    };
+
+    const handleDisconnectMcp = async () => {
+        setIsDisconnecting(true);
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            const res = await fetch('/api/mcp/disconnect', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error || 'Gagal keluar dari sesi connector.');
+            setMcpCode('');
+            notify('Sesi Claude Connector berhasil di-keluarkan. Sambungkan ulang di Claude.ai buat ganti akun. 🔌');
+        } catch (e) {
+            notify(e instanceof Error ? e.message : 'Gagal keluar dari sesi connector.', 'error');
+        } finally {
+            setIsDisconnecting(false);
+        }
+    };
+
+    const handleActivateTelegram = async () => {
+        setIsTelegramActivating(true);
+        setTelegramCode('');
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            const res = await fetch('/api/telegram/activate', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error || 'Gagal generate kode.');
+            setTelegramCode(data.code);
+        } catch (e) {
+            notify(e instanceof Error ? e.message : 'Gagal generate kode.', 'error');
+        } finally {
+            setIsTelegramActivating(false);
+        }
+    };
+
+    const handleDisconnectTelegram = async () => {
+        setIsTelegramDisconnecting(true);
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            const res = await fetch('/api/telegram/disconnect', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error || 'Gagal memutuskan Telegram.');
+            setTelegramCode('');
+            notify('Telegram berhasil diputuskan. 🔌');
+        } catch (e) {
+            notify(e instanceof Error ? e.message : 'Gagal memutuskan Telegram.', 'error');
+        } finally {
+            setIsTelegramDisconnecting(false);
         }
     };
 
@@ -316,6 +424,122 @@ export default function ProfilePage() {
                         </Button>
                     </div>
                 </form>
+            </GlassCard>
+
+            {/* ── Claude Connector ── */}
+            <GlassCard className="p-5 md:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <Sparkles className="w-4 h-4 text-brand" />
+                    <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold">Hubungkan Claude</p>
+                </div>
+                <p className="text-ink-soft text-sm font-medium mb-4">
+                    Generate kode akses buat nyambungin akun Claude.ai kamu ke Narzza Quest, biar bisa nanya quest/finance/journal langsung lewat chat Claude.
+                </p>
+
+                {mcpCode ? (
+                    <div className="space-y-4">
+                        <div className="flex gap-3">
+                            <span className="shrink-0 w-6 h-6 rounded-full bg-brand-soft text-brand text-xs font-black flex items-center justify-center">1</span>
+                            <div className="flex-1 pt-0.5">
+                                <p className="text-sm font-bold text-ink mb-2">Buka Connectors di Claude.ai</p>
+                                <a href="https://claude.ai/settings/connectors?modal=add-custom-connector" target="_blank" rel="noopener noreferrer">
+                                    <Button type="button" variant="secondary" className="w-full sm:w-auto" leftIcon={<ExternalLink className="w-4 h-4" />}>
+                                        Buka Claude.ai
+                                    </Button>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <span className="shrink-0 w-6 h-6 rounded-full bg-brand-soft text-brand text-xs font-black flex items-center justify-center">2</span>
+                            <div className="flex-1 pt-0.5">
+                                <p className="text-sm font-bold text-ink mb-2">Masukkan URL connector ini</p>
+                                <div className="flex items-center gap-2 p-3 rounded-xl bg-surface-2 border border-line">
+                                    <code className="flex-1 text-xs font-bold text-ink-soft break-all">{mcpServerUrl}</code>
+                                    <button type="button" onClick={handleCopyUrl} className="shrink-0 p-2 rounded-lg hover:bg-surface transition-colors" aria-label="Copy URL">
+                                        {urlCopied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4 text-ink-muted" />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <span className="shrink-0 w-6 h-6 rounded-full bg-brand-soft text-brand text-xs font-black flex items-center justify-center">3</span>
+                            <div className="flex-1 pt-0.5">
+                                <p className="text-sm font-bold text-ink mb-2">Pas diminta login, klik tab <span className="text-brand">&quot;Punya Kode&quot;</span> lalu tempel ini</p>
+                                <div className="flex items-center gap-2 p-3.5 rounded-xl bg-surface-2 border border-line">
+                                    <code className="flex-1 text-sm font-bold text-brand break-all">{mcpCode}</code>
+                                    <button type="button" onClick={handleCopyCode} className="shrink-0 p-2 rounded-lg hover:bg-surface transition-colors" aria-label="Copy kode">
+                                        {codeCopied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4 text-ink-muted" />}
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-ink-muted font-semibold uppercase tracking-wider mt-1.5">
+                                    Berlaku 10 menit
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <Button type="button" variant="primary" isLoading={isActivating} onClick={handleActivateMcp} className="w-full" leftIcon={<Sparkles className="w-4 h-4" />}>
+                        Generate Kode Akses
+                    </Button>
+                )}
+
+                <div className="mt-4 pt-4 border-t border-line">
+                    <p className="text-ink-muted text-xs font-medium mb-2.5">
+                        Connector udah aktif tapi mau ganti ke akun lain?
+                    </p>
+                    <Button type="button" variant="secondary" isLoading={isDisconnecting} onClick={handleDisconnectMcp} className="w-full" leftIcon={<LogOut className="w-4 h-4" />}>
+                        Ganti Akun / Keluar dari Sesi Connector
+                    </Button>
+                </div>
+            </GlassCard>
+
+            {/* ── Telegram ── */}
+            <GlassCard className="p-5 md:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <FaTelegram className="w-4 h-4 text-brand" />
+                    <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold">Hubungkan Telegram</p>
+                </div>
+                <p className="text-ink-soft text-sm font-medium mb-4">
+                    Dapetin notifikasi real-time, laporan harian/mingguan, dan reminder quest/habit langsung lewat Telegram.
+                </p>
+
+                {telegramCode ? (
+                    <div className="space-y-4">
+                        <div className="flex gap-3">
+                            <span className="shrink-0 w-6 h-6 rounded-full bg-brand-soft text-brand text-xs font-black flex items-center justify-center">1</span>
+                            <div className="flex-1 pt-0.5">
+                                <p className="text-sm font-bold text-ink mb-2">Buka bot Telegram & tekan Start</p>
+                                <a
+                                    href={`https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}?start=${telegramCode}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <Button type="button" variant="secondary" className="w-full sm:w-auto" leftIcon={<ExternalLink className="w-4 h-4" />}>
+                                        Buka Telegram
+                                    </Button>
+                                </a>
+                                <p className="text-[10px] text-ink-muted font-semibold uppercase tracking-wider mt-1.5">
+                                    Kode berlaku 10 menit
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <Button type="button" variant="primary" isLoading={isTelegramActivating} onClick={handleActivateTelegram} className="w-full" leftIcon={<FaTelegram className="w-4 h-4" />}>
+                        Generate Kode & Hubungkan
+                    </Button>
+                )}
+
+                <div className="mt-4 pt-4 border-t border-line">
+                    <p className="text-ink-muted text-xs font-medium mb-2.5">
+                        Mau berhenti dapet notifikasi di Telegram?
+                    </p>
+                    <Button type="button" variant="secondary" isLoading={isTelegramDisconnecting} onClick={handleDisconnectTelegram} className="w-full" leftIcon={<LogOut className="w-4 h-4" />}>
+                        Putuskan Telegram
+                    </Button>
+                </div>
             </GlassCard>
 
             <button

@@ -1,13 +1,66 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { getActivitiesRange, getHabitLogs, getJournals, getMissedQuestsInRange, subscribeToQuests } from '@/lib/db';
+import { getActivitiesRange, getHabitLogs, getJournals, getMissedQuestsInRange, subscribeToQuests, subscribeToHabits } from '@/lib/db';
 import { localDateStr } from '@/lib/dateUtils';
 import { isAIQuest } from '@/constants/ai';
 import { ACTIVITY_CAT_COLORS, ACTIVITY_CAT_LABELS, MONTH_NAMES_SHORT, DAY_NAMES_SHORT } from '@/constants/ui';
 import { DIFF_WEIGHT, QUEST_CATEGORIES } from '@/constants/game';
 import { CATEGORY_LABEL } from '@/constants/ui';
-import type { ActivityEntry, Quest, JournalEntry, HabitLog } from '@/types';
+import type { ActivityEntry, ActivityCategory, Quest, JournalEntry, HabitLog, Habit } from '@/types';
+
+// Best-effort mapping from a goal's free-text focus area tag to the closest
+// ActivityCategory — the two use different vocabularies, so this is a
+// heuristic for "goal alignment", not an exact classification.
+const FOCUS_AREA_TO_CATEGORY: Record<string, ActivityCategory> = {
+    Coding: 'learning', Bahasa: 'learning', Belajar: 'learning',
+    Bisnis: 'work', Karier: 'work', Keuangan: 'work',
+    Fitness: 'health',
+    Kreatif: 'personal', Spiritual: 'personal', Hobi: 'personal',
+};
+
+function pctChange(curr: number, prev: number): number | null {
+    if (prev === 0) return null;
+    return ((curr - prev) / prev) * 100;
+}
+
+/** Both current & longest streak derived from the same sequence of scheduled days, so they stay consistent. */
+function computeHabitStreaks(habits: Habit[], logs: HabitLog[]) {
+    const logsByHabit: Record<string, Record<string, boolean>> = {};
+    logs.forEach((l) => {
+        if (!logsByHabit[l.habitId]) logsByHabit[l.habitId] = {};
+        logsByHabit[l.habitId][l.date] = l.completed;
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return habits.map((h) => {
+        const byDate = logsByHabit[h.id] ?? {};
+        const created = new Date(h.createdAt);
+        created.setHours(0, 0, 0, 0);
+
+        const scheduled: boolean[] = [];
+        for (const d = new Date(created); d <= today; d.setDate(d.getDate() + 1)) {
+            if (h.targetDays.length === 0 || h.targetDays.includes(d.getDay())) {
+                scheduled.push(!!byDate[localDateStr(d)]);
+            }
+        }
+
+        let longest = 0, run = 0;
+        scheduled.forEach((done) => {
+            run = done ? run + 1 : 0;
+            longest = Math.max(longest, run);
+        });
+
+        let current = 0;
+        for (let i = scheduled.length - 1; i >= 0; i--) {
+            if (scheduled[i]) current++; else break;
+        }
+
+        return { habitId: h.id, name: h.name, icon: h.icon, current, longest };
+    });
+}
 
 function dateRange(days: number): { from: string; to: string } {
     return {
@@ -27,11 +80,12 @@ function durationHours(e: ActivityEntry): number {
     return (end.getTime() - new Date(e.startTime).getTime()) / 3_600_000;
 }
 
-export function useAnalytics(uid: string | undefined) {
+export function useAnalytics(uid: string | undefined, goalFocusAreas?: string[]) {
     const [activities, setActivities] = useState<ActivityEntry[]>([]);
     const [quests, setQuests] = useState<Quest[]>([]);
     const [journals, setJournals] = useState<JournalEntry[]>([]);
     const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
+    const [habits, setHabits] = useState<Habit[]>([]);
     const [missed, setMissed] = useState<Array<{ date: string; penalty: number; questTitle: string }>>([]);
     const [loading, setLoading] = useState(true);
 
@@ -53,8 +107,9 @@ export function useAnalytics(uid: string | undefined) {
             setLoading(false);
         }).catch(() => setLoading(false));
 
-        const unsub = subscribeToQuests(uid, setQuests);
-        return () => unsub();
+        const unsubQuests = subscribeToQuests(uid, setQuests);
+        const unsubHabits = subscribeToHabits(uid, setHabits);
+        return () => { unsubQuests(); unsubHabits(); };
     }, [uid]);
 
     const moodEnergyData = useMemo(() => {
@@ -156,8 +211,12 @@ export function useAnalytics(uid: string | undefined) {
         const aiApproved = quests.filter(q => q.status === 'approved' && isAIQuest(q.createdBy));
         const byDate: Record<string, number> = {};
         aiApproved.forEach(q => {
-            const k = dateKey(q.updatedAt ?? '');
-            byDate[k] = (byDate[k] ?? 0) + 1;
+            // Key by the same "D MMM" label format moodEnergyData uses, not the raw
+            // YYYY-MM-DD date — otherwise the lookup below never matches and quests
+            // always shows 0.
+            const d = new Date(dateKey(q.updatedAt ?? ''));
+            const label = `${d.getDate()} ${MONTH_NAMES_SHORT[d.getMonth()]}`;
+            byDate[label] = (byDate[label] ?? 0) + 1;
         });
         return moodEnergyData
             .map(d => ({ ...d, quests: byDate[d.label] ?? 0 }))
@@ -185,6 +244,47 @@ export function useAnalytics(uid: string | undefined) {
 
     const questsDone = quests.filter(q => q.status === 'approved').length;
 
+    // Minggu ini vs minggu lalu — jam aktif & rata-rata mood.
+    const periodComparison = useMemo(() => {
+        const dayKey = (n: number) => localDateStr(new Date(Date.now() - n * 86_400_000));
+        const inRange = (a: ActivityEntry, from: string, to: string) => {
+            const k = dateKey(a.startTime);
+            return k >= from && k <= to;
+        };
+        const thisWeek = activities.filter(a => inRange(a, dayKey(6), dayKey(0)));
+        const lastWeek = activities.filter(a => inRange(a, dayKey(13), dayKey(7)));
+        const hoursThis = thisWeek.reduce((s, a) => s + durationHours(a), 0);
+        const hoursLast = lastWeek.reduce((s, a) => s + durationHours(a), 0);
+        const moodThis = thisWeek.length ? thisWeek.reduce((s, a) => s + a.mood, 0) / thisWeek.length : 0;
+        const moodLast = lastWeek.length ? lastWeek.reduce((s, a) => s + a.mood, 0) / lastWeek.length : 0;
+        return {
+            hoursPct: lastWeek.length ? pctChange(hoursThis, hoursLast) : null,
+            moodPct: lastWeek.length ? pctChange(moodThis, moodLast) : null,
+        };
+    }, [activities]);
+
+    // Selarasnya jam aktivitas dengan focus area yang ditulis di goal (heuristik, lihat FOCUS_AREA_TO_CATEGORY).
+    const goalAlignment = useMemo(() => {
+        const areas = goalFocusAreas ?? [];
+        if (!areas.length || !activities.length) return null;
+        const mapped = new Set(areas.map(a => FOCUS_AREA_TO_CATEGORY[a]).filter(Boolean));
+        if (mapped.size === 0) return null;
+        let aligned = 0, total = 0;
+        activities.forEach(a => {
+            const h = durationHours(a);
+            total += h;
+            if (mapped.has(a.category)) aligned += h;
+        });
+        return {
+            focusAreas: areas,
+            alignedHours: parseFloat(aligned.toFixed(1)),
+            totalHours: parseFloat(total.toFixed(1)),
+            pct: total > 0 ? Math.round((aligned / total) * 100) : 0,
+        };
+    }, [goalFocusAreas, activities]);
+
+    const habitStreaks = useMemo(() => computeHabitStreaks(habits, habitLogs), [habits, habitLogs]);
+
     return {
         loading,
         activities,
@@ -200,5 +300,8 @@ export function useAnalytics(uid: string | undefined) {
         avgMood,
         peakHour,
         questsDone,
+        periodComparison,
+        goalAlignment,
+        habitStreaks,
     };
 }

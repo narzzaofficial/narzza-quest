@@ -15,6 +15,9 @@ export default function JournalPage() {
     const [journalContent, setJournalContent] = useState('');
     const [visibility, setVisibility] = useState<'private' | 'gm'>('private');
     const [isSaving, setIsSaving] = useState(false);
+    const [timelineFilter, setTimelineFilter] = useState<'all' | 'personal'>('all');
+
+    const filteredTimeline = timelineFilter === 'all' ? j.timeline : j.timeline.filter((item) => item.type === 'personal');
 
     const handleSaveJournal = async () => {
         if (!journalContent.trim() || !j.selectedHeroId) return;
@@ -115,19 +118,35 @@ export default function JournalPage() {
 
             {/* Timeline */}
             <section className="space-y-4 mt-6">
-                <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-2">Linimasa Jurnal</p>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold">Linimasa Jurnal</p>
+                    <div className="flex items-center bg-surface-2 p-1 rounded-xl border border-line/50">
+                        <button
+                            onClick={() => setTimelineFilter('all')}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timelineFilter === 'all' ? 'bg-surface shadow-sm text-ink' : 'text-ink-muted hover:text-ink'}`}
+                        >
+                            Semua
+                        </button>
+                        <button
+                            onClick={() => setTimelineFilter('personal')}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timelineFilter === 'personal' ? 'bg-amber-400/20 text-amber-500' : 'text-ink-muted hover:text-ink'}`}
+                        >
+                            <Feather className="w-3.5 h-3.5" /> Catatan Harian
+                        </button>
+                    </div>
+                </div>
 
                 {j.isLoadingData ? (
                     <div className="text-center py-8 text-ink-muted font-bold text-sm">Membuka lembaran jurnal…</div>
-                ) : j.timeline.length === 0 ? (
+                ) : filteredTimeline.length === 0 ? (
                     <EmptyState
                         icon={Feather}
-                        title="Jurnal masih kosong"
-                        desc="Belum ada quest atau curhatan. Mulailah menulis sejarahmu!"
+                        title={timelineFilter === 'personal' ? 'Belum ada catatan harian' : 'Jurnal masih kosong'}
+                        desc={timelineFilter === 'personal' ? 'Belum ada curhatan yang ditulis.' : 'Belum ada quest atau curhatan. Mulailah menulis sejarahmu!'}
                     />
                 ) : (
                     <div className="relative border-l-2 border-line/30 ml-4 pl-6 space-y-8">
-                        {j.timeline.map((item) => {
+                        {filteredTimeline.map((item) => {
                             if (item.type === 'quest') {
                                 return (
                                     <div key={`q-${item.data.id}`} className="relative">
@@ -160,7 +179,7 @@ export default function JournalPage() {
                 )}
             </section>
 
-            {j.timeline.length > 0 && (
+            {filteredTimeline.length > 0 && (
                 <p className="text-center text-ink-muted font-bold text-xs tracking-widest uppercase py-8">— Akhir dari jurnal —</p>
             )}
         </div>

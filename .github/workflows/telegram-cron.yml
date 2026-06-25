@@ -1,0 +1,54 @@
+name: Telegram Reports & Reminders
+
+on:
+  schedule:
+    - cron: '0 14 * * *'   # Daily summary — 21:00 WIB (UTC+7)
+    - cron: '0 14 * * 0'   # Weekly summary — Sunday 21:00 WIB
+    - cron: '*/30 * * * *' # Reminders — every 30 minutes
+  workflow_dispatch:        # manual trigger from GitHub UI
+
+jobs:
+  daily:
+    if: github.event.schedule == '0 14 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Telegram Daily Report
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET \
+            "${{ secrets.APP_URL }}/api/cron/telegram-daily" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "Response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Telegram daily report failed with status $STATUS"
+            exit 1
+          fi
+
+  weekly:
+    if: github.event.schedule == '0 14 * * 0'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Telegram Weekly Report
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET \
+            "${{ secrets.APP_URL }}/api/cron/telegram-weekly" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "Response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Telegram weekly report failed with status $STATUS"
+            exit 1
+          fi
+
+  reminders:
+    if: github.event.schedule == '*/30 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Telegram Reminders
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET \
+            "${{ secrets.APP_URL }}/api/cron/telegram-reminders" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "Response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Telegram reminders failed with status $STATUS"
+            exit 1
+          fi

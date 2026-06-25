@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { sendExpoPush } from '@/lib/push';
 import { sendWebPushToUser } from '@/lib/webPush';
+import { sendTelegramMessage } from '@/lib/telegram';
 
 export async function POST(req: Request) {
     try {
@@ -12,10 +13,12 @@ export async function POST(req: Request) {
 
         const userSnap = await adminDb.collection('users').doc(uid).get();
         const pushToken = userSnap.data()?.pushToken as string | undefined;
+        const telegramChatId = userSnap.data()?.telegramChatId as string | undefined;
 
         await Promise.allSettled([
             sendExpoPush(pushToken, title, body ?? '', data),
             sendWebPushToUser(uid, { title, body: body ?? '', url: data?.url }),
+            sendTelegramMessage(telegramChatId, `<b>${title}</b>${body ? `\n${body}` : ''}`),
         ]);
 
         return NextResponse.json({ ok: true });
