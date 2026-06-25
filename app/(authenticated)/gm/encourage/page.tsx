@@ -1,70 +1,34 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { sendNotification, getLinkedProfiles } from '@/lib/db';
-import { UserProfile } from '@/types';
+import React from 'react';
+import { useEncourageHero } from '@/hooks/useEncourageHero';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import Toast from '@/components/ui/Toast';
-import { Heart, Brain, Zap, Coffee, Send, Users, HeartHandshake, Loader2 } from 'lucide-react';
-
-const buffOptions = [
-    { name: 'Kasih Sayang', icon: Heart },
-    { name: 'Fokus Penuh', icon: Brain },
-    { name: 'Extra Energi', icon: Zap },
-    { name: 'Secangkir Kopi', icon: Coffee },
-];
+import { BUFF_OPTIONS } from '@/constants/gm';
+import { Send, Users, HeartHandshake, Loader2 } from 'lucide-react';
 
 export default function EncourageHeroPage() {
-    const { profile } = useAuth();
-    const [linkedHeroes, setLinkedHeroes] = useState<UserProfile[]>([]);
-    const [loadingHeroes, setLoadingHeroes] = useState(true);
-    const [selectedHeroId, setSelectedHeroId] = useState('');
-    const [message, setMessage] = useState('');
-    const [buffType, setBuffType] = useState('Kasih Sayang');
-    const [isSending, setIsSending] = useState(false);
-    const [showToast, setShowToast] = useState(false);
+    const {
+        linkedHeroes,
+        loadingHeroes,
+        selectedHeroId,
+        setSelectedHeroId,
+        message,
+        setMessage,
+        buffType,
+        setBuffType,
+        isSending,
+        showToast,
+        setShowToast,
+        send,
+    } = useEncourageHero();
 
-    useEffect(() => {
-        if (profile?.partnerIds && profile.partnerIds.length > 0) {
-            getLinkedProfiles(profile.partnerIds).then((heroes) => {
-                const players = heroes.filter((h) => h.role === 'player');
-                setLinkedHeroes(players);
-                if (players.length > 0) setSelectedHeroId(players[0].uid);
-                setLoadingHeroes(false);
-            });
-        } else {
-            setLoadingHeroes(false);
-        }
-    }, [profile]);
-
-    const handleSend = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!profile || !selectedHeroId || !message.trim()) {
-            if (!selectedHeroId) alert('Pilih Hero terlebih dahulu!');
-            return;
-        }
-        setIsSending(true);
-        try {
-            await sendNotification({
-                toUid: selectedHeroId,
-                fromUid: profile.uid,
-                fromName: profile.displayName,
-                type: 'encouragement',
-                title: `Mantra Semangat: ${buffType}`,
-                message,
-            });
-            setShowToast(true);
-            setMessage('');
-        } catch (error) {
-            console.error('Gagal mengirim semangat:', error);
-            alert('Gagal mengirim pesan. Coba lagi.');
-        } finally {
-            setIsSending(false);
-        }
+    const handleSend = async (ev: React.FormEvent) => {
+        ev.preventDefault();
+        await send();
     };
 
     if (loadingHeroes) {
@@ -95,7 +59,7 @@ export default function EncourageHeroPage() {
                             </label>
                             <select
                                 value={selectedHeroId}
-                                onChange={(e) => setSelectedHeroId(e.target.value)}
+                                onChange={(ev) => setSelectedHeroId(ev.target.value)}
                                 required
                                 className="w-full p-3.5 rounded-xl border border-line bg-surface font-bold text-ink outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 cursor-pointer transition"
                             >
@@ -108,7 +72,7 @@ export default function EncourageHeroPage() {
                         <div>
                             <label className="block text-xs font-extrabold text-ink-soft mb-3 uppercase tracking-widest">Jenis Buff</label>
                             <div className="grid grid-cols-2 gap-3">
-                                {buffOptions.map((buff) => {
+                                {BUFF_OPTIONS.map((buff) => {
                                     const active = buffType === buff.name;
                                     return (
                                         <button
@@ -130,7 +94,7 @@ export default function EncourageHeroPage() {
                             <textarea
                                 required
                                 value={message}
-                                onChange={(e) => setMessage(e.target.value)}
+                                onChange={(ev) => setMessage(ev.target.value)}
                                 rows={4}
                                 placeholder="Ketik pesan semangatmu di sini…"
                                 className="w-full bg-surface border border-line rounded-xl p-4 text-ink font-medium outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 resize-none transition placeholder:text-ink-muted"

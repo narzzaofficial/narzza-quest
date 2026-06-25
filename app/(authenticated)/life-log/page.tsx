@@ -21,25 +21,24 @@ import { WorkTasksSection } from '@/components/ai-gm/WorkTasksSection';
 
 export default function LifeLogPage() {
     const { profile } = useAuth();
-    const log     = useActivityLog(profile?.uid);
+    const {
+        entries, currentActivity, saving, switchActivity, stopCurrent, getDurationMinutes,
+        completedEntries, totalMinutesToday, avgMood,
+    } = useActivityLog(profile?.uid);
+    // Not destructured: `habits` shares its own field name (`habits.habits`),
+    // so pulling it apart would force confusing renames of every field.
     const habits  = useHabits(profile?.uid);
-    const history = useActivityHistory(profile?.uid);
+    const { days: historyDays, loading: historyLoading, getDurationMinutes: getHistoryDurationMinutes } = useActivityHistory(profile?.uid);
     const wt  = useWorkTasks(profile?.uid);
     const sit = useSituation(profile?.uid);
 
     const [showLogForm,   setShowLogForm]   = useState(false);
     const [showHabitForm, setShowHabitForm] = useState(false);
 
-    const handleSwitch = async (data: Parameters<typeof log.switchActivity>[0]) => {
-        await log.switchActivity(data);
+    const handleSwitch = async (data: Parameters<typeof switchActivity>[0]) => {
+        await switchActivity(data);
         setShowLogForm(false);
     };
-
-    const completedEntries  = log.entries.filter((e) => !!e.endTime);
-    const totalMinutesToday = log.entries.reduce((sum, e) => sum + log.getDurationMinutes(e), 0);
-    const avgMood = log.entries.length
-        ? (log.entries.reduce((s, e) => s + e.mood, 0) / log.entries.length).toFixed(1)
-        : null;
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
@@ -54,7 +53,7 @@ export default function LifeLogPage() {
                         <h1 className="text-2xl md:text-3xl font-extrabold text-white leading-tight">Life Log</h1>
                         <p className="text-white/75 text-sm mt-0.5">
                             {totalMinutesToday > 0
-                                ? `${formatDuration(totalMinutesToday)} tercatat hari ini · ${log.entries.length} aktivitas`
+                                ? `${formatDuration(totalMinutesToday)} tercatat hari ini · ${entries.length} aktivitas`
                                 : 'Belum ada aktivitas. Mulai catat sekarang!'}
                         </p>
                     </div>
@@ -67,24 +66,24 @@ export default function LifeLogPage() {
                 </div>
             </header>
 
-            {log.currentActivity && !showLogForm ? (
+            {currentActivity && !showLogForm ? (
                 <CurrentActivityCard
-                    entry={log.currentActivity}
-                    duration={log.getDurationMinutes(log.currentActivity)}
+                    entry={currentActivity}
+                    duration={getDurationMinutes(currentActivity)}
                     onSwitch={() => setShowLogForm(true)}
-                    onStop={log.stopCurrent}
-                    saving={log.saving}
+                    onStop={stopCurrent}
+                    saving={saving}
                 />
             ) : showLogForm ? (
                 <section className="glass rounded-card shadow-card p-5 md:p-6">
                     <h2 className="text-ink font-extrabold text-lg mb-4">
-                        {log.currentActivity ? 'Ganti Aktivitas' : 'Mulai Aktivitas Baru'}
+                        {currentActivity ? 'Ganti Aktivitas' : 'Mulai Aktivitas Baru'}
                     </h2>
                     <LogForm
                         onSave={handleSwitch}
                         onCancel={() => setShowLogForm(false)}
-                        saving={log.saving}
-                        label={log.currentActivity ? 'Ganti Sekarang' : 'Mulai Sekarang'}
+                        saving={saving}
+                        label={currentActivity ? 'Ganti Sekarang' : 'Mulai Sekarang'}
                     />
                 </section>
             ) : (
@@ -129,7 +128,7 @@ export default function LifeLogPage() {
                         ) : (
                             <div className="space-y-0">
                                 {[...completedEntries].reverse().map((e) => (
-                                    <TimelineEntry key={e.id} entry={e} duration={log.getDurationMinutes(e)} />
+                                    <TimelineEntry key={e.id} entry={e} duration={getDurationMinutes(e)} />
                                 ))}
                             </div>
                         )}
@@ -207,10 +206,10 @@ export default function LifeLogPage() {
             </div>
 
             <ActivityHistory
-                days={history.days}
-                loading={history.loading}
+                days={historyDays}
+                loading={historyLoading}
                 habits={habits.habits}
-                getDurationMinutes={history.getDurationMinutes}
+                getDurationMinutes={getHistoryDurationMinutes}
             />
         </div>
     );

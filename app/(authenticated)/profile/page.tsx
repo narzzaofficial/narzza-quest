@@ -1,9 +1,13 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfileSettings } from '@/hooks/useProfileSettings';
+import { useProfileForm } from '@/hooks/useProfileForm';
+import { useAIConnectionTest } from '@/hooks/useAIConnectionTest';
+import { useMcpConnector } from '@/hooks/useMcpConnector';
+import { useTelegramConnector } from '@/hooks/useTelegramConnector';
 import { GRAD } from '@/constants/ui';
 import GlassCard from '@/components/ui/GlassCard';
 import Button from '@/components/ui/Button';
@@ -34,7 +38,6 @@ import {
 } from 'lucide-react';
 import { FaTelegram } from 'react-icons/fa6';
 import { dicebearAvatar } from '@/lib/avatar';
-import { auth } from '@/lib/firebase';
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -42,38 +45,30 @@ export default function ProfilePage() {
     const { profile, loading, isSaving, isUploading, uploadAvatar, saveProfile } = useProfileSettings();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const [displayName, setDisplayName] = useState('');
-    const [useOpenRouter, setUseOpenRouter] = useState(false);
-    const [openRouterApiKey, setOpenRouterApiKey] = useState('');
-    const [openRouterModel, setOpenRouterModel] = useState('');
-    const [isTestingConnection, setIsTestingConnection] = useState(false);
-    const [isActivating, setIsActivating] = useState(false);
-    const [isDisconnecting, setIsDisconnecting] = useState(false);
-    const [mcpCode, setMcpCode] = useState('');
-    const [codeCopied, setCodeCopied] = useState(false);
-    const [urlCopied, setUrlCopied] = useState(false);
-    const [mcpServerUrl, setMcpServerUrl] = useState('');
-    const [isTelegramActivating, setIsTelegramActivating] = useState(false);
-    const [isTelegramDisconnecting, setIsTelegramDisconnecting] = useState(false);
-    const [telegramCode, setTelegramCode] = useState('');
+    const {
+        displayName, setDisplayName,
+        useOpenRouter, setUseOpenRouter,
+        openRouterApiKey, setOpenRouterApiKey,
+        openRouterModel, setOpenRouterModel,
+        saveForm,
+    } = useProfileForm(profile, saveProfile);
+    const { isTesting: isTestingConnection, testConnection } = useAIConnectionTest();
+    const {
+        isActivating: mcpActivating, isDisconnecting: mcpDisconnecting,
+        code: mcpCode, codeCopied, urlCopied, serverUrl: mcpServerUrl,
+        activate: mcpActivate, disconnect: mcpDisconnect, copyCode: handleCopyCode, copyUrl: handleCopyUrl,
+    } = useMcpConnector();
+    const {
+        isActivating: isTelegramActivating, isDisconnecting: isTelegramDisconnecting,
+        code: telegramCode, deepLink: telegramDeepLink,
+        activate: telegramActivate, disconnect: telegramDisconnect,
+    } = useTelegramConnector();
 
-    useEffect(() => {
-        setMcpServerUrl(`${window.location.origin}/api/mcp`);
-    }, []);
     const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
         show: false,
         message: '',
         type: 'success',
     });
-
-    useEffect(() => {
-        if (profile) {
-            setDisplayName(profile.displayName || '');
-            setUseOpenRouter(profile.aiSettings?.useOpenRouter || false);
-            setOpenRouterApiKey(profile.aiSettings?.openRouterApiKey || '');
-            setOpenRouterModel(profile.aiSettings?.openRouterModel || '');
-        }
-    }, [profile]);
 
     const notify = (message: string, type: 'success' | 'error' = 'success') =>
         setToast({ show: true, message, type });
@@ -92,7 +87,7 @@ export default function ProfilePage() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await saveProfile(displayName, { useOpenRouter, openRouterApiKey, openRouterModel });
+            await saveForm();
             notify('Profil berhasil diperbarui! ✨');
         } catch {
             notify('Terjadi kesalahan saat menyimpan profil.', 'error');
@@ -100,115 +95,45 @@ export default function ProfilePage() {
     };
 
     const handleTestConnection = async () => {
-        if (!openRouterApiKey) {
-            notify('API Key harus diisi untuk mengetes koneksi.', 'error');
-            return;
-        }
-        setIsTestingConnection(true);
         try {
-            const res = await fetch('/api/ai/test-connection', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    aiSettings: { openRouterApiKey, openRouterModel }
-                })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || 'Gagal terhubung.');
+            await testConnection(openRouterApiKey, openRouterModel);
             notify('Koneksi sukses! Model siap digunakan. 🚀', 'success');
         } catch (e) {
             notify(e instanceof Error ? e.message : 'Koneksi gagal.', 'error');
-        } finally {
-            setIsTestingConnection(false);
         }
     };
 
     const handleActivateMcp = async () => {
-        setIsActivating(true);
-        setMcpCode('');
         try {
-            const token = await auth.currentUser?.getIdToken();
-            const res = await fetch('/api/mcp/activate', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || 'Gagal generate kode.');
-            setMcpCode(data.code);
-            setCodeCopied(false);
+            await mcpActivate();
         } catch (e) {
             notify(e instanceof Error ? e.message : 'Gagal generate kode.', 'error');
-        } finally {
-            setIsActivating(false);
         }
     };
 
-    const handleCopyCode = async () => {
-        await navigator.clipboard.writeText(mcpCode);
-        setCodeCopied(true);
-        setTimeout(() => setCodeCopied(false), 2000);
-    };
-
-    const handleCopyUrl = async () => {
-        await navigator.clipboard.writeText(mcpServerUrl);
-        setUrlCopied(true);
-        setTimeout(() => setUrlCopied(false), 2000);
-    };
-
     const handleDisconnectMcp = async () => {
-        setIsDisconnecting(true);
         try {
-            const token = await auth.currentUser?.getIdToken();
-            const res = await fetch('/api/mcp/disconnect', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || 'Gagal keluar dari sesi connector.');
-            setMcpCode('');
+            await mcpDisconnect();
             notify('Sesi Claude Connector berhasil di-keluarkan. Sambungkan ulang di Claude.ai buat ganti akun. 🔌');
         } catch (e) {
             notify(e instanceof Error ? e.message : 'Gagal keluar dari sesi connector.', 'error');
-        } finally {
-            setIsDisconnecting(false);
         }
     };
 
     const handleActivateTelegram = async () => {
-        setIsTelegramActivating(true);
-        setTelegramCode('');
         try {
-            const token = await auth.currentUser?.getIdToken();
-            const res = await fetch('/api/telegram/activate', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || 'Gagal generate kode.');
-            setTelegramCode(data.code);
+            await telegramActivate();
         } catch (e) {
             notify(e instanceof Error ? e.message : 'Gagal generate kode.', 'error');
-        } finally {
-            setIsTelegramActivating(false);
         }
     };
 
     const handleDisconnectTelegram = async () => {
-        setIsTelegramDisconnecting(true);
         try {
-            const token = await auth.currentUser?.getIdToken();
-            const res = await fetch('/api/telegram/disconnect', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || 'Gagal memutuskan Telegram.');
-            setTelegramCode('');
+            await telegramDisconnect();
             notify('Telegram berhasil diputuskan. 🔌');
         } catch (e) {
             notify(e instanceof Error ? e.message : 'Gagal memutuskan Telegram.', 'error');
-        } finally {
-            setIsTelegramDisconnecting(false);
         }
     };
 
@@ -353,11 +278,11 @@ export default function ProfilePage() {
                     <Bot className="w-4 h-4 text-brand" />
                     <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold">Konfigurasi AI (Opsional)</p>
                 </div>
-                
+
                 <form onSubmit={handleSave} className="space-y-4">
                     <label className="flex items-center gap-3 p-3 rounded-xl border border-line bg-surface cursor-pointer hover:bg-surface-2 transition-colors">
-                        <input 
-                            type="checkbox" 
+                        <input
+                            type="checkbox"
                             checked={useOpenRouter}
                             onChange={(e) => setUseOpenRouter(e.target.checked)}
                             className="w-4 h-4 rounded border-line text-brand focus:ring-brand/20"
@@ -395,28 +320,28 @@ export default function ProfilePage() {
                                     className="w-full px-4 py-2.5 rounded-xl border border-line bg-surface font-bold text-sm text-ink outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 transition"
                                 />
                                 <p className="text-[10px] text-ink-muted mt-1.5 font-medium leading-relaxed">
-                                    Secara default sistem menggunakan "google/gemini-2.5-flash".
+                                    Secara default sistem menggunakan &quot;google/gemini-2.5-flash&quot;.
                                 </p>
                             </div>
                         </div>
                     )}
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 mt-4">
-                        <Button 
-                            type="button" 
-                            variant="secondary" 
-                            isLoading={isTestingConnection} 
-                            onClick={handleTestConnection} 
-                            className="w-full sm:w-1/3 whitespace-nowrap" 
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            isLoading={isTestingConnection}
+                            onClick={handleTestConnection}
+                            className="w-full sm:w-1/3 whitespace-nowrap"
                             disabled={!openRouterApiKey}
                             leftIcon={<Wifi className="w-4 h-4" />}
                         >
                             Test Koneksi
                         </Button>
-                        <Button 
-                            type="submit" 
-                            variant="primary" 
-                            isLoading={isSaving} 
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            isLoading={isSaving}
                             className="w-full sm:w-2/3 whitespace-nowrap"
                             leftIcon={<Save className="w-4 h-4" />}
                         >
@@ -480,7 +405,7 @@ export default function ProfilePage() {
                         </div>
                     </div>
                 ) : (
-                    <Button type="button" variant="primary" isLoading={isActivating} onClick={handleActivateMcp} className="w-full" leftIcon={<Sparkles className="w-4 h-4" />}>
+                    <Button type="button" variant="primary" isLoading={mcpActivating} onClick={handleActivateMcp} className="w-full" leftIcon={<Sparkles className="w-4 h-4" />}>
                         Generate Kode Akses
                     </Button>
                 )}
@@ -489,7 +414,7 @@ export default function ProfilePage() {
                     <p className="text-ink-muted text-xs font-medium mb-2.5">
                         Connector udah aktif tapi mau ganti ke akun lain?
                     </p>
-                    <Button type="button" variant="secondary" isLoading={isDisconnecting} onClick={handleDisconnectMcp} className="w-full" leftIcon={<LogOut className="w-4 h-4" />}>
+                    <Button type="button" variant="secondary" isLoading={mcpDisconnecting} onClick={handleDisconnectMcp} className="w-full" leftIcon={<LogOut className="w-4 h-4" />}>
                         Ganti Akun / Keluar dari Sesi Connector
                     </Button>
                 </div>
@@ -511,11 +436,7 @@ export default function ProfilePage() {
                             <span className="shrink-0 w-6 h-6 rounded-full bg-brand-soft text-brand text-xs font-black flex items-center justify-center">1</span>
                             <div className="flex-1 pt-0.5">
                                 <p className="text-sm font-bold text-ink mb-2">Buka bot Telegram & tekan Start</p>
-                                <a
-                                    href={`https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}?start=${telegramCode}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >
+                                <a href={telegramDeepLink} target="_blank" rel="noopener noreferrer">
                                     <Button type="button" variant="secondary" className="w-full sm:w-auto" leftIcon={<ExternalLink className="w-4 h-4" />}>
                                         Buka Telegram
                                     </Button>

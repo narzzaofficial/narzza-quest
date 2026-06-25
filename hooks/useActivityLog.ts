@@ -60,6 +60,12 @@ export function useActivityLog(uid: string | undefined) {
         return Math.round((end.getTime() - new Date(entry.startTime).getTime()) / 60_000);
     };
 
+    const completedEntries = entries.filter((e) => !!e.endTime);
+    const totalMinutesToday = entries.reduce((sum, e) => sum + getDurationMinutes(e), 0);
+    const avgMood = entries.length
+        ? (entries.reduce((s, e) => s + e.mood, 0) / entries.length).toFixed(1)
+        : null;
+
     return {
         entries,
         currentActivity,
@@ -69,5 +75,8 @@ export function useActivityLog(uid: string | undefined) {
         switchActivity,
         stopCurrent,
         getDurationMinutes,
+        completedEntries,
+        totalMinutesToday,
+        avgMood,
     };
 }

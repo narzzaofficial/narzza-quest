@@ -10,9 +10,9 @@ import Toast from '@/components/ui/Toast';
 import { GMQuestCard } from '@/components/gm/GMQuestCard';
 
 export default function GMQuestListPage() {
-    const gm = useGMQuests();
+    const { quests, loading, toast, setToast, remove } = useGMQuests();
 
-    if (gm.loading) {
+    if (loading) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-brand animate-spin" />
@@ -39,17 +39,17 @@ export default function GMQuestListPage() {
                 }
             />
 
-            {gm.quests.length === 0 ? (
+            {quests.length === 0 ? (
                 <EmptyState icon={ListTodo} title="Belum ada quest" desc='Klik "Quest Baru" untuk mulai membuat misi.' />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {gm.quests.map((q) => (
-                        <GMQuestCard key={q.id} quest={q} onDelete={() => gm.remove(q.id)} />
+                    {quests.map((q) => (
+                        <GMQuestCard key={q.id} quest={q} onDelete={() => remove(q.id)} />
                     ))}
                 </div>
             )}
 
-            <Toast isVisible={gm.toast.show} onClose={() => gm.setToast({ ...gm.toast, show: false })} message={gm.toast.message} type="success" />
+            <Toast isVisible={toast.show} onClose={() => setToast({ ...toast, show: false })} message={toast.message} type="success" />
         </div>
     );
 }

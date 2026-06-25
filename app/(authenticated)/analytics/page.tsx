@@ -23,7 +23,7 @@ import { FaBullseye } from 'react-icons/fa6';
 export default function AnalyticsPage() {
     const [tab, setTab] = useState<'life' | 'finance'>('life');
     const { profile } = useAuth();
-    const xp = useXPHistory(profile?.uid);
+    const { days, loading: xpLoading, totalEarned, totalPenalty, totalNet, maxAbs } = useXPHistory(profile?.uid);
     const {
         loading, activities,
         moodEnergyData, categoryData, peakHoursData, bestDayData,
@@ -260,12 +260,12 @@ export default function AnalyticsPage() {
                     )}
 
                     <XPHistory
-                        days={xp.days}
-                        loading={xp.loading}
-                        totalEarned={xp.totalEarned}
-                        totalPenalty={xp.totalPenalty}
-                        totalNet={xp.totalNet}
-                        maxAbs={xp.maxAbs}
+                        days={days}
+                        loading={xpLoading}
+                        totalEarned={totalEarned}
+                        totalPenalty={totalPenalty}
+                        totalNet={totalNet}
+                        maxAbs={maxAbs}
                     />
                 </>
             )}

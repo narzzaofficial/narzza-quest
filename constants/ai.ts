@@ -15,3 +15,11 @@ export const AI_GM = {
 export function isAIQuest(createdBy: string | undefined): boolean {
     return createdBy === AI_GM_ID;
 }
+
+/** Quick-start prompts shown on the empty Chat page. */
+export const CHAT_SUGGESTED_PROMPTS = [
+    'Evaluasi hidupku hari ini',
+    'Aku harus ngapain sekarang?',
+    'Gimana progress tujuanku?',
+    'Aku lagi ngerasa overwhelmed',
+] as const;

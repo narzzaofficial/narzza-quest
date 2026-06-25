@@ -9,16 +9,17 @@ import { GMDashboard }      from '@/components/dashboard/GMDashboard';
 
 export default function DashboardPage() {
     const d = useDashboard();
+    const { profile, loading } = d;
     const router = useRouter();
 
     useEffect(() => {
-        if (d.profile && d.profile.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL) {
+        if (profile && profile.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL) {
             router.push('/superadmin');
         }
-    }, [d.profile, router]);
+    }, [profile, router]);
 
-    if (d.loading || !d.profile) return <DashboardSkeleton />;
-    if (d.profile.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL) return null;
-    if (d.profile.role === 'gm') return <GMDashboard d={d} />;
+    if (loading || !profile) return <DashboardSkeleton />;
+    if (profile.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL) return null;
+    if (profile.role === 'gm') return <GMDashboard d={d} />;
     return <HeroDashboard d={d} />;
 }

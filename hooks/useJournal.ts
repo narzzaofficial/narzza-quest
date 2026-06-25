@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getPlayerQuests, getLinkedProfiles } from '@/lib/db';
-import { subscribeToPersonalJournals } from '@/lib/journalDb';
+import { subscribeToPersonalJournals, addPersonalJournal } from '@/lib/journalDb';
 import type { Quest, UserProfile, PersonalJournal, TimelineItem } from '@/types';
 
-/** Journal logic: approved quests for the current player (or selected hero, for GM). */
+/** Journal logic: approved quests for the current player (or selected hero, for GM), plus writing new personal entries. */
 export function useJournal() {
     const { profile, loading } = useAuth();
 
@@ -15,6 +15,10 @@ export function useJournal() {
     const [completedQuests, setCompletedQuests] = useState<Quest[]>([]);
     const [personalJournals, setPersonalJournals] = useState<PersonalJournal[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
+
+    const [draftContent, setDraftContent] = useState('');
+    const [draftVisibility, setDraftVisibility] = useState<'private' | 'gm'>('private');
+    const [isSavingDraft, setIsSavingDraft] = useState(false);
 
     useEffect(() => {
         if (!profile) return;
@@ -68,6 +72,19 @@ export function useJournal() {
 
     const totalExpEarned = completedQuests.reduce((sum, q) => sum + q.expReward + (q.bonusExp || 0), 0);
 
+    const saveDraft = async () => {
+        if (!draftContent.trim() || !selectedHeroId) return;
+        setIsSavingDraft(true);
+        try {
+            await addPersonalJournal(selectedHeroId, draftContent.trim(), draftVisibility);
+            setDraftContent('');
+        } catch (error) {
+            console.error('Gagal menyimpan jurnal:', error);
+        } finally {
+            setIsSavingDraft(false);
+        }
+    };
+
     return {
         profile,
         loading,
@@ -78,5 +95,11 @@ export function useJournal() {
         completedQuests,
         isLoadingData,
         totalExpEarned,
+        draftContent,
+        setDraftContent,
+        draftVisibility,
+        setDraftVisibility,
+        isSavingDraft,
+        saveDraft,
     };
 }

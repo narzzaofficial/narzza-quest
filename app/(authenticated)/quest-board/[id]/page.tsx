@@ -1,16 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
-import { useAuth } from '@/hooks/useAuth';
-import { getQuestById, submitQuest } from '@/lib/db';
-import { runAIReview } from '@/hooks/useAIReview';
-import { enqueueOfflineItem, getQueuedSubmitForQuest, upsertOfflineSubmitItem } from '@/lib/offlineQueue';
+import { useQuestDetail } from '@/hooks/useQuestDetail';
 import { isAIQuest, AI_GM } from '@/constants/ai';
 import { CATEGORY_LABEL } from '@/constants/ui';
-import { Quest } from '@/types';
 import GlassCard from '@/components/ui/GlassCard';
 import Button from '@/components/ui/Button';
 import DifficultyBadge from '@/components/ui/DifficultyBadge';
@@ -36,172 +30,19 @@ import {
 export default function QuestDetailPage() {
     const { id } = useParams();
     const router = useRouter();
-    const { profile, refreshProfile } = useAuth();
-
-    const [quest, setQuest] = useState<Quest | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    const [submissionNote, setSubmissionNote] = useState('');
-    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState('');
-    const [hasQueuedSubmission, setHasQueuedSubmission] = useState(false);
-
-    useEffect(() => {
-        if (id) {
-            getQuestById(id as string).then((data) => {
-                setQuest(data);
-                if (data?.status === 'rejected') setSubmissionNote(data.submissionNote || '');
-                setLoading(false);
-            });
-        }
-    }, [id]);
-
-    useEffect(() => {
-        const loadQueuedSubmission = async () => {
-            if (!id) return;
-            const queued = await getQueuedSubmitForQuest(id as string);
-            if (queued) {
-                setHasQueuedSubmission(true);
-                setSubmissionNote(queued.submissionNote || '');
-                setSelectedFiles([]);
-            } else {
-                setHasQueuedSubmission(false);
-            }
-        };
-        const onQueueUpdated = () => { void loadQueuedSubmission(); };
-        void loadQueuedSubmission();
-        window.addEventListener('offline-queue-updated', onQueueUpdated as EventListener);
-        return () => window.removeEventListener('offline-queue-updated', onQueueUpdated as EventListener);
-    }, [id]);
-
-    const handleAcceptQuest = async () => {
-        if (!quest) return;
-        if (new Date(quest.deadline).getTime() <= Date.now()) {
-            alert('Quest ini sudah melewati deadline dan tidak bisa diambil lagi.');
-            setQuest({ ...quest, status: 'missed' });
-            return;
-        }
-        setIsSubmitting(true);
-        try {
-            await updateDoc(doc(db, 'quests', quest.id), { status: 'in_progress' });
-            setQuest({ ...quest, status: 'in_progress' });
-        } catch (error) {
-            console.error('Gagal mengambil quest:', error);
-            if (!navigator.onLine) {
-                const idToken = await auth.currentUser?.getIdToken();
-                if (!idToken) {
-                    alert('Sesi login tidak ditemukan. Silakan login ulang saat online.');
-                    return;
-                }
-                await enqueueOfflineItem({ type: 'accept_quest', questId: quest.id, idToken, createdAt: Date.now() });
-                setQuest({ ...quest, status: 'in_progress' });
-                alert("Kamu sedang offline. Status 'mulai quest' disimpan dan akan disinkron saat online.");
-            } else {
-                alert('Gagal memulai quest.');
-            }
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+    const {
+        profile, quest, loading, submissionNote, setSubmissionNote,
+        selectedFiles, selectFiles, removeFile, isSubmitting, uploadProgress,
+        hasQueuedSubmission, acceptQuest, submit,
+    } = useQuestDetail(id as string | undefined);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) setSelectedFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+        selectFiles(e.target.files);
     };
 
-    const removeFile = (indexToRemove: number) => {
-        setSelectedFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!quest || !profile) return;
-
-        const queueSubmission = async () => {
-            const idToken = await auth.currentUser?.getIdToken();
-            if (!idToken) throw new Error('Sesi login tidak ditemukan. Silakan login ulang saat online.');
-            const existingQueued = await getQueuedSubmitForQuest(quest.id);
-            const queuedFiles =
-                selectedFiles.length > 0
-                    ? selectedFiles.map((file) => ({ name: file.name, type: file.type, lastModified: file.lastModified, blob: file }))
-                    : existingQueued?.files || [];
-            if (queuedFiles.length === 0) throw new Error('Minimal ada 1 file bukti agar bisa disimpan offline.');
-            await upsertOfflineSubmitItem({ type: 'submit_quest', questId: quest.id, idToken, submissionNote, files: queuedFiles, createdAt: Date.now() });
-            setHasQueuedSubmission(true);
-        };
-
-        setIsSubmitting(true);
-        try {
-            if (!navigator.onLine) {
-                try {
-                    await queueSubmission();
-                    alert('Kamu offline. Laporan disimpan dan akan otomatis di-upload saat online.');
-                    router.push('/quest-board');
-                } catch (queueError) {
-                    alert(queueError instanceof Error ? queueError.message : 'Gagal menyimpan laporan offline.');
-                }
-                return;
-            }
-
-            const uploadedUrls: string[] = [];
-            for (let i = 0; i < selectedFiles.length; i++) {
-                setUploadProgress(`Mengunggah bukti ${i + 1} dari ${selectedFiles.length}...`);
-                const file = selectedFiles[i];
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('questId', quest.id);
-                const res = await fetch('/api/upload', { method: 'POST', body: formData });
-                if (!res.ok) throw new Error(`Gagal upload file ${file.name}`);
-                const data = await res.json();
-                uploadedUrls.push(data.url);
-            }
-
-            setUploadProgress('Menyimpan laporan…');
-            await submitQuest(quest.id, submissionNote, uploadedUrls);
-
-            // ── Solo auto-review: AI quests get reviewed instantly ──
-            if (isAIQuest(quest.createdBy)) {
-                setUploadProgress('AI Game Master sedang me-review…');
-                try {
-                    const outcome = await runAIReview(
-                        { ...quest, submissionUrls: uploadedUrls },
-                        submissionNote,
-                        profile,
-                        uploadedUrls.length > 0
-                    );
-                    await refreshProfile?.();
-                    if (outcome.decision === 'approve') {
-                        alert(`✅ AI Game Master menyetujui!\n+${outcome.expEarned} EXP\n\n"${outcome.feedback}"`);
-                    } else {
-                        alert(`📝 AI Game Master minta revisi:\n\n"${outcome.feedback}"`);
-                    }
-                } catch (reviewErr) {
-                    alert('Quest tersubmit, tapi auto-review AI gagal: ' + (reviewErr instanceof Error ? reviewErr.message : 'error'));
-                }
-                router.push('/quest-board');
-                return;
-            }
-
-            alert('Laporan berhasil dikirim ke GM!');
-            router.push('/quest-board');
-        } catch (error) {
-            console.error('Gagal submit:', error);
-            if (!navigator.onLine) {
-                try {
-                    await queueSubmission();
-                    alert('Koneksi terputus. Laporan disimpan dan akan otomatis di-upload saat online.');
-                    router.push('/quest-board');
-                } catch (queueError) {
-                    alert(queueError instanceof Error ? queueError.message : 'Gagal menyimpan laporan offline.');
-                }
-            } else {
-                alert('Terjadi kesalahan saat mengunggah laporan.');
-            }
-        } finally {
-            setIsSubmitting(false);
-            setUploadProgress('');
-        }
+        submit();
     };
 
     if (loading)
@@ -271,7 +112,7 @@ export default function QuestDetailPage() {
                 <GlassCard className="p-8 text-center">
                     <h3 className="text-xl font-extrabold text-ink mb-2">Misi Ini Menunggumu!</h3>
                     <p className="text-ink-soft mb-6">Terima misi ini untuk mulai mengumpulkan bukti penyelesaian.</p>
-                    <Button onClick={handleAcceptQuest} isLoading={isSubmitting} size="lg" className="w-full md:w-auto">
+                    <Button onClick={acceptQuest} isLoading={isSubmitting} size="lg" className="w-full md:w-auto">
                         <PlayCircle className="w-5 h-5 mr-2" /> Mulai Petualangan
                     </Button>
                 </GlassCard>

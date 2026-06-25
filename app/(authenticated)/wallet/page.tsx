@@ -13,12 +13,16 @@ import { dicebearAvatar } from '@/lib/avatar';
 
 export default function WalletPage() {
     const w = useWallet();
+    const {
+        profile, loading, totalBalance, localBalances, gmProfiles,
+        handleWithdraw, processingId, withdrawals, toast, setToast,
+    } = w;
 
-    if (w.profile?.role === 'gm') {
+    if (profile?.role === 'gm') {
         return <div className="min-h-[60vh] flex items-center justify-center text-ink-soft font-bold">Halaman ini khusus untuk Hero.</div>;
     }
 
-    if (w.loading) {
+    if (loading) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-success animate-spin" />
@@ -39,17 +43,17 @@ export default function WalletPage() {
             <GlassCard className="relative overflow-hidden p-6 md:p-7">
                 <Banknote className="absolute -right-4 -top-4 w-28 h-28 text-success/10 rotate-12 pointer-events-none" />
                 <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-1">Total Harta Terkumpul</p>
-                <p className="text-4xl md:text-5xl font-black text-success">Rp {w.totalBalance.toLocaleString('id-ID')}</p>
+                <p className="text-4xl md:text-5xl font-black text-success">Rp {totalBalance.toLocaleString('id-ID')}</p>
             </GlassCard>
 
             <section className="space-y-3">
                 <SectionLabel className="flex items-center gap-1.5"><ArrowRightLeft className="w-3.5 h-3.5" /> Saldo Per Sponsor (GM)</SectionLabel>
-                {Object.keys(w.localBalances).length === 0 ? (
+                {Object.keys(localBalances).length === 0 ? (
                     <EmptyState icon={AlertCircle} title="Belum ada pemasukan" desc="Selesaikan quest berhadiah untuk mengisi dompet." />
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {Object.entries(w.localBalances).map(([gmUid, amount]) => {
-                            const gm = w.gmProfiles[gmUid];
+                        {Object.entries(localBalances).map(([gmUid, amount]) => {
+                            const gm = gmProfiles[gmUid];
                             const isZero = amount === 0;
                             return (
                                 <GlassCard key={gmUid} className={`p-5 ${isZero ? 'opacity-70' : ''}`}>
@@ -67,11 +71,11 @@ export default function WalletPage() {
                                         <p className={`text-2xl font-black ${isZero ? 'text-ink-muted' : 'text-success'}`}>Rp {amount.toLocaleString('id-ID')}</p>
                                     </div>
                                     <button
-                                        onClick={() => w.handleWithdraw(gmUid, amount)}
-                                        disabled={isZero || w.processingId === gmUid}
+                                        onClick={() => handleWithdraw(gmUid, amount)}
+                                        disabled={isZero || processingId === gmUid}
                                         className={`w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-colors disabled:cursor-not-allowed ${isZero ? 'bg-surface-2 text-ink-muted' : 'bg-success text-white hover:brightness-95 shadow-card'}`}
                                     >
-                                        {w.processingId === gmUid ? <Loader2 className="w-4 h-4 animate-spin" /> : isZero ? 'Saldo Kosong' : <><Send className="w-4 h-4" /> Ajukan Pencairan</>}
+                                        {processingId === gmUid ? <Loader2 className="w-4 h-4 animate-spin" /> : isZero ? 'Saldo Kosong' : <><Send className="w-4 h-4" /> Ajukan Pencairan</>}
                                     </button>
                                 </GlassCard>
                             );
@@ -82,18 +86,18 @@ export default function WalletPage() {
 
             <section className="space-y-3">
                 <SectionLabel className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Riwayat Pencairan</SectionLabel>
-                {w.withdrawals.length === 0 ? (
+                {withdrawals.length === 0 ? (
                     <EmptyState icon={FileText} title="Belum ada riwayat" desc="Tagihan pencairanmu akan muncul di sini." />
                 ) : (
                     <div className="space-y-3">
-                        {w.withdrawals.map((wd) => (
+                        {withdrawals.map((wd) => (
                             <WithdrawalRow key={wd.id} wd={wd} w={w} />
                         ))}
                     </div>
                 )}
             </section>
 
-            <Toast isVisible={w.toast.show} onClose={() => w.setToast({ ...w.toast, show: false })} message={w.toast.msg} type={w.toast.type} />
+            <Toast isVisible={toast.show} onClose={() => setToast({ ...toast, show: false })} message={toast.msg} type={toast.type} />
         </div>
     );
 }

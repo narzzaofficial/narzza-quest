@@ -7,40 +7,17 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useGMMessages } from '@/hooks/useGMMessages';
 import { useAuth } from '@/hooks/useAuth';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
+import { getNotificationHref } from '@/lib/notifications';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import { GMMessageRow } from '@/components/notifications/GMMessageRow';
 import { NotifRow }     from '@/components/notifications/NotifRow';
 
-function notifHref(type: string, role?: string, refId?: string): string | null {
-    switch (type) {
-        case 'quest_assigned':
-        case 'quest_created':
-        case 'quest_approved':
-        case 'quest_rejected':
-            return '/quest-board';
-        case 'guild_quest_open':
-            return '/guild-quest';
-        case 'guild_quest_claimed':
-            return '/gm/guild-quest';
-        case 'withdrawal_requested':
-        case 'withdrawal_confirmed':
-        case 'withdrawal_rejected':
-        case 'withdrawal_transferred':
-        case 'reminder': {
-            const base = role === 'gm' ? '/gm/payouts' : '/wallet';
-            return refId ? `${base}?highlight=${refId}` : base;
-        }
-        default:
-            return null;
-    }
-}
-
 export default function NotificationsPage() {
     const { notifications, loading, unreadCount, markRead, markAllRead } = useNotifications();
     const { profile } = useAuth();
     const router = useRouter();
-    const gm = useGMMessages(profile?.uid);
+    const { messages: gmMessages, unreadCount: gmUnreadCount, markRead: markGmRead, markAllRead: markAllGmRead } = useGMMessages(profile?.uid);
     const { state: pushState, subscribe, unsubscribe } = usePushSubscription();
 
     if (loading) {
@@ -92,27 +69,27 @@ export default function NotificationsPage() {
                 }
             />
 
-            {gm.messages.length > 0 && (
+            {gmMessages.length > 0 && (
                 <section>
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                             <Bot className="w-4 h-4 text-brand" />
                             <p className="text-ink font-extrabold text-sm">Pesan dari AI Game Master</p>
-                            {gm.unreadCount > 0 && (
+                            {gmUnreadCount > 0 && (
                                 <span className="bg-brand text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                                    {gm.unreadCount}
+                                    {gmUnreadCount}
                                 </span>
                             )}
                         </div>
-                        {gm.unreadCount > 0 && (
-                            <button onClick={gm.markAllRead} className="text-brand text-xs font-bold hover:underline">
+                        {gmUnreadCount > 0 && (
+                            <button onClick={markAllGmRead} className="text-brand text-xs font-bold hover:underline">
                                 Tandai semua dibaca
                             </button>
                         )}
                     </div>
                     <div className="space-y-3">
-                        {gm.messages.map((msg) => (
-                            <GMMessageRow key={msg.id} message={msg} onRead={gm.markRead} />
+                        {gmMessages.map((msg) => (
+                            <GMMessageRow key={msg.id} message={msg} onRead={markGmRead} />
                         ))}
                     </div>
                 </section>
@@ -123,7 +100,7 @@ export default function NotificationsPage() {
             ) : (
                 <div className="space-y-3">
                     {notifications.map((notif) => {
-                        const href = notifHref(notif.type, profile?.role, notif.refId);
+                        const href = getNotificationHref(notif.type, profile?.role, notif.refId);
                         return (
                             <NotifRow
                                 key={notif.id}

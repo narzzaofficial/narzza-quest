@@ -1,4 +1,13 @@
 import type { QuestDifficulty } from "@/types";
+import type { QuestFilter } from "@/hooks/useQuestBoard";
+
+// ─────────────────────────────────────────
+// QUEST BOARD FILTERS
+// ─────────────────────────────────────────
+
+export const QUEST_FILTER_LABEL: Record<QuestFilter, string> = {
+    All: 'Semua', Available: 'Tersedia', Active: 'Aktif', Completed: 'Selesai',
+};
 
 // ─────────────────────────────────────────
 // LEVELING TABLES

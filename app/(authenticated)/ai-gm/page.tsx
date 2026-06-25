@@ -11,9 +11,10 @@ import { MemoryCard } from '@/components/ai-gm/MemoryCard';
 import { QuestRow } from '@/components/ai-gm/QuestRow';
 
 export default function AIGameMasterPage() {
-    const ai  = useAIGameMaster();
+    const ai = useAIGameMaster();
+    const { profile, active, completed, aiQuests, goals, setGoals, generate, generating, createdCount, error } = ai;
 
-    if (!ai.profile) {
+    if (!profile) {
         return (
             <div className="p-4 md:p-8 max-w-6xl mx-auto">
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -24,9 +25,9 @@ export default function AIGameMasterPage() {
     }
 
     const stats = [
-        { label: 'Quest Aktif',    value: ai.active.length,    icon: ListChecks  },
-        { label: 'Diselesaikan',   value: ai.completed.length, icon: CheckCircle2},
-        { label: 'Total dari AI',  value: ai.aiQuests.length,  icon: Sparkles    },
+        { label: 'Quest Aktif',    value: active.length,    icon: ListChecks  },
+        { label: 'Diselesaikan',   value: completed.length, icon: CheckCircle2},
+        { label: 'Total dari AI',  value: aiQuests.length,  icon: Sparkles    },
     ];
 
     return (
@@ -59,8 +60,8 @@ export default function AIGameMasterPage() {
 
                 <label className="block text-ink-soft text-xs font-semibold mb-1.5">Fokus / target kamu sekarang (opsional)</label>
                 <textarea
-                    value={ai.goals}
-                    onChange={(e) => ai.setGoals(e.target.value)}
+                    value={goals}
+                    onChange={(e) => setGoals(e.target.value)}
                     rows={2}
                     placeholder="cth: belajar bahasa Jepang, rutin olahraga pagi, bangun side project…"
                     className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-ink-muted outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 transition resize-none"
@@ -70,20 +71,20 @@ export default function AIGameMasterPage() {
                     <p className="text-ink-muted text-xs">AI nyesuaiin difficulty &amp; memakai memory kamu.</p>
                     <button
                         type="button"
-                        onClick={() => ai.generate()}
-                        disabled={ai.generating}
+                        onClick={() => generate()}
+                        disabled={generating}
                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-white font-bold shadow-card hover:bg-brand-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
                     >
-                        {ai.generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                        {ai.generating ? 'Membuat…' : 'Generate Quest'}
+                        {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                        {generating ? 'Membuat…' : 'Generate Quest'}
                     </button>
                 </div>
 
-                {(ai.createdCount > 0 || ai.error) && (
+                {(createdCount > 0 || error) && (
                     <div className="mt-4 pt-4 border-t border-line text-sm">
-                        {ai.error
-                            ? <p className="text-danger font-semibold">⚠ {ai.error}</p>
-                            : <p className="text-success font-semibold">✓ {ai.createdCount} quest baru ditambahkan ke daftar di bawah.</p>
+                        {error
+                            ? <p className="text-danger font-semibold">⚠ {error}</p>
+                            : <p className="text-success font-semibold">✓ {createdCount} quest baru ditambahkan ke daftar di bawah.</p>
                         }
                     </div>
                 )}
@@ -109,7 +110,7 @@ export default function AIGameMasterPage() {
             {/* ── AI quest list ── */}
             <section>
                 <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-3">Misi dari AI</p>
-                {ai.aiQuests.length === 0 ? (
+                {aiQuests.length === 0 ? (
                     <div className="glass rounded-card p-10 text-center shadow-card">
                         <Bot className="w-9 h-9 text-ink-muted mx-auto mb-3" />
                         <p className="text-ink font-bold mb-1">Belum ada misi dari AI</p>
@@ -117,7 +118,7 @@ export default function AIGameMasterPage() {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {ai.aiQuests.map((q) => <QuestRow key={q.id} quest={q} />)}
+                        {aiQuests.map((q) => <QuestRow key={q.id} quest={q} />)}
                     </div>
                 )}
             </section>

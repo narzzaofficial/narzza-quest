@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { BookOpen, Award, Feather, Users, Loader2, CheckCircle2, MessageCircle, Send, Lock, Eye } from 'lucide-react';
 import { useJournal } from '@/hooks/useJournal';
-import { addPersonalJournal } from '@/lib/journalDb';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import StatTile from '@/components/ui/StatTile';
@@ -11,28 +10,28 @@ import EmptyState from '@/components/ui/EmptyState';
 import { JournalEntry } from '@/components/journal/JournalEntry';
 
 export default function JournalPage() {
-    const j = useJournal();
-    const [journalContent, setJournalContent] = useState('');
-    const [visibility, setVisibility] = useState<'private' | 'gm'>('private');
-    const [isSaving, setIsSaving] = useState(false);
+    const {
+        profile,
+        loading,
+        linkedHeroes,
+        selectedHeroId,
+        setSelectedHeroId,
+        timeline,
+        completedQuests,
+        isLoadingData,
+        totalExpEarned,
+        draftContent,
+        setDraftContent,
+        draftVisibility,
+        setDraftVisibility,
+        isSavingDraft,
+        saveDraft,
+    } = useJournal();
     const [timelineFilter, setTimelineFilter] = useState<'all' | 'personal'>('all');
 
-    const filteredTimeline = timelineFilter === 'all' ? j.timeline : j.timeline.filter((item) => item.type === 'personal');
+    const filteredTimeline = timelineFilter === 'all' ? timeline : timeline.filter((item) => item.type === 'personal');
 
-    const handleSaveJournal = async () => {
-        if (!journalContent.trim() || !j.selectedHeroId) return;
-        setIsSaving(true);
-        try {
-            await addPersonalJournal(j.selectedHeroId, journalContent.trim(), visibility);
-            setJournalContent('');
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    if (j.loading || (j.isLoadingData && !j.selectedHeroId)) {
+    if (loading || (isLoadingData && !selectedHeroId)) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-brand animate-spin" />
@@ -49,17 +48,17 @@ export default function JournalPage() {
             />
 
             {/* GM hero picker */}
-            {j.profile?.role === 'gm' && j.linkedHeroes.length > 0 && (
+            {profile?.role === 'gm' && linkedHeroes.length > 0 && (
                 <GlassCard className="px-4 py-3 flex flex-col md:flex-row items-center gap-3 justify-between">
                     <div className="flex items-center gap-2 text-ink font-bold text-sm">
                         <Users className="w-4 h-4 text-brand" /> Pilih Jurnal Hero:
                     </div>
                     <select
-                        value={j.selectedHeroId}
-                        onChange={(e) => j.setSelectedHeroId(e.target.value)}
+                        value={selectedHeroId}
+                        onChange={(e) => setSelectedHeroId(e.target.value)}
                         className="w-full md:w-56 p-2.5 rounded-xl border border-line bg-surface font-bold text-sm text-ink outline-none focus:border-brand/50 focus:ring-2 focus:ring-brand/15 cursor-pointer"
                     >
-                        {j.linkedHeroes.map((hero) => (
+                        {linkedHeroes.map((hero) => (
                             <option key={hero.uid} value={hero.uid}>
                                 {hero.displayName} (Lv. {hero.level})
                             </option>
@@ -70,46 +69,46 @@ export default function JournalPage() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4">
-                <StatTile icon={CheckCircle2} label="Quest Selesai" value={j.completedQuests.length} grad="brand" />
-                <StatTile icon={Award} label="Total EXP" value={j.totalExpEarned} grad="amber" />
+                <StatTile icon={CheckCircle2} label="Quest Selesai" value={completedQuests.length} grad="brand" />
+                <StatTile icon={Award} label="Total EXP" value={totalExpEarned} grad="amber" />
             </div>
 
             {/* Tulis Perasaan */}
-            {j.profile?.role === 'player' && (
+            {profile?.role === 'player' && (
                 <GlassCard className="p-4 space-y-3 relative overflow-hidden border-brand/20">
                     <div className="flex items-center gap-2 mb-2 text-brand font-bold text-sm">
                         <MessageCircle className="w-5 h-5" /> Apa yang kamu rasakan hari ini?
                     </div>
                     <textarea
-                        value={journalContent}
-                        onChange={(e) => setJournalContent(e.target.value)}
+                        value={draftContent}
+                        onChange={(e) => setDraftContent(e.target.value)}
                         placeholder="Tuliskan keluh kesah, kegembiraan, atau apapun yang ada di pikiranmu..."
                         className="w-full bg-surface-2 border border-line rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand min-h-[100px] resize-y text-ink"
                     />
-                    
+
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2">
                         {/* Visibility Toggle */}
                         <div className="flex items-center bg-surface-2 p-1 rounded-xl border border-line/50">
                             <button
-                                onClick={() => setVisibility('private')}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${visibility === 'private' ? 'bg-surface shadow-sm text-ink' : 'text-ink-muted hover:text-ink'}`}
+                                onClick={() => setDraftVisibility('private')}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${draftVisibility === 'private' ? 'bg-surface shadow-sm text-ink' : 'text-ink-muted hover:text-ink'}`}
                             >
                                 <Lock className="w-3.5 h-3.5" /> Pribadi
                             </button>
                             <button
-                                onClick={() => setVisibility('gm')}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${visibility === 'gm' ? 'bg-amber-400/20 text-amber-500' : 'text-ink-muted hover:text-ink'}`}
+                                onClick={() => setDraftVisibility('gm')}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${draftVisibility === 'gm' ? 'bg-amber-400/20 text-amber-500' : 'text-ink-muted hover:text-ink'}`}
                             >
                                 <Eye className="w-3.5 h-3.5" /> Bagikan ke GM
                             </button>
                         </div>
 
                         <button
-                            onClick={handleSaveJournal}
-                            disabled={isSaving || !journalContent.trim()}
+                            onClick={saveDraft}
+                            disabled={isSavingDraft || !draftContent.trim()}
                             className="bg-brand text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-brand-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
                         >
-                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                            {isSavingDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                             Simpan Perasaan
                         </button>
                     </div>
@@ -136,7 +135,7 @@ export default function JournalPage() {
                     </div>
                 </div>
 
-                {j.isLoadingData ? (
+                {isLoadingData ? (
                     <div className="text-center py-8 text-ink-muted font-bold text-sm">Membuka lembaran jurnal…</div>
                 ) : filteredTimeline.length === 0 ? (
                     <EmptyState

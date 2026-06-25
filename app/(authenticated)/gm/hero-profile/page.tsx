@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { getLinkedProfiles } from '@/lib/db';
-import { UserProfile } from '@/types';
-import { GRAD } from '@/constants/ui';
+import { useLinkedHeroes } from '@/hooks/useLinkedHeroes';
 import GlassCard from '@/components/ui/GlassCard';
 import StatTile from '@/components/ui/StatTile';
 import ExpBar from '@/components/ui/ExpBar';
@@ -15,28 +13,7 @@ import { dicebearAvatar } from '@/lib/avatar';
 
 export default function GMHeroProfilePage() {
     const { profile, loading: authLoading } = useAuth();
-    const [linkedHeroes, setLinkedHeroes] = useState<UserProfile[]>([]);
-    const [selectedHeroId, setSelectedHeroId] = useState('');
-    const [loadingHeroes, setLoadingHeroes] = useState(true);
-
-    useEffect(() => {
-        if (profile && profile.role === 'gm') {
-            if (profile.partnerIds && profile.partnerIds.length > 0) {
-                getLinkedProfiles(profile.partnerIds)
-                    .then((data) => {
-                        const heroes = data.filter((p) => p.role === 'player');
-                        setLinkedHeroes(heroes);
-                        if (heroes.length > 0) setSelectedHeroId(heroes[0].uid);
-                        setLoadingHeroes(false);
-                    })
-                    .catch(() => setLoadingHeroes(false));
-            } else {
-                setLoadingHeroes(false);
-            }
-        }
-    }, [profile]);
-
-    const hero = linkedHeroes.find((h) => h.uid === selectedHeroId);
+    const { heroes: linkedHeroes, selectedHeroId, setSelectedHeroId, selectedHero: hero, loading: loadingHeroes } = useLinkedHeroes(profile);
 
     if (authLoading || loadingHeroes) {
         return (

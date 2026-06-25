@@ -16,7 +16,10 @@ const ACTIVE_STATUSES = ['pending', 'in_progress', 'submitted', 'active'];
 
 export default function StoryArcPage() {
     const { profile } = useAuth();
-    const mgr = useStoryArcManager(profile ?? null);
+    const {
+        arcs, loading, activeArc, generating, error,
+        generateNewArc, latestArcNum, deleteLatestArc,
+    } = useStoryArcManager(profile ?? null);
     const [quests, setQuests] = useState<Quest[]>([]);
 
     useEffect(() => {
@@ -29,11 +32,11 @@ export default function StoryArcPage() {
     ).length;
 
     // All arcs sorted newest first for display
-    const sortedArcs   = [...mgr.arcs].sort((a, b) => b.arcNumber - a.arcNumber);
+    const sortedArcs   = [...arcs].sort((a, b) => b.arcNumber - a.arcNumber);
     const completedArcs = sortedArcs.filter(a => a.status === 'completed');
-    const totalQuests  = mgr.arcs.reduce((sum, a) => sum + a.questsCompleted, 0);
+    const totalQuests  = arcs.reduce((sum, a) => sum + a.questsCompleted, 0);
 
-    if (mgr.loading) {
+    if (loading) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-brand animate-spin" />
@@ -41,9 +44,9 @@ export default function StoryArcPage() {
         );
     }
 
-    const canGenerate = !mgr.activeArc && !mgr.generating;
+    const canGenerate = !activeArc && !generating;
     // Lock only applies when there were previous arcs — orphaned quests shouldn't block fresh start
-    const isLocked    = mgr.arcs.length > 0 && activeQuestCount > 0;
+    const isLocked    = arcs.length > 0 && activeQuestCount > 0;
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
@@ -55,7 +58,7 @@ export default function StoryArcPage() {
             />
 
             <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                <StatTile icon={BookOpen}     label="Total Arc"          value={mgr.arcs.length}  grad="brand" />
+                <StatTile icon={BookOpen}     label="Total Arc"          value={arcs.length}  grad="brand" />
                 <StatTile icon={Trophy}       label="Quest Diselesaikan" value={totalQuests}       grad="amber" />
                 <StatTile icon={CheckCircle2} label="Arc Selesai"        value={completedArcs.length} grad="green" />
             </div>
@@ -66,10 +69,10 @@ export default function StoryArcPage() {
                     <div className="flex-1">
                         <p className="text-brand text-[10px] uppercase tracking-widest font-bold">AI Game Master</p>
                         <h3 className="text-ink font-extrabold text-base">
-                            {mgr.activeArc ? 'Arc Aktif Sedang Berjalan' : 'Belum Ada Arc Aktif'}
+                            {activeArc ? 'Arc Aktif Sedang Berjalan' : 'Belum Ada Arc Aktif'}
                         </h3>
                         <p className="text-ink-soft text-sm mt-0.5">
-                            {mgr.activeArc
+                            {activeArc
                                 ? 'Selesaikan arc ini atau tunggu 14 hari untuk membuka arc baru.'
                                 : 'Generate arc baru agar AI Game Master bisa menyusun chapter berikutnya.'}
                         </p>
@@ -83,15 +86,15 @@ export default function StoryArcPage() {
                             </div>
                         ) : (
                             <button
-                                onClick={mgr.generateNewArc}
-                                disabled={mgr.generating}
+                                onClick={generateNewArc}
+                                disabled={generating}
                                 className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-brand text-white font-bold shadow-card hover:bg-brand-hover transition-colors disabled:opacity-60 shrink-0"
                             >
                                 <Sparkles className="w-4 h-4" />
                                 Generate Arc Baru
                             </button>
                         )
-                    ) : mgr.generating ? (
+                    ) : generating ? (
                         <div className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-surface-2 text-ink-muted font-bold text-sm shrink-0">
                             <Loader2 className="w-4 h-4 animate-spin" />
                             Menyusun arc...
@@ -104,8 +107,8 @@ export default function StoryArcPage() {
                     )}
                 </div>
 
-                {mgr.error && (
-                    <p className="mt-3 text-sm text-danger font-semibold">⚠ {mgr.error}</p>
+                {error && (
+                    <p className="mt-3 text-sm text-danger font-semibold">⚠ {error}</p>
                 )}
             </GlassCard>
 
@@ -133,8 +136,8 @@ export default function StoryArcPage() {
                                     <ArcHistoryCard
                                         arc={arc}
                                         defaultOpen={arc.status === 'active'}
-                                        isDeletable={arc.arcNumber === mgr.latestArcNum}
-                                        onDelete={mgr.deleteLatestArc}
+                                        isDeletable={arc.arcNumber === latestArcNum}
+                                        onDelete={deleteLatestArc}
                                     />
                                 </div>
                             ))}

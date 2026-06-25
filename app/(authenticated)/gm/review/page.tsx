@@ -26,8 +26,9 @@ import type { Quest } from '@/types';
 
 export default function GMReviewPage() {
     const r = useGMReview();
+    const { loading, submissions, toast, setToast } = r;
 
-    if (r.loading) {
+    if (loading) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-brand animate-spin" />
@@ -44,17 +45,17 @@ export default function GMReviewPage() {
                 badge="GM Panel"
             />
 
-            {r.submissions.length === 0 ? (
+            {submissions.length === 0 ? (
                 <EmptyState icon={Coffee} title="Semua laporan sudah direview" desc="Hero sedang sibuk menyelesaikan misinya. Santai sejenak!" />
             ) : (
                 <div className="grid grid-cols-1 gap-4">
-                    {r.submissions.map((sub) => (
+                    {submissions.map((sub) => (
                         <ReviewCard key={sub.id} sub={sub} r={r} />
                     ))}
                 </div>
             )}
 
-            <Toast isVisible={r.toast.show} onClose={() => r.setToast({ ...r.toast, show: false })} message={r.toast.message} type="success" />
+            <Toast isVisible={toast.show} onClose={() => setToast({ ...toast, show: false })} message={toast.message} type="success" />
         </div>
     );
 }

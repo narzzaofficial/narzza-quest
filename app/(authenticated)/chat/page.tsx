@@ -11,10 +11,11 @@ import { useSituation } from '@/hooks/useSituation';
 import { useHabits } from '@/hooks/useHabits';
 import { useFinance } from '@/hooks/useFinance';
 import { useJournal } from '@/hooks/useJournal';
+import { useChatContext } from '@/hooks/useChatContext';
 import { MarkdownMessage } from '@/components/ai/MarkdownMessage';
 import { TypingIndicator } from '@/components/ai/TypingIndicator';
-import { formatGoal } from '@/constants/goal';
 import { GRAD } from '@/constants/ui';
+import { CHAT_SUGGESTED_PROMPTS } from '@/constants/ai';
 
 export default function ChatPage() {
     const { profile } = useAuth();
@@ -30,78 +31,23 @@ export default function ChatPage() {
     const inputRef       = useRef<HTMLTextAreaElement>(null);
     const [confirmClear, setConfirmClear] = useState(false);
 
-    const chatContext = profile ? {
-        displayName: profile.displayName,
-        level:       profile.level || 1,
-        streak:      profile.streak || 0,
-        title:       profile.title,
-        goalSummary: formatGoal(profile.goal) || undefined,
-        memorySummary: ai.memory?.summary,
-        todayReview: ai.review ? {
-            summary:         ai.review.summary,
-            wins:            ai.review.wins,
-            focus:           ai.review.focus,
-            questsCompleted: ai.review.questsCompleted,
-            expEarned:       ai.review.expEarned,
-        } : null,
-        recentQuestTitles: ai.aiQuests.slice(0, 5).map((q: { title: string }) => q.title),
-        recentJournals: journal.timeline
-            .filter(item => item.type === 'personal')
-            .slice(0, 5)
-            .map(item => ({
-                content: (item.data as any).content,
-                createdAt: (item.data as any).createdAt
-            })),
-        situation: sit.situation ? {
-            currentStatus:  sit.situation.currentStatus,
-            weekFocus:      sit.situation.weekFocus,
-            workload:       sit.situation.workload,
-            activeProjects: sit.situation.activeProjects,
-            contextNote:    sit.situation.contextNote,
-        } : null,
-        workTasks: workTasks.tasks.map((t: { title: string; project?: string; priority: string; status: string; deadline?: string; blocker?: string }) => ({
-            title: t.title, project: t.project, priority: t.priority,
-            status: t.status, deadline: t.deadline, blocker: t.blocker,
-        })),
-        todayActivities: actLog.entries.map((a) => ({
-            title: a.title, category: a.category, mood: a.mood, energy: a.energy,
-            durationMinutes: actLog.getDurationMinutes(a),
-        })),
-        habitSummary: habits.todayTotal > 0
-            ? { completed: habits.todayCount, total: habits.todayTotal }
-            : null,
-        financeSummary: {
-            totalNetWorthIDR: finance.totalNetWorthIDR,
-            incomeThisMonth: finance.getIncomeThisMonth(),
-            expenseThisMonth: finance.getExpenseThisMonth(),
-            goals: finance.goals.map((g: { title: string, currentAmount: number, targetAmount: number }) => ({
-                title: g.title,
-                progressPercentage: Math.round((g.currentAmount / g.targetAmount) * 100)
-            })),
-            recentTransactions: finance.transactions.slice(0, 5).map((t: { title: string, amount: number, type: string, category: string }) => ({
-                title: t.title, amount: t.amount, type: t.type, category: t.category
-            }))
-        },
-        arcTitle:     ai.storyArc.arc?.title,
-        arcNarrative: ai.storyArc.arc?.narrative,
-    } : null;
-
-    const chat = useAIChat(chatContext, profile?.uid, profile?.aiSettings);
+    const chatContext = useChatContext(profile, ai, actLog, workTasks, sit, habits, finance, journal);
+    const { messages, input, setInput, loading, typing, error, historyLoaded, send, reset } = useAIChat(chatContext, profile?.uid, profile?.aiSettings);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chat.messages, chat.loading]);
+    }, [messages, loading]);
 
     // Refocus input once AI finishes responding
     useEffect(() => {
-        if (!chat.loading && !chat.typing) {
+        if (!loading && !typing) {
             inputRef.current?.focus();
         }
-    }, [chat.loading, chat.typing]);
+    }, [loading, typing]);
 
     const handleSend = () => {
-        if (!chat.input.trim() || chat.loading || chat.typing) return;
-        chat.send();
+        if (!input.trim() || loading || typing) return;
+        send();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -110,11 +56,11 @@ export default function ChatPage() {
 
     const handleClear = () => {
         if (!confirmClear) { setConfirmClear(true); setTimeout(() => setConfirmClear(false), 3000); return; }
-        chat.reset();
+        reset();
         setConfirmClear(false);
     };
 
-    const isEmpty = chat.historyLoaded && chat.messages.length === 0 && !chat.loading;
+    const isEmpty = historyLoaded && messages.length === 0 && !loading;
 
     return (
         <div className="flex flex-col h-full max-h-screen bg-transparent">
@@ -127,7 +73,7 @@ export default function ChatPage() {
                     <h1 className="text-white font-extrabold text-lg leading-tight">AI Game Master</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    {chat.messages.length > 0 && (
+                    {messages.length > 0 && (
                         <button onClick={handleClear} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors">
                             <Trash2 className="w-3.5 h-3.5" />
                             {confirmClear ? 'Yakin?' : 'Hapus Chat'}
@@ -157,8 +103,8 @@ export default function ChatPage() {
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2 justify-center max-w-md">
-                            {['Evaluasi hidupku hari ini','Aku harus ngapain sekarang?','Gimana progress tujuanku?','Aku lagi ngerasa overwhelmed'].map(s => (
-                                <button key={s} onClick={() => { chat.setInput(s); inputRef.current?.focus(); }} className="px-3 py-1.5 rounded-xl bg-brand-soft text-brand text-xs font-bold hover:bg-brand hover:text-white transition-colors border border-brand/20">
+                            {CHAT_SUGGESTED_PROMPTS.map(s => (
+                                <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }} className="px-3 py-1.5 rounded-xl bg-brand-soft text-brand text-xs font-bold hover:bg-brand hover:text-white transition-colors border border-brand/20">
                                     {s}
                                 </button>
                             ))}
@@ -166,21 +112,21 @@ export default function ChatPage() {
                     </div>
                 )}
 
-                {!chat.historyLoaded && (
+                {!historyLoaded && (
                     <div className="flex justify-center">
                         <span className="text-ink-muted text-xs flex items-center gap-1.5">
                             <Loader2 className="w-3 h-3 animate-spin" /> Memuat riwayat chat...
                         </span>
                     </div>
                 )}
-                {chat.historyLoaded && chat.messages.length > 0 && (
+                {historyLoaded && messages.length > 0 && (
                     <div className="flex justify-center">
                         <span className="text-ink-muted/50 text-[10px] uppercase tracking-widest font-bold">Riwayat percakapan</span>
                     </div>
                 )}
 
-                {chat.messages.map((msg, i) => {
-                    const isStreaming = chat.typing && i === chat.messages.length - 1 && msg.role === 'assistant';
+                {messages.map((msg, i) => {
+                    const isStreaming = typing && i === messages.length - 1 && msg.role === 'assistant';
                     return (
                         <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                             {msg.role === 'assistant' && (
@@ -201,8 +147,8 @@ export default function ChatPage() {
                     );
                 })}
 
-                {chat.loading && <TypingIndicator />}
-                {chat.error && <p className="text-center text-danger text-sm">{chat.error}</p>}
+                {loading && <TypingIndicator />}
+                {error && <p className="text-center text-danger text-sm">{error}</p>}
                 <div ref={messagesEndRef} />
             </div>
 
@@ -214,8 +160,8 @@ export default function ChatPage() {
                         </button>
                         <textarea
                             ref={inputRef}
-                            value={chat.input}
-                            onChange={e => chat.setInput(e.target.value)}
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Tanya apa saja..."
                             rows={1}
@@ -226,14 +172,14 @@ export default function ChatPage() {
                                 el.style.height = 'auto';
                                 el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
                             }}
-                            disabled={chat.loading || chat.typing}
+                            disabled={loading || typing}
                         />
                         <button
                             onClick={handleSend}
-                            disabled={!chat.input.trim() || chat.loading || chat.typing}
+                            disabled={!input.trim() || loading || typing}
                             className="w-8 h-8 rounded-full bg-ink flex items-center justify-center text-white transition-all active:scale-95 disabled:opacity-30 shrink-0"
                         >
-                            {chat.loading || chat.typing
+                            {loading || typing
                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 : <Send className="w-3.5 h-3.5" />
                             }

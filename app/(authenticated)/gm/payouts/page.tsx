@@ -4,11 +4,8 @@ import React, { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
     Receipt,
-    CheckCircle2,
-    Clock,
-    FileText,
-    Upload,
     AlertCircle,
+    Upload,
     ExternalLink,
     X,
     Image as ImageIcon,
@@ -21,32 +18,28 @@ import GlassCard from '@/components/ui/GlassCard';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
+import { WITHDRAWAL_STATUS_UI, WITHDRAWAL_STATUS_UI_FALLBACK } from '@/constants/gm';
 import type { Withdrawal } from '@/types';
-
-const STATUS_UI: Record<string, { soft: string; color: string; icon: React.ElementType; text: string }> = {
-    pending: { soft: 'bg-danger-soft', color: 'var(--color-danger)', icon: AlertCircle, text: 'Butuh Pembayaran' },
-    transfer_submitted: { soft: 'bg-brand-soft', color: 'var(--color-brand)', icon: Clock, text: 'Menunggu Konfirmasi Hero' },
-    completed: { soft: 'bg-success-soft', color: 'var(--color-success)', icon: CheckCircle2, text: 'Pembayaran Selesai' },
-};
 
 export default function GMPayoutsPage() {
     const p = useGMPayouts();
+    const { profile, loading, pendingTotal, withdrawals, toast, setToast } = p;
     const searchParams = useSearchParams();
     const highlightId = searchParams.get('highlight');
     const highlightRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (!highlightId || p.loading) return;
+        if (!highlightId || loading) return;
         const timer = setTimeout(() => {
             highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 300);
         return () => clearTimeout(timer);
-    }, [highlightId, p.loading]);
+    }, [highlightId, loading]);
 
-    if (p.profile && p.profile.role !== 'gm') {
+    if (profile && profile.role !== 'gm') {
         return <div className="min-h-[60vh] flex items-center justify-center text-ink-soft font-bold">Akses ditolak. Khusus Game Master.</div>;
     }
-    if (p.loading) {
+    if (loading) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-brand animate-spin" />
@@ -65,16 +58,16 @@ export default function GMPayoutsPage() {
                 actions={
                     <div className="bg-white/15 ring-1 ring-white/25 px-5 py-3 rounded-xl text-center">
                         <p className="text-white/70 text-[10px] font-black uppercase tracking-widest mb-0.5">Harus Dibayar</p>
-                        <p className="text-2xl font-black text-white">Rp {p.pendingTotal.toLocaleString('id-ID')}</p>
+                        <p className="text-2xl font-black text-white">Rp {pendingTotal.toLocaleString('id-ID')}</p>
                     </div>
                 }
             />
 
-            {p.withdrawals.length === 0 ? (
+            {withdrawals.length === 0 ? (
                 <EmptyState icon={Receipt} title="Tidak ada tagihan" desc="Keuangan Guild sedang aman dan tenang." />
             ) : (
                 <div className="space-y-4">
-                    {p.withdrawals.map((wd) => {
+                    {withdrawals.map((wd) => {
                         const isHighlighted = wd.id === highlightId;
                         return (
                             <div key={wd.id} ref={isHighlighted ? highlightRef : undefined}>
@@ -85,7 +78,7 @@ export default function GMPayoutsPage() {
                 </div>
             )}
 
-            <Toast isVisible={p.toast.show} onClose={() => p.setToast({ ...p.toast, show: false })} message={p.toast.msg} type={p.toast.type} />
+            <Toast isVisible={toast.show} onClose={() => setToast({ ...toast, show: false })} message={toast.msg} type={toast.type} />
         </div>
     );
 }
@@ -93,7 +86,7 @@ export default function GMPayoutsPage() {
 type PayoutData = ReturnType<typeof useGMPayouts>;
 
 function PayoutRow({ wd, p, highlighted }: { wd: Withdrawal; p: PayoutData; highlighted?: boolean }) {
-    const status = STATUS_UI[wd.status] ?? { soft: 'bg-surface-2', color: 'var(--color-ink-soft)', icon: FileText, text: wd.status };
+    const status = WITHDRAWAL_STATUS_UI[wd.status] ?? { ...WITHDRAWAL_STATUS_UI_FALLBACK, text: wd.status };
     const isPending = wd.status === 'pending';
 
     return (

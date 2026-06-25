@@ -1,10 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
-import { subscribeToGMGuildQuests } from '@/lib/db';
-import { GuildQuest } from '@/types';
+import { useGMGuildQuests } from '@/hooks/useGMGuildQuests';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import EmptyState from '@/components/ui/EmptyState';
@@ -12,18 +10,7 @@ import DifficultyBadge from '@/components/ui/DifficultyBadge';
 import { Swords, Plus, Users, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function GMGuildQuestPage() {
-    const { profile } = useAuth();
-    const [quests, setQuests] = useState<GuildQuest[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (!profile || profile.role !== 'gm') return;
-        const unsub = subscribeToGMGuildQuests(profile.uid, (qs) => {
-            setQuests(qs);
-            setLoading(false);
-        });
-        return () => unsub();
-    }, [profile]);
+    const { quests, loading } = useGMGuildQuests();
 
     if (loading) {
         return (
