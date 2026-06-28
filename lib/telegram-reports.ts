@@ -3,8 +3,17 @@ import { sendTelegramMessage } from './telegram';
 import { getAIProvider } from './ai';
 import type { UserProfile, Quest, ActivityEntry, FinancialTransaction, Habit, HabitLog } from '@/types';
 
-const GM_PERSONA =
-    'Kamu adalah AI Game Master dari game RPG kehidupan "Narzza Quest". Pesan harus terasa personal, hangat, dan ringkas. Jangan gunakan markdown.';
+// ── Persona ──────────────────────────────────────────────────────────────────
+// Brutal honest coach. No sugarcoating. Every message references the user's
+// actual goal so the stakes feel real, not generic.
+
+const BRUTAL_COACH_PERSONA = `Kamu adalah coach brutal jujur yang gak kenal basa-basi. Gaya kamu seperti pelatih keras yang peduli tapi gak ada ampunnya.
+Aturan wajib:
+- TIDAK ada kalimat motivasi kosong seperti "kamu pasti bisa!" atau "tetap semangat!".
+- SELALU sebut nama orang dan tujuan spesifik mereka dalam pesan.
+- SELALU hubungkan tindakan hari ini ke konsekuensi nyata di masa depan.
+- Nada: keras, jujur, tapi bukan jahat. Seperti teman yang peduli dan mau lo sukses, tapi gak mau bullshit lo.
+- Bahasa Indonesia gaul/santai, tanpa markdown, maks 3 kalimat pendek yang menohok.`;
 
 const TODAY = () => new Date().toISOString().split('T')[0];
 const DAYS_AGO = (n: number) => {
@@ -30,7 +39,7 @@ function fmtTrend(pct: number | null, goodWhenUp = true): string {
     return ` (${isGood ? '✅' : '⚠️'} ${arrow}${Math.abs(pct).toFixed(0)}%)`;
 }
 
-// ── Dedup log (deterministic doc id, no queries/indexes needed) ──
+// ── Dedup log ─────────────────────────────────────────────────────────────────
 
 async function wasTelegramSent(uid: string, key: string): Promise<boolean> {
     const snap = await adminDb.collection('telegramReminderLog').doc(uid).collection('entries').doc(key).get();
@@ -43,7 +52,7 @@ async function markTelegramSent(uid: string, key: string): Promise<void> {
     });
 }
 
-// ── Shared data fetch ──
+// ── Shared data fetch ─────────────────────────────────────────────────────────
 
 async function getLinkedUsers(): Promise<UserProfile[]> {
     const snap = await adminDb.collection('users').get();
@@ -75,10 +84,7 @@ async function computePeriodStats(uid: string, fromDate: string, toDate: string)
     questsSnap.docs.forEach((d) => {
         const q = d.data() as Quest;
         const checkDate = (q.reviewedAt ?? q.updatedAt ?? '').split('T')[0];
-        if (inRange(checkDate)) {
-            questsCount++;
-            exp += (q.expReward ?? 0) + (q.bonusExp ?? 0);
-        }
+        if (inRange(checkDate)) { questsCount++; exp += (q.expReward ?? 0) + (q.bonusExp ?? 0); }
     });
 
     let hours = 0;
@@ -88,13 +94,8 @@ async function computePeriodStats(uid: string, fromDate: string, toDate: string)
         const a = d.data() as ActivityEntry;
         const dateStr = a.startTime?.split('T')[0];
         if (!dateStr || !inRange(dateStr)) return;
-        if (a.endTime) {
-            hours += (new Date(a.endTime).getTime() - new Date(a.startTime).getTime()) / 3_600_000;
-        }
-        if (a.mood) {
-            moodSum += a.mood;
-            moodCount++;
-        }
+        if (a.endTime) hours += (new Date(a.endTime).getTime() - new Date(a.startTime).getTime()) / 3_600_000;
+        if (a.mood) { moodSum += a.mood; moodCount++; }
     });
 
     let income = 0;
@@ -109,34 +110,130 @@ async function computePeriodStats(uid: string, fromDate: string, toDate: string)
     return { questsCount, exp, hours, avgMood: moodCount ? moodSum / moodCount : null, income, expense };
 }
 
-function dailyFallbackText(stats: PeriodStats): string {
-    return [
-        `✅ Quest selesai: ${stats.questsCount} (${stats.exp} EXP)`,
-        `⏱ Jam aktif: ${stats.hours.toFixed(1)}j`,
-        stats.avgMood !== null ? `😊 Mood rata-rata: ${stats.avgMood.toFixed(1)}/5` : null,
-        `💰 Keuangan: +${fmtRupiah(stats.income)} / -${fmtRupiah(stats.expense)}`,
-    ].filter((l) => l !== null).join('\n');
+/** How many consecutive days has the user had zero activity logged. */
+async function getDaysWithoutActivity(uid: string): Promise<number> {
+    const snap = await adminDb.collection('activities').where('uid', '==', uid).get();
+    const loggedDates = new Set(snap.docs.map((d) => (d.data() as ActivityEntry).startTime?.split('T')[0]).filter(Boolean));
+
+    let streak = 0;
+    const d = new Date();
+    while (streak < 30) {
+        const key = d.toISOString().split('T')[0];
+        if (loggedDates.has(key)) break;
+        streak++;
+        d.setDate(d.getDate() - 1);
+    }
+    return streak;
 }
 
-async function generateDailySummaryText(user: UserProfile, stats: PeriodStats): Promise<string> {
+function goalContext(user: UserProfile): string {
+    if (!user.goal) return 'tidak ada tujuan yang dicatat';
+    const focus = user.goal.focusAreas?.length ? user.goal.focusAreas.join(', ') : '';
+    const tf = user.goal.timeframe ? ` dalam ${user.goal.timeframe}` : '';
+    return `Tujuan: "${user.goal.aspiration}"${tf}. Fokus: ${focus || '-'}.`;
+}
+
+// ── AI text generators ────────────────────────────────────────────────────────
+
+async function generateDailySummaryText(user: UserProfile, stats: PeriodStats, missedHabits: string[]): Promise<string> {
+    const noActivity = stats.hours < 0.1;
+    const noQuests = stats.questsCount === 0;
+
+    const situation = [
+        noActivity && noQuests
+            ? `Hari ini NOLNYA SEMPURNA — tidak ada quest, tidak ada aktivitas tercatat, tidak ada progress sama sekali.`
+            : `${stats.questsCount} quest selesai (${stats.exp} EXP), ${stats.hours.toFixed(1)} jam aktivitas tercatat.`,
+        missedHabits.length > 0 ? `Habit yang dilewatin hari ini: ${missedHabits.join(', ')}.` : `Semua habit selesai.`,
+        stats.avgMood !== null ? `Mood rata-rata: ${stats.avgMood.toFixed(1)}/5.` : '',
+        goalContext(user),
+    ].filter(Boolean).join(' ');
+
     try {
         const ai = getAIProvider(user.aiSettings);
         return await ai.generateText({
-            system: GM_PERSONA,
+            system: BRUTAL_COACH_PERSONA,
             messages: [{
                 role: 'user',
-                content: `Tulis ringkasan hari ini untuk "${user.displayName}" dalam maksimal 3 kalimat pendek, nada hangat & memotivasi, bahasa Indonesia, tanpa markdown. Data hari ini: ${stats.questsCount} quest selesai (${stats.exp} EXP), ${stats.hours.toFixed(1)} jam aktif, ${stats.avgMood !== null ? `mood rata-rata ${stats.avgMood.toFixed(1)}/5` : 'belum ada catatan mood'}, pemasukan ${fmtRupiah(stats.income)}, pengeluaran ${fmtRupiah(stats.expense)}. Sebut angka pentingnya secara natural, jangan kaku seperti laporan.`,
+                content: `Tulis ringkasan brutal jujur untuk ${user.displayName} tentang hari ini. ${situation} Kalau hasilnya buruk, bilang apa adanya dan hubungkan ke tujuan mereka. Kalau bagus, akui tapi tetap push lebih keras. Maks 3 kalimat, bahasa santai, tanpa markdown.`,
             }],
-            maxTokens: 150,
-            temperature: 0.8,
+            maxTokens: 180,
+            temperature: 0.85,
         });
-    } catch (err) {
-        console.error('[Telegram Daily] AI generation failed, falling back to template:', err);
-        return dailyFallbackText(stats);
+    } catch {
+        if (noActivity && noQuests) {
+            return `${user.displayName}, hari ini lo buang 24 jam tanpa satu pun progress. ${user.goal?.aspiration ? `Tujuan lo "${user.goal.aspiration}" gak bakal dateng sendiri.` : ''} Besok jangan ulangi ini.`;
+        }
+        return `${stats.questsCount} quest, ${stats.hours.toFixed(1)} jam. ${missedHabits.length > 0 ? `Tapi ${missedHabits.join(', ')} masih kelewat.` : 'Konsisten.'} Lanjutkan.`;
     }
 }
 
-// ── Daily report ──
+async function generateWeeklySummaryText(
+    user: UserProfile, curr: PeriodStats, prev: PeriodStats, habitRate: number | null
+): Promise<string> {
+    const hoursDiff = curr.hours - prev.hours;
+    const situation = [
+        `Minggu ini: ${curr.questsCount} quest (${curr.exp} EXP), ${curr.hours.toFixed(1)} jam aktif (minggu lalu ${prev.hours.toFixed(1)}j, ${hoursDiff >= 0 ? '+' : ''}${hoursDiff.toFixed(1)}j).`,
+        curr.avgMood !== null ? `Mood rata-rata ${curr.avgMood.toFixed(1)}/5.` : '',
+        habitRate !== null ? `Konsistensi habit: ${habitRate}%.` : 'Tidak ada data habit.',
+        `Pengeluaran: ${fmtRupiah(curr.expense)} (${hoursDiff >= 0 ? 'naik' : 'turun'} dari ${fmtRupiah(prev.expense)}).`,
+        goalContext(user),
+    ].filter(Boolean).join(' ');
+
+    try {
+        const ai = getAIProvider(user.aiSettings);
+        return await ai.generateText({
+            system: BRUTAL_COACH_PERSONA,
+            messages: [{
+                role: 'user',
+                content: `Tulis evaluasi mingguan brutal jujur untuk ${user.displayName}. ${situation} Jangan tutup dengan kalimat semangat kosong. Tutup dengan 1 kalimat yang menggambarkan konsekuensi konkret kalau pola ini dilanjutkan. Maks 4 kalimat, tanpa markdown.`,
+            }],
+            maxTokens: 220,
+            temperature: 0.85,
+        });
+    } catch {
+        const lines = [
+            `${curr.questsCount} quest, ${curr.hours.toFixed(1)} jam aktif${fmtTrend(pctChange(curr.hours, prev.hours))}.`,
+            habitRate !== null ? `Habit: ${habitRate}%.` : '',
+            `Pengeluaran ${fmtRupiah(curr.expense)}${fmtTrend(pctChange(curr.expense, prev.expense), false)}.`,
+        ].filter(Boolean);
+        return lines.join(' ');
+    }
+}
+
+async function generateBrutalNudge(
+    user: UserProfile,
+    conditions: { noActiveQuest: boolean; pendingHabits: string[]; noActivityToday: boolean; daysWithoutActivity: number }
+): Promise<string> {
+    const { noActiveQuest, pendingHabits, noActivityToday, daysWithoutActivity } = conditions;
+    const escalation = daysWithoutActivity >= 3
+        ? `KRITIS: Lo udah ${daysWithoutActivity} hari berturut-turut tanpa aktivitas tercatat.`
+        : daysWithoutActivity >= 1 ? `Kemarin juga lo gak catat apapun.` : '';
+
+    const issues = [
+        noActiveQuest && 'tidak ada quest aktif',
+        pendingHabits.length > 0 && `habit "${pendingHabits.join('", "')}" belum dikerjain`,
+        noActivityToday && 'belum ada aktivitas tercatat hari ini',
+    ].filter(Boolean).join(', ');
+
+    try {
+        const ai = getAIProvider(user.aiSettings);
+        return await ai.generateText({
+            system: BRUTAL_COACH_PERSONA,
+            messages: [{
+                role: 'user',
+                content: `Tulis reminder keras untuk ${user.displayName}. ${escalation} Masalah sekarang: ${issues}. ${goalContext(user)} Hubungkan langsung ke konsekuensi nyata kalau ini terus terjadi. Maks 2-3 kalimat, jangan lembut, jangan kasih pujian.`,
+            }],
+            maxTokens: 150,
+            temperature: 0.9,
+        });
+    } catch {
+        const name = user.displayName.split(' ')[0];
+        if (daysWithoutActivity >= 3) return `${name}, ${daysWithoutActivity} hari hilang tanpa jejak. ${user.goal?.aspiration ? `"${user.goal.aspiration}" bukan mimpi yang bisa dicapai dengan cara ini.` : 'Lo serius sama tujuan lo?'}`;
+        return `${name}: ${issues}. Sekarang, bukan nanti.`;
+    }
+}
+
+// ── Daily report ──────────────────────────────────────────────────────────────
 
 export async function runDailyTelegramReport(): Promise<{ processed: number; sent: number }> {
     const users = await getLinkedUsers();
@@ -144,50 +241,29 @@ export async function runDailyTelegramReport(): Promise<{ processed: number; sen
     let sent = 0;
 
     for (const user of users) {
-        const stats = await computePeriodStats(user.uid, today, today);
-        const body = await generateDailySummaryText(user, stats);
+        const [stats, habitsSnap, habitLogsSnap] = await Promise.all([
+            computePeriodStats(user.uid, today, today),
+            adminDb.collection('habits').where('uid', '==', user.uid).get(),
+            adminDb.collection('habitLogs').where('uid', '==', user.uid).where('date', '==', today).where('completed', '==', true).get(),
+        ]);
 
-        await sendTelegramMessage(user.telegramChatId, `📊 <b>Ringkasan Hari Ini</b>\n\n${body}`);
+        const now = new Date();
+        const todayWeekday = now.getDay();
+        const habits = habitsSnap.docs.map((d) => d.data() as Habit);
+        const completedIds = new Set(habitLogsSnap.docs.map((d) => (d.data() as HabitLog).habitId));
+        const missedHabits = habits
+            .filter((h) => (h.targetDays.length === 0 || h.targetDays.includes(todayWeekday)) && !completedIds.has(h.id))
+            .map((h) => h.name);
+
+        const body = await generateDailySummaryText(user, stats, missedHabits);
+        await sendTelegramMessage(user.telegramChatId, `📊 <b>Laporan Hari Ini</b>\n\n${body}`);
         sent++;
     }
 
     return { processed: users.length, sent };
 }
 
-// ── Weekly report ──
-
-function weeklyFallbackText(curr: PeriodStats, prev: PeriodStats, habitRate: number | null): string {
-    return [
-        `✅ ${curr.questsCount} quest selesai (${curr.exp} EXP)`,
-        `⏱ ${curr.hours.toFixed(1)}j aktif${fmtTrend(pctChange(curr.hours, prev.hours))}`,
-        curr.avgMood !== null ? `😊 Mood rata-rata: ${curr.avgMood.toFixed(1)}/5` : null,
-        `💸 Pengeluaran: ${fmtRupiah(curr.expense)}${fmtTrend(pctChange(curr.expense, prev.expense), false)}`,
-        habitRate !== null ? `🔥 Konsistensi habit: ${habitRate}%` : null,
-    ].filter((l) => l !== null).join('\n');
-}
-
-async function generateWeeklySummaryText(
-    user: UserProfile,
-    curr: PeriodStats,
-    prev: PeriodStats,
-    habitRate: number | null
-): Promise<string> {
-    try {
-        const ai = getAIProvider(user.aiSettings);
-        return await ai.generateText({
-            system: GM_PERSONA,
-            messages: [{
-                role: 'user',
-                content: `Tulis ringkasan minggu ini untuk "${user.displayName}" dalam maksimal 4 kalimat pendek, nada hangat & memotivasi, bahasa Indonesia, tanpa markdown. Data minggu ini: ${curr.questsCount} quest selesai (${curr.exp} EXP), ${curr.hours.toFixed(1)} jam aktif (minggu lalu ${prev.hours.toFixed(1)}j), ${curr.avgMood !== null ? `mood rata-rata ${curr.avgMood.toFixed(1)}/5` : 'belum ada catatan mood'}, pengeluaran ${fmtRupiah(curr.expense)} (minggu lalu ${fmtRupiah(prev.expense)})${habitRate !== null ? `, konsistensi habit ${habitRate}%` : ''}. Sebut tren naik/turunnya secara natural, tutup dengan semangat buat minggu depan.`,
-            }],
-            maxTokens: 200,
-            temperature: 0.8,
-        });
-    } catch (err) {
-        console.error('[Telegram Weekly] AI generation failed, falling back to template:', err);
-        return weeklyFallbackText(curr, prev, habitRate);
-    }
-}
+// ── Weekly report ─────────────────────────────────────────────────────────────
 
 export async function runWeeklyTelegramReport(): Promise<{ processed: number; sent: number }> {
     const users = await getLinkedUsers();
@@ -210,21 +286,14 @@ export async function runWeeklyTelegramReport(): Promise<{ processed: number; se
         const habitRate = weekLogs.length ? Math.round((weekLogs.filter((l) => l.completed).length / weekLogs.length) * 100) : null;
 
         const body = await generateWeeklySummaryText(user, curr, prev, habitRate);
-
-        await sendTelegramMessage(user.telegramChatId, `📅 <b>Ringkasan Minggu Ini</b>\n\n${body}`);
+        await sendTelegramMessage(user.telegramChatId, `📅 <b>Evaluasi Mingguan</b>\n\n${body}`);
         sent++;
     }
 
     return { processed: users.length, sent };
 }
 
-// ── Reminders (deadline + condition-based nudges) ──
-//
-// Deadline reminders fire once per quest (dedup via telegramReminderLog).
-// Nudges (no active quest / habit not done / no activity today) are NOT
-// deduped — every cron cycle just re-checks the live condition and sends
-// again if it's still unresolved, and naturally stays silent the moment
-// it's resolved. No "already sent today" bookkeeping needed.
+// ── Reminders ─────────────────────────────────────────────────────────────────
 
 const ACTIVE_HOUR_START_WIB = 7;
 const ACTIVE_HOUR_END_WIB = 22;
@@ -239,11 +308,10 @@ export async function runTelegramReminders(): Promise<{ processed: number; deadl
     let nudges = 0;
 
     for (const user of users) {
-        // Deadline-approaching quests — single equality filter only, to avoid
-        // needing a new composite index for this fresh query shape.
         const questsSnap = await adminDb.collection('quests').where('assignedTo', '==', user.uid).get();
         const quests = questsSnap.docs.map((d) => d.data() as Quest);
 
+        // Deadline warnings (deduped per quest)
         for (let i = 0; i < questsSnap.docs.length; i++) {
             const doc = questsSnap.docs[i];
             const q = quests[i];
@@ -255,17 +323,17 @@ export async function runTelegramReminders(): Promise<{ processed: number; deadl
             const key = `quest_deadline_${doc.id}`;
             if (await wasTelegramSent(user.uid, key)) continue;
 
+            const name = user.displayName.split(' ')[0];
+            const goalHint = user.goal?.aspiration ? ` Ini bagian dari perjalanan lo menuju "${user.goal.aspiration}".` : '';
             await sendTelegramMessage(
                 user.telegramChatId,
-                `⏰ Quest "<b>${q.title}</b>" deadline ${Math.max(1, Math.round(hoursLeft))} jam lagi! Yuk selesaikan sebelum kehabisan waktu.`
+                `⚠️ <b>DEADLINE MEPET</b>\n\n${name}, quest "<b>${q.title}</b>" tinggal ${Math.max(1, Math.round(hoursLeft))} jam lagi.${goalHint} Gagal di sini bukan pilihan.`
             );
             await markTelegramSent(user.uid, key);
             deadlineReminders++;
         }
 
         if (!isActiveHours) continue;
-
-        const hasActiveQuest = quests.some((q) => q.status === 'pending' || q.status === 'in_progress' || q.status === 'submitted');
 
         const todayWeekday = now.getDay();
         const [habitsSnap, habitLogsSnap, activitiesSnap] = await Promise.all([
@@ -276,19 +344,29 @@ export async function runTelegramReminders(): Promise<{ processed: number; deadl
 
         const habits = habitsSnap.docs.map((d) => d.data() as Habit);
         const completedHabitIds = new Set(habitLogsSnap.docs.map((d) => (d.data() as HabitLog).habitId));
-        const pendingHabits = habits.filter(
-            (h) => (h.targetDays.length === 0 || h.targetDays.includes(todayWeekday)) && !completedHabitIds.has(h.id)
+        const pendingHabits = habits
+            .filter((h) => (h.targetDays.length === 0 || h.targetDays.includes(todayWeekday)) && !completedHabitIds.has(h.id))
+            .map((h) => h.name);
+
+        const hasActiveQuest = quests.some((q) => q.status === 'pending' || q.status === 'in_progress' || q.status === 'submitted');
+        const hasActivityToday = activitiesSnap.docs.some(
+            (d) => (d.data() as ActivityEntry).startTime?.startsWith(TODAY())
         );
-        const hasActivityToday = activitiesSnap.docs.some((d) => (d.data() as ActivityEntry).startTime?.startsWith(TODAY()));
 
-        const lines: string[] = [];
-        if (!hasActiveQuest) lines.push(`🎯 Belum ada quest aktif — buka app & generate quest baru!`);
-        if (pendingHabits.length > 0) lines.push(`🔁 Belum checklist: ${pendingHabits.map((h) => h.name).join(', ')}`);
-        if (!hasActivityToday) lines.push(`📝 Belum ada aktivitas tercatat hari ini — catat sekarang!`);
+        const noCondition = hasActiveQuest && pendingHabits.length === 0 && hasActivityToday;
+        if (noCondition) continue;
 
-        if (lines.length === 0) continue;
+        const daysWithoutActivity = hasActivityToday ? 0 : await getDaysWithoutActivity(user.uid);
 
-        await sendTelegramMessage(user.telegramChatId, [`🔔 <b>Reminder</b>`, ``, ...lines].join('\n'));
+        const nudge = await generateBrutalNudge(user, {
+            noActiveQuest: !hasActiveQuest,
+            pendingHabits,
+            noActivityToday: !hasActivityToday,
+            daysWithoutActivity,
+        });
+
+        const header = daysWithoutActivity >= 3 ? `🚨 <b>KRITIS</b>` : `🔔 <b>Reminder</b>`;
+        await sendTelegramMessage(user.telegramChatId, `${header}\n\n${nudge}`);
         nudges++;
     }
 
