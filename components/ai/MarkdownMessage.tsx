@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -18,7 +19,7 @@ function normalizeMarkdown(text: string): string {
         .replace(/^(\d+)\.[^\S\n]*\n+[^\S\n]*(\*\*)/gm, '$1. $2');
 }
 
-export function MarkdownMessage({ content, streaming }: { content: string; streaming?: boolean }) {
+export const MarkdownMessage = memo(function MarkdownMessage({ content, streaming }: { content: string; streaming?: boolean }) {
     return (
         <div className="prose-ai">
             <ReactMarkdown
@@ -74,4 +75,4 @@ export function MarkdownMessage({ content, streaming }: { content: string; strea
             {streaming && <span className="inline-block w-0.5 h-4 bg-brand/60 ml-0.5 animate-pulse align-middle" />}
         </div>
     );
-}
+});

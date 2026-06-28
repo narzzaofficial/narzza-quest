@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { Bot, Send, Trash2, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAIGameMaster } from '@/hooks/useAIGameMaster';
-import { useAIChat } from '@/hooks/useAIChat';
+import { useAIChat, type ChatMessage } from '@/hooks/useAIChat';
 import { useLearningGraph } from '@/hooks/useLearningGraph';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useWorkTasks } from '@/hooks/useWorkTasks';
@@ -19,7 +20,158 @@ import { GRAD } from '@/constants/ui';
 import { CHAT_SUGGESTED_PROMPTS } from '@/constants/ai';
 import OnboardingTour from '@/components/system/OnboardingTour';
 import { CHAT_TOUR_STEPS } from '@/constants/onboardingTours';
+import type { UserProfile } from '@/types';
 
+// ─── Memoized message list with virtual scrolling ────────────────────────────
+interface ChatMessagesProps {
+    messages: ChatMessage[];
+    loading: boolean;
+    typing: boolean;
+    error: string | null;
+    historyLoaded: boolean;
+    profile: UserProfile | null;
+    setInput: (v: string) => void;
+    inputRef: React.RefObject<HTMLTextAreaElement | null>;
+}
+
+const ChatMessages = memo(function ChatMessages({
+    messages, loading, typing, error, historyLoaded, profile, setInput, inputRef,
+}: ChatMessagesProps) {
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Virtual items = messages + optional loading indicator at the end
+    const itemCount = messages.length + (loading ? 1 : 0);
+
+    const virtualizer = useVirtualizer({
+        count: itemCount,
+        getScrollElement: () => scrollRef.current,
+        // Rough estimate per item; virtualizer measures real height via measureElement
+        estimateSize: (i) => {
+            if (i >= messages.length) return 56; // TypingIndicator height
+            const msg = messages[i];
+            if (msg.role === 'user') return 56;
+            // Assistant messages with markdown can be tall — estimate by content length
+            return Math.min(600, 80 + Math.floor(msg.content.length / 3));
+        },
+        overscan: 5, // render 5 extra items above/below viewport
+    });
+
+    // Auto-scroll to bottom when new messages arrive or loading state changes
+    useEffect(() => {
+        if (itemCount === 0) return;
+        virtualizer.scrollToIndex(itemCount - 1, { behavior: 'smooth' });
+    }, [itemCount, virtualizer]);
+
+    const isEmpty = historyLoaded && messages.length === 0 && !loading;
+    const virtualItems = virtualizer.getVirtualItems();
+
+    return (
+        <div
+            ref={scrollRef}
+            data-tour="chat-messages"
+            className="flex-1 overflow-y-auto custom-scrollbar"
+        >
+            {isEmpty && (
+                <div className="flex flex-col items-center justify-center h-full gap-6 text-center py-16 px-4">
+                    <div className="relative">
+                        <div className="absolute inset-0 rounded-3xl blur-2xl opacity-30 animate-pulse" style={{ backgroundImage: GRAD.brand }} />
+                        <div className="relative w-24 h-24 rounded-3xl flex items-center justify-center shadow-card" style={{ backgroundImage: GRAD.brand }}>
+                            <Bot className="w-12 h-12 text-white" />
+                        </div>
+                        <span className="absolute -inset-1.5 rounded-3xl border-2 border-brand/20 animate-ping" />
+                    </div>
+                    <div className="max-w-sm">
+                        <p className="text-brand text-[10px] uppercase tracking-widest font-bold mb-2">AI Life Coach</p>
+                        <h2 className="text-ink font-extrabold text-2xl mb-2">
+                            Halo{profile ? `, ${profile.displayName.split(' ')[0]}` : ''}!
+                        </h2>
+                        <p className="text-ink-soft text-sm leading-relaxed">
+                            Aku tau situasimu — aktivitas hari ini, task kantor, habit, dan perjalananmu sejauh ini.
+                            Tanya apa saja, aku siap bantu arahkan kamu.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center max-w-md">
+                        {CHAT_SUGGESTED_PROMPTS.map(s => (
+                            <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }}
+                                className="px-3 py-1.5 rounded-xl bg-brand-soft text-brand text-xs font-bold hover:bg-brand hover:text-white transition-colors border border-brand/20">
+                                {s}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {!historyLoaded && (
+                <div className="flex justify-center py-6">
+                    <span className="text-ink-muted text-xs flex items-center gap-1.5">
+                        <Loader2 className="w-3 h-3 animate-spin" /> Memuat riwayat chat...
+                    </span>
+                </div>
+            )}
+
+            {/* Virtual scroll container */}
+            {itemCount > 0 && (
+                <div
+                    style={{ height: virtualizer.getTotalSize(), position: 'relative' }}
+                    className="px-4 md:px-8"
+                >
+                    {historyLoaded && messages.length > 0 && (
+                        <div className="flex justify-center pt-6 pb-2">
+                            <span className="text-ink-muted/50 text-[10px] uppercase tracking-widest font-bold">Riwayat percakapan</span>
+                        </div>
+                    )}
+                    {virtualItems.map((vItem) => {
+                        const isLoader = vItem.index >= messages.length;
+                        return (
+                            <div
+                                key={vItem.key}
+                                data-index={vItem.index}
+                                ref={virtualizer.measureElement}
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    transform: `translateY(${vItem.start}px)`,
+                                }}
+                                className="px-4 md:px-8 py-2"
+                            >
+                                {isLoader ? (
+                                    <TypingIndicator />
+                                ) : (() => {
+                                    const msg = messages[vItem.index];
+                                    const isStreaming = typing && vItem.index === messages.length - 1 && msg.role === 'assistant';
+                                    return (
+                                        <div className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                            {msg.role === 'assistant' && (
+                                                <div className="w-8 h-8 rounded-xl bg-brand-soft flex items-center justify-center shrink-0 mt-0.5">
+                                                    <Bot className="w-4 h-4 text-brand" />
+                                                </div>
+                                            )}
+                                            <div className={`max-w-[75%] md:max-w-[65%] ${msg.role === 'user'
+                                                ? 'bg-brand text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm font-medium'
+                                                : 'bg-surface-2 text-ink px-4 py-3 rounded-2xl rounded-tl-sm text-sm'
+                                            }`}>
+                                                {msg.role === 'assistant'
+                                                    ? <MarkdownMessage content={msg.content} streaming={isStreaming} />
+                                                    : msg.content
+                                                }
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {error && <p className="text-center text-danger text-sm px-4 py-2">{error}</p>}
+        </div>
+    );
+});
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ChatPage() {
     const { profile } = useAuth();
     const ai        = useAIGameMaster();
@@ -30,30 +182,20 @@ export default function ChatPage() {
     const finance   = useFinance(profile?.uid);
     const journal   = useJournal();
 
-    const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef       = useRef<HTMLTextAreaElement>(null);
     const [confirmClear, setConfirmClear] = useState(false);
 
-    const chatContext = useChatContext(profile, ai, actLog, workTasks, sit, habits, finance, journal);
+    const chatContext   = useChatContext(profile, ai, actLog, workTasks, sit, habits, finance, journal);
     const learningGraph = useLearningGraph(profile?.uid, profile?.aiSettings);
-    const { messages, input, setInput, loading, typing, error, historyLoaded, send, reset } = useAIChat(chatContext, profile?.uid, profile?.aiSettings, learningGraph.recordExchange);
+    const { messages, input, setInput, loading, typing, error, historyLoaded, send, reset } =
+        useAIChat(chatContext, profile?.uid, profile?.aiSettings, learningGraph.recordExchange);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, loading]);
-
-    // Refocus input once AI finishes responding
-    useEffect(() => {
-        if (!loading && !typing) {
-            inputRef.current?.focus();
-        }
+        if (!loading && !typing) inputRef.current?.focus();
     }, [loading, typing]);
 
-    // Reset textarea height after send
     useEffect(() => {
-        if (!input && inputRef.current) {
-            inputRef.current.style.height = 'auto';
-        }
+        if (!input && inputRef.current) inputRef.current.style.height = 'auto';
     }, [input]);
 
     const handleSend = () => {
@@ -70,8 +212,6 @@ export default function ChatPage() {
         reset();
         setConfirmClear(false);
     };
-
-    const isEmpty = historyLoaded && messages.length === 0 && !loading;
 
     return (
         <div className="flex flex-col h-full max-h-screen bg-transparent">
@@ -94,75 +234,16 @@ export default function ChatPage() {
                 </div>
             </header>
 
-            <div data-tour="chat-messages" className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-5 custom-scrollbar">
-                {isEmpty && (
-                    <div className="flex flex-col items-center justify-center h-full gap-6 text-center py-16">
-                        <div className="relative">
-                            <div className="absolute inset-0 rounded-3xl blur-2xl opacity-30 animate-pulse" style={{ backgroundImage: GRAD.brand }} />
-                            <div className="relative w-24 h-24 rounded-3xl flex items-center justify-center shadow-card" style={{ backgroundImage: GRAD.brand }}>
-                                <Bot className="w-12 h-12 text-white" />
-                            </div>
-                            <span className="absolute -inset-1.5 rounded-3xl border-2 border-brand/20 animate-ping" />
-                        </div>
-                        <div className="max-w-sm">
-                            <p className="text-brand text-[10px] uppercase tracking-widest font-bold mb-2">AI Life Coach</p>
-                            <h2 className="text-ink font-extrabold text-2xl mb-2">
-                                Halo{profile ? `, ${profile.displayName.split(' ')[0]}` : ''}!
-                            </h2>
-                            <p className="text-ink-soft text-sm leading-relaxed">
-                                Aku tau situasimu — aktivitas hari ini, task kantor, habit, dan perjalananmu sejauh ini.
-                                Tanya apa saja, aku siap bantu arahkan kamu.
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2 justify-center max-w-md">
-                            {CHAT_SUGGESTED_PROMPTS.map(s => (
-                                <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }} className="px-3 py-1.5 rounded-xl bg-brand-soft text-brand text-xs font-bold hover:bg-brand hover:text-white transition-colors border border-brand/20">
-                                    {s}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {!historyLoaded && (
-                    <div className="flex justify-center">
-                        <span className="text-ink-muted text-xs flex items-center gap-1.5">
-                            <Loader2 className="w-3 h-3 animate-spin" /> Memuat riwayat chat...
-                        </span>
-                    </div>
-                )}
-                {historyLoaded && messages.length > 0 && (
-                    <div className="flex justify-center">
-                        <span className="text-ink-muted/50 text-[10px] uppercase tracking-widest font-bold">Riwayat percakapan</span>
-                    </div>
-                )}
-
-                {messages.map((msg, i) => {
-                    const isStreaming = typing && i === messages.length - 1 && msg.role === 'assistant';
-                    return (
-                        <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                            {msg.role === 'assistant' && (
-                                <div className="w-8 h-8 rounded-xl bg-brand-soft flex items-center justify-center shrink-0 mt-0.5">
-                                    <Bot className="w-4 h-4 text-brand" />
-                                </div>
-                            )}
-                            <div className={`max-w-[75%] md:max-w-[65%] ${msg.role === 'user'
-                                ? 'bg-brand text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm font-medium'
-                                : 'bg-surface-2 text-ink px-4 py-3 rounded-2xl rounded-tl-sm text-sm'
-                            }`}>
-                                {msg.role === 'assistant'
-                                    ? <MarkdownMessage content={msg.content} streaming={isStreaming} />
-                                    : msg.content
-                                }
-                            </div>
-                        </div>
-                    );
-                })}
-
-                {loading && <TypingIndicator />}
-                {error && <p className="text-center text-danger text-sm">{error}</p>}
-                <div ref={messagesEndRef} />
-            </div>
+            <ChatMessages
+                messages={messages}
+                loading={loading}
+                typing={typing}
+                error={error}
+                historyLoaded={historyLoaded}
+                profile={profile}
+                setInput={setInput}
+                inputRef={inputRef}
+            />
 
             <div className="shrink-0 px-4 md:px-10 pb-5 pt-3">
                 <div className="max-w-3xl mx-auto">

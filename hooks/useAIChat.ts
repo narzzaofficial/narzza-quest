@@ -11,8 +11,8 @@ export interface ChatMessage {
     timestamp: Date;
 }
 
-const CHARS_PER_TICK = 4;
-const TICK_MS = 16;
+const CHARS_PER_TICK = 10;
+const TICK_MS = 24;
 
 function toStored(m: ChatMessage): StoredChatMessage {
     return { role: m.role, content: m.content, timestamp: m.timestamp.toISOString() };
@@ -40,6 +40,10 @@ export function useAIChat(
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const onExchangeCompleteRef = useRef(onExchangeComplete);
     useEffect(() => { onExchangeCompleteRef.current = onExchangeComplete; }, [onExchangeComplete]);
+    // Mirror input into a ref so `send` doesn't need `input` in its dep array,
+    // preventing send() from being recreated on every keystroke.
+    const inputRef_value = useRef(input);
+    inputRef_value.current = input;
 
     // Load history from Firestore on mount
     useEffect(() => {
@@ -62,7 +66,7 @@ export function useAIChat(
     }, [uid]);
 
     const send = useCallback(async (text?: string) => {
-        const content = (text ?? input).trim();
+        const content = (text ?? inputRef_value.current).trim();
         if (!content || !context || loading || typing) return;
 
         cancelRef.current = false;
@@ -127,7 +131,7 @@ export function useAIChat(
         } finally {
             setTyping(false);
         }
-    }, [input, messages, context, loading, typing, persistMessages]);
+    }, [messages, context, loading, typing, persistMessages]);
 
     const reset = useCallback(() => {
         cancelRef.current = true;
