@@ -122,7 +122,7 @@ export function GraphCanvas({ nodes, edges, selectedId, onSelectNode }: GraphCan
         >
             <Background />
             <Controls />
-            <MiniMap pannable zoomable />
+            <MiniMap pannable zoomable nodeColor="#3b82f6" maskColor="rgba(240,244,255,0.7)" />
         </ReactFlow>
     );
 }

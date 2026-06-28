@@ -49,6 +49,13 @@ export default function ChatPage() {
         }
     }, [loading, typing]);
 
+    // Reset textarea height after send
+    useEffect(() => {
+        if (!input && inputRef.current) {
+            inputRef.current.style.height = 'auto';
+        }
+    }, [input]);
+
     const handleSend = () => {
         if (!input.trim() || loading || typing) return;
         send();
@@ -159,8 +166,8 @@ export default function ChatPage() {
 
             <div className="shrink-0 px-4 md:px-10 pb-5 pt-3">
                 <div className="max-w-3xl mx-auto">
-                    <div data-tour="chat-input" className="flex items-center gap-2 bg-white/80 border border-line rounded-full px-3 py-2 shadow-card backdrop-blur-sm focus-within:border-brand/40 focus-within:ring-2 focus-within:ring-brand/10 transition-all">
-                        <button className="w-7 h-7 rounded-full flex items-center justify-center text-ink-muted hover:bg-surface-2 transition-colors shrink-0">
+                    <div data-tour="chat-input" className="flex items-end gap-2 bg-white/80 border border-line rounded-2xl px-3 py-2 shadow-card backdrop-blur-sm focus-within:border-brand/40 focus-within:ring-2 focus-within:ring-brand/10 transition-all">
+                        <button className="w-7 h-7 rounded-full flex items-center justify-center text-ink-muted hover:bg-surface-2 transition-colors shrink-0 mb-0.5">
                             <Plus className="w-4 h-4" />
                         </button>
                         <textarea
@@ -170,19 +177,19 @@ export default function ChatPage() {
                             onKeyDown={handleKeyDown}
                             placeholder="Tanya apa saja..."
                             rows={1}
-                            className="flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none overflow-hidden leading-relaxed"
-                            style={{ maxHeight: 120 }}
+                            className="flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none overflow-hidden leading-relaxed py-1"
+                            style={{ maxHeight: 160 }}
                             onInput={e => {
                                 const el = e.currentTarget;
                                 el.style.height = 'auto';
-                                el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+                                el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
                             }}
                             disabled={loading || typing}
                         />
                         <button
                             onClick={handleSend}
                             disabled={!input.trim() || loading || typing}
-                            className="w-8 h-8 rounded-full bg-ink flex items-center justify-center text-white transition-all active:scale-95 disabled:opacity-30 shrink-0"
+                            className="w-8 h-8 rounded-full bg-ink flex items-center justify-center text-white transition-all active:scale-95 disabled:opacity-30 shrink-0 mb-0.5"
                         >
                             {loading || typing
                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
