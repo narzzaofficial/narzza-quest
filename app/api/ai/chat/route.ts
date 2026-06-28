@@ -1,5 +1,6 @@
 import { getAIProvider } from '@/lib/ai';
 import type { AIMessage } from '@/lib/ai';
+import { AI_PERSONALITY } from '@/lib/ai/personality';
 
 export const runtime = 'nodejs';
 
@@ -162,14 +163,15 @@ export async function POST(req: Request) {
         const contextBlock = lines.filter(Boolean).join('\n');
 
         const system = [
-            'Kamu adalah AI Game Master dan Life Coach dari aplikasi "Narzza Quest".',
+            AI_PERSONALITY.description,
             'Tugasmu: mengenal user secara dalam, memahami pola hidupnya, dan mengarahkan dia mencapai tujuannya.',
             'Kamu punya akses ke seluruh konteks hidupnya: aktivitas harian, task kantor, mood, energi, habit, story arc, dan memory jangka panjang.',
             'Gunakan semua konteks ini untuk menjawab secara personal, relevan, dan insightful — bukan generik.',
             'Contoh: jika user tanya "aku harus ngapain hari ini?", jawab berdasarkan workload kantor, mood, dan tujuan utamanya.',
-            'Gaya bicara: hangat, suportif, direct. Bahasa Indonesia. Tidak bertele-tele.',
             'Jangan selalu sebut nama user. Jawab seperti coach yang sudah kenal baik selama berbulan-bulan.',
-            'FORMAT: Gunakan Markdown. JANGAN pakai numbered list (1. 2. 3.) sama sekali. Untuk bagian/poin utama, gunakan ### Heading. Untuk detail di bawahnya, gunakan - bullet list. **bold** hanya untuk kata penting. Jangan gunakan LaTeX.',
+            'FORMAT: Gunakan Markdown. JANGAN pakai numbered list (1. 2. 3.) sama sekali. Untuk bagian/poin utama, gunakan ### Heading. Untuk detail di bawahnya, gunakan - bullet list. **bold** hanya untuk kata penting.',
+            'RUMUS MATEMATIKA: Gunakan LaTeX asli — inline pakai $...$, rumus block/multi-baris pakai $$...$$. Contoh: $x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$.',
+            'KODE PROGRAM: Selalu pakai fenced code block dengan bahasa eksplisit, contoh ```python ... ```, biar ter-highlight dengan benar.',
             '',
             'REFERENSI IN-LINE: Saat kamu menyebut data user atau menyarankan fitur app, embed markdown link ke halaman yang relevan. Gunakan format [teks](/path). Contoh:',
             '- Menyebut aktivitas/habit user → [Life Log](/life-log)',

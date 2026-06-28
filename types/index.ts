@@ -285,6 +285,34 @@ export interface AIMemory {
     updatedAt: string;
 }
 
+export type LearningRelation = 'prerequisite' | 'related' | 'builds-on' | 'contradicts';
+
+export interface LearningNode {
+    id: string;
+    topic: string;
+    summary: string;
+    tags: string[];
+    strength: number;       // 0-100
+    reviewCount: number;
+    lastReviewedAt: string; // ISO
+    createdAt: string;      // ISO
+}
+
+export interface LearningEdge {
+    id: string;
+    sourceId: string;
+    targetId: string;
+    relation: LearningRelation;
+    strength: number; // 0-100
+}
+
+export interface LearningGraph {
+    uid: string;
+    nodes: LearningNode[];
+    edges: LearningEdge[];
+    updatedAt: string;
+}
+
 export interface DailyReview {
     uid: string;
     date: string;          // YYYY-MM-DD

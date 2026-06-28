@@ -10,11 +10,16 @@ import { DailyReviewCard } from '@/components/ai-gm/DailyReviewCard';
 import { MemoryCard } from '@/components/ai-gm/MemoryCard';
 import { QuestRow } from '@/components/ai-gm/QuestRow';
 import OnboardingTour from '@/components/system/OnboardingTour';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { AI_GM_TOUR_STEPS } from '@/constants/onboardingTours';
+import { DUMMY_AI_QUESTS } from '@/constants/onboardingPreviewData';
+import Badge from '@/components/ui/Badge';
 
 export default function AIGameMasterPage() {
     const ai = useAIGameMaster();
     const { profile, active, completed, aiQuests, goals, setGoals, generate, generating, createdCount, error } = ai;
+    const { run: isOnboarding } = useOnboardingTour('ai-gm', AI_GM_TOUR_STEPS);
+    const showDummyQuests = isOnboarding && aiQuests.length === 0;
 
     if (!profile) {
         return (
@@ -118,9 +123,16 @@ export default function AIGameMasterPage() {
             </section>
 
             {/* ── AI quest list ── */}
-            <section data-tour="ai-gm-quest-list">
-                <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-3">Misi dari AI</p>
-                {aiQuests.length === 0 ? (
+            <section data-tour="ai-gm-quest-list" className="relative">
+                <div className="flex items-center gap-2 mb-3">
+                    <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold">Misi dari AI</p>
+                    {showDummyQuests && <Badge variant="B">Contoh</Badge>}
+                </div>
+                {showDummyQuests ? (
+                    <div className="space-y-3">
+                        {DUMMY_AI_QUESTS.map((q) => <QuestRow key={q.id} quest={q} />)}
+                    </div>
+                ) : aiQuests.length === 0 ? (
                     <div className="glass rounded-card p-10 text-center shadow-card">
                         <Bot className="w-9 h-9 text-ink-muted mx-auto mb-3" />
                         <p className="text-ink font-bold mb-1">Belum ada misi dari AI</p>

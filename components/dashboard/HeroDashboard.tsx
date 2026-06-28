@@ -23,16 +23,22 @@ import { ChartTooltip } from '@/components/dashboard/ChartTooltip';
 import { getAvatarUrl } from '@/lib/avatar';
 import type { useDashboard } from '@/hooks/useDashboard';
 import OnboardingTour from '@/components/system/OnboardingTour';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { DASHBOARD_TOUR_STEPS } from '@/constants/onboardingTours';
+import { DUMMY_ACTIVITY_7D, DUMMY_STORY_ARC, DUMMY_ARC_QUESTS } from '@/constants/onboardingPreviewData';
+import Badge from '@/components/ui/Badge';
 
 type DashboardData = ReturnType<typeof useDashboard>;
 
 export function HeroDashboard({ d }: { d: DashboardData }) {
     const profile = d.profile!;
     const hasActivity = d.activity7d.some((p) => p.exp > 0 || p.penalty > 0);
+    const { run: isOnboarding } = useOnboardingTour('dashboard', DASHBOARD_TOUR_STEPS);
+    const showDummyActivity = isOnboarding && !hasActivity;
     const [chartType, setChartType] = useState<'bar' | 'line'>('line');
     const { displayPct, smoothPct } = useAnimatedPercent(d.expPercent);
     const ai = useAIGameMaster();
+    const showDummyArc = isOnboarding && !ai.storyArc.arc;
     const gm = useGMMessages(profile.uid);
     const activityLog = useActivityLog(profile.uid);
 
@@ -170,7 +176,8 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                     </p>
                 </section>
 
-                <section data-tour="activity-card" className="glass rounded-card p-5 shadow-card lg:col-span-2">
+                <section data-tour="activity-card" className="relative glass rounded-card p-5 shadow-card lg:col-span-2">
+                    {showDummyActivity && <Badge variant="B" className="absolute top-3 right-3 z-10">Contoh</Badge>}
                     <div className="flex items-center justify-between mb-3">
                         <div>
                             <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold mb-0.5">Aktivitas</p>
@@ -202,7 +209,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                     </div>
                     <div className="relative" style={{ height: 200 }}>
                         <ResponsiveContainer width="100%" height={200} minWidth={1} minHeight={1}>
-                            <ComposedChart data={d.activity7d} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={2}>
+                            <ComposedChart data={showDummyActivity ? DUMMY_ACTIVITY_7D : d.activity7d} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={2}>
                                 <defs>
                                     <linearGradient id="expLineGrad" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
@@ -228,7 +235,7 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
                                 )}
                             </ComposedChart>
                         </ResponsiveContainer>
-                        {!hasActivity && (
+                        {!hasActivity && !showDummyActivity && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                 <p className="text-ink-muted text-sm font-semibold">Belum ada aktivitas minggu ini</p>
                                 <p className="text-ink-muted/70 text-xs">Selesaikan quest untuk mulai mengisi grafik</p>
@@ -252,20 +259,23 @@ export function HeroDashboard({ d }: { d: DashboardData }) {
             </section>
 
             {/* Story Arc */}
-            <div data-tour="story-arc-card">
+            <div data-tour="story-arc-card" className="relative">
+                {showDummyArc && <Badge variant="B" className="absolute top-3 right-3 z-10">Contoh</Badge>}
                 <ArcCard
-                    arc={ai.storyArc.arc}
-                    loading={ai.storyArc.loading}
-                    generating={ai.storyArc.generating}
-                    daysRemaining={ai.storyArc.daysRemaining}
-                    progressPct={ai.storyArc.progressPct}
-                    justCompleted={ai.storyArc.justCompleted}
+                    arc={showDummyArc ? DUMMY_STORY_ARC : ai.storyArc.arc}
+                    loading={showDummyArc ? false : ai.storyArc.loading}
+                    generating={showDummyArc ? false : ai.storyArc.generating}
+                    daysRemaining={showDummyArc ? 11 : ai.storyArc.daysRemaining}
+                    progressPct={showDummyArc ? 21 : ai.storyArc.progressPct}
+                    justCompleted={showDummyArc ? null : ai.storyArc.justCompleted}
                     onDismissCompleted={ai.storyArc.dismissCompleted}
-                    arcQuests={ai.storyArc.arc
-                        ? ai.aiQuests
-                            .filter(q => (q.createdAt || '') >= ai.storyArc.arc!.startDate)
-                            .map(q => ({ id: q.id, title: q.title, status: q.status }))
-                        : []}
+                    arcQuests={showDummyArc
+                        ? DUMMY_ARC_QUESTS
+                        : ai.storyArc.arc
+                            ? ai.aiQuests
+                                .filter(q => (q.createdAt || '') >= ai.storyArc.arc!.startDate)
+                                .map(q => ({ id: q.id, title: q.title, status: q.status }))
+                            : []}
                 />
             </div>
 

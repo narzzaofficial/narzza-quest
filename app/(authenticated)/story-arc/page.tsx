@@ -11,7 +11,10 @@ import GlassCard from '@/components/ui/GlassCard';
 import StatTile from '@/components/ui/StatTile';
 import { ArcHistoryCard } from '@/components/story-arc/ArcHistoryCard';
 import OnboardingTour from '@/components/system/OnboardingTour';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { STORY_ARC_TOUR_STEPS } from '@/constants/onboardingTours';
+import { DUMMY_STORY_ARC } from '@/constants/onboardingPreviewData';
+import Badge from '@/components/ui/Badge';
 import type { Quest } from '@/types';
 
 const ACTIVE_STATUSES = ['pending', 'in_progress', 'submitted', 'active'];
@@ -37,6 +40,8 @@ export default function StoryArcPage() {
     const sortedArcs   = [...arcs].sort((a, b) => b.arcNumber - a.arcNumber);
     const completedArcs = sortedArcs.filter(a => a.status === 'completed');
     const totalQuests  = arcs.reduce((sum, a) => sum + a.questsCompleted, 0);
+    const { run: isOnboarding } = useOnboardingTour('story-arc', STORY_ARC_TOUR_STEPS);
+    const showDummyHistory = isOnboarding && sortedArcs.length === 0;
 
     if (loading) {
         return (
@@ -117,7 +122,23 @@ export default function StoryArcPage() {
                 )}
             </GlassCard>
 
-            {sortedArcs.length === 0 ? (
+            {showDummyHistory ? (
+                <div data-tour="story-arc-history" className="relative space-y-3">
+                    <div className="flex items-center gap-2">
+                        <p className="text-ink-muted text-[10px] uppercase tracking-widest font-bold">Semua Chapter</p>
+                        <Badge variant="B">Contoh</Badge>
+                    </div>
+                    <div className="relative">
+                        <div className="absolute left-5 top-3 bottom-3 w-px bg-line" />
+                        <div className="space-y-3">
+                            <div className="relative pl-12">
+                                <div className="absolute left-3.5 top-5 w-2.5 h-2.5 rounded-full border-2 bg-brand border-brand" />
+                                <ArcHistoryCard arc={DUMMY_STORY_ARC} defaultOpen />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : sortedArcs.length === 0 ? (
                 <GlassCard data-tour="story-arc-history" className="p-12 text-center">
                     <BookOpen className="w-8 h-8 text-ink-muted mx-auto mb-3" />
                     <p className="text-ink font-bold">Belum ada arc</p>

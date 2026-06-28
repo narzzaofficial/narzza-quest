@@ -2,7 +2,12 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Link from 'next/link';
+import 'katex/dist/katex.min.css';
 
 // Fix AI-generated markdown where "1.\n**Title**" renders as a separate empty
 // list item + bold paragraph. Normalizes it to "1. **Title**" on one line.
@@ -17,7 +22,8 @@ export function MarkdownMessage({ content, streaming }: { content: string; strea
     return (
         <div className="prose-ai">
             <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
                 components={{
                     p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
                     strong: ({ children }) => <strong className="font-bold text-ink">{children}</strong>,
@@ -25,11 +31,21 @@ export function MarkdownMessage({ content, streaming }: { content: string; strea
                     ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 mb-2">{children}</ul>,
                     ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 mb-2">{children}</ol>,
                     li: ({ children }) => <li className="leading-relaxed pl-1">{children}</li>,
+                    pre: ({ children }) => <>{children}</>,
                     code: ({ children, className }) => {
-                        const isBlock = className?.includes('language-');
-                        return isBlock
-                            ? <code className="block bg-surface rounded-lg px-3 py-2 text-xs font-mono my-2 overflow-x-auto">{children}</code>
-                            : <code className="bg-surface rounded px-1.5 py-0.5 text-xs font-mono">{children}</code>;
+                        const match = /language-(\w+)/.exec(className || '');
+                        if (match) {
+                            return (
+                                <SyntaxHighlighter
+                                    language={match[1]}
+                                    style={oneDark}
+                                    customStyle={{ borderRadius: '0.75rem', fontSize: '0.75rem', margin: '0.5rem 0', padding: '0.75rem' }}
+                                >
+                                    {String(children).replace(/\n$/, '')}
+                                </SyntaxHighlighter>
+                            );
+                        }
+                        return <code className="bg-surface rounded px-1.5 py-0.5 text-xs font-mono">{children}</code>;
                     },
                     blockquote: ({ children }) => (
                         <blockquote className="border-l-2 border-brand/40 pl-3 italic text-ink-soft my-2">{children}</blockquote>

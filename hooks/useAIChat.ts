@@ -24,7 +24,12 @@ function fromStored(m: StoredChatMessage): ChatMessage {
 
 import type { UserProfile } from '@/types';
 
-export function useAIChat(context: ChatContext | null, uid?: string, aiSettings?: UserProfile['aiSettings']) {
+export function useAIChat(
+    context: ChatContext | null,
+    uid?: string,
+    aiSettings?: UserProfile['aiSettings'],
+    onExchangeComplete?: (userMessage: string, assistantReply: string) => void
+) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -33,6 +38,8 @@ export function useAIChat(context: ChatContext | null, uid?: string, aiSettings?
     const [historyLoaded, setHistoryLoaded] = useState(false);
     const cancelRef = useRef(false);
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const onExchangeCompleteRef = useRef(onExchangeComplete);
+    useEffect(() => { onExchangeCompleteRef.current = onExchangeComplete; }, [onExchangeComplete]);
 
     // Load history from Firestore on mount
     useEffect(() => {
@@ -112,6 +119,7 @@ export function useAIChat(context: ChatContext | null, uid?: string, aiSettings?
                 ];
                 setMessages(finalMessages);
                 persistMessages(finalMessages);
+                onExchangeCompleteRef.current?.(content, fullReply);
             }
         } catch (e) {
             setLoading(false);

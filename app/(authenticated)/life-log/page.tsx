@@ -19,7 +19,10 @@ import { ActivityHistory }     from '@/components/life-log/ActivityHistory';
 import { SituationRoom } from '@/components/ai-gm/SituationRoom';
 import { WorkTasksSection } from '@/components/ai-gm/WorkTasksSection';
 import OnboardingTour from '@/components/system/OnboardingTour';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { LIFE_LOG_TOUR_STEPS } from '@/constants/onboardingTours';
+import { DUMMY_TIMELINE_ENTRIES, DUMMY_ACTIVITY_HISTORY_DAYS } from '@/constants/onboardingPreviewData';
+import Badge from '@/components/ui/Badge';
 
 export default function LifeLogPage() {
     const { profile } = useAuth();
@@ -33,6 +36,9 @@ export default function LifeLogPage() {
     const { days: historyDays, loading: historyLoading, getDurationMinutes: getHistoryDurationMinutes } = useActivityHistory(profile?.uid);
     const wt  = useWorkTasks(profile?.uid);
     const sit = useSituation(profile?.uid);
+    const { run: isOnboarding } = useOnboardingTour('life-log', LIFE_LOG_TOUR_STEPS);
+    const showDummyTimeline = isOnboarding && completedEntries.length === 0;
+    const showDummyHistory  = isOnboarding && historyDays.length === 0;
 
     const [showLogForm,   setShowLogForm]   = useState(false);
     const [showHabitForm, setShowHabitForm] = useState(false);
@@ -117,7 +123,8 @@ export default function LifeLogPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <section data-tour="life-log-timeline" className="glass rounded-card shadow-card">
+                <section data-tour="life-log-timeline" className="relative glass rounded-card shadow-card">
+                    {showDummyTimeline && <Badge variant="B" className="absolute top-4 right-4 z-10">Contoh</Badge>}
                     <div className="p-5">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-8 h-8 rounded-xl bg-brand-soft flex items-center justify-center shrink-0">
@@ -128,7 +135,13 @@ export default function LifeLogPage() {
                                 <h2 className="text-ink font-extrabold text-base leading-tight">Timeline</h2>
                             </div>
                         </div>
-                        {completedEntries.length === 0 ? (
+                        {showDummyTimeline ? (
+                            <div className="space-y-0">
+                                {DUMMY_TIMELINE_ENTRIES.map((e) => (
+                                    <TimelineEntry key={e.id} entry={e} duration={getDurationMinutes(e)} />
+                                ))}
+                            </div>
+                        ) : completedEntries.length === 0 ? (
                             <p className="text-ink-muted text-sm py-4 text-center">Belum ada aktivitas selesai hari ini.</p>
                         ) : (
                             <div className="space-y-0">
@@ -210,9 +223,10 @@ export default function LifeLogPage() {
                 </section>
             </div>
 
-            <div data-tour="life-log-history">
+            <div data-tour="life-log-history" className="relative">
+                {showDummyHistory && <Badge variant="B" className="absolute top-0 right-0 z-10">Contoh</Badge>}
                 <ActivityHistory
-                    days={historyDays}
+                    days={showDummyHistory ? DUMMY_ACTIVITY_HISTORY_DAYS : historyDays}
                     loading={historyLoading}
                     habits={habits.habits}
                     getDurationMinutes={getHistoryDurationMinutes}

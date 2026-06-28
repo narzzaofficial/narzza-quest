@@ -11,7 +11,8 @@ import { localDateStr } from "./dateUtils";
 import {
     UserProfile, Quest, JournalEntry, Notification,
     QuestStatus, calculateLevel, LEVEL_TITLES, getExpToNextLevel,
-    GuildQuest, AIMemory, DailyReview, Withdrawal, GMMessage, StoryArc
+    GuildQuest, AIMemory, DailyReview, Withdrawal, GMMessage, StoryArc,
+    LearningGraph, LearningNode, LearningEdge
 } from "@/types";
 
 const MAX_HEARTS = 5;
@@ -875,6 +876,22 @@ export async function saveAIMemory(
     await setDoc(
         doc(db, "aiMemory", uid),
         { uid, summary: data.summary, insights: data.insights, updatedAt: new Date().toISOString() },
+        { merge: true }
+    );
+}
+
+export async function getLearningGraph(uid: string): Promise<LearningGraph | null> {
+    const snap = await getDoc(doc(db, "learningGraphs", uid));
+    return snap.exists() ? (snap.data() as LearningGraph) : null;
+}
+
+export async function saveLearningGraph(
+    uid: string,
+    data: { nodes: LearningNode[]; edges: LearningEdge[] }
+): Promise<void> {
+    await setDoc(
+        doc(db, "learningGraphs", uid),
+        { uid, nodes: data.nodes, edges: data.edges, updatedAt: new Date().toISOString() },
         { merge: true }
     );
 }

@@ -11,7 +11,7 @@ import {
     LayoutDashboard, Bot, ScrollText, BookOpen, Swords, Bell,
     ListTodo, ClipboardCheck, HeartHandshake, LogOut, Users,
     Settings, CalendarDays, Trophy, Wallet, Receipt,
-    Activity, BarChart2, PanelLeftClose, PanelLeftOpen, ChevronDown, MessageCircle, BookMarked, Landmark, ShieldAlert
+    Activity, BarChart2, PanelLeftClose, PanelLeftOpen, ChevronDown, MessageCircle, BookMarked, Landmark, ShieldAlert, Network
 } from 'lucide-react';
 
 type BadgeKey = keyof ReturnType<typeof useBadges>;
@@ -153,6 +153,7 @@ export default function Sidebar() {
             links: [
                 { name: 'AI Game Master', href: '/ai-gm', icon: <Bot className="w-5 h-5" />, badgeKey: null },
                 { name: 'AI Coach', href: '/chat', icon: <MessageCircle className="w-5 h-5" />, badgeKey: null },
+                { name: 'Learning Graph', href: '/learning-graph', icon: <Network className="w-5 h-5" />, badgeKey: null },
                 { name: 'Story Arc', href: '/story-arc', icon: <BookMarked className="w-5 h-5" />, badgeKey: null },
                 { name: 'Life Log', href: '/life-log', icon: <Activity className="w-5 h-5" />, badgeKey: null },
                 { name: 'Analytics', href: '/analytics', icon: <BarChart2 className="w-5 h-5" />, badgeKey: null },

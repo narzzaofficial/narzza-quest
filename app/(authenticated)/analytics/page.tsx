@@ -20,7 +20,13 @@ import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
 import { HABIT_ICON_MAP, HABIT_ICON_COLORS } from '@/components/life-log/activityMeta';
 import { FaBullseye } from 'react-icons/fa6';
 import OnboardingTour from '@/components/system/OnboardingTour';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { ANALYTICS_TOUR_STEPS } from '@/constants/onboardingTours';
+import {
+    DUMMY_MOOD_ENERGY, DUMMY_CATEGORY_DATA, DUMMY_PEAK_HOURS, DUMMY_BEST_DAY,
+    DUMMY_HEATMAP_ACTIVITIES, DUMMY_EXP_DATA, DUMMY_RADAR_DATA, DUMMY_HABIT_RATE, DUMMY_XP_DAYS,
+} from '@/constants/onboardingPreviewData';
+import Badge from '@/components/ui/Badge';
 
 export default function AnalyticsPage() {
     const [tab, setTab] = useState<'life' | 'finance'>('life');
@@ -33,6 +39,7 @@ export default function AnalyticsPage() {
         totalHoursLogged, avgMood, peakHour, questsDone,
         periodComparison, goalAlignment, habitStreaks,
     } = useAnalytics(profile?.uid, profile?.goal?.focusAreas);
+    const { run: isOnboarding } = useOnboardingTour('analytics', ANALYTICS_TOUR_STEPS);
 
     if (loading) {
         return (
@@ -43,6 +50,15 @@ export default function AnalyticsPage() {
     }
 
     const noActivity = activities.length === 0;
+    const showDummyCharts = isOnboarding && noActivity;
+    const showDummyRadar = isOnboarding && radarData.every(r => r.score === 0);
+    const displayHabitRate = isOnboarding && habitRate === null ? DUMMY_HABIT_RATE : habitRate;
+    const showDummyXP = isOnboarding && !days.some(d => d.earned > 0 || d.penalty > 0);
+    const dummyXPTotals = {
+        earned:  DUMMY_XP_DAYS.reduce((s, d) => s + d.earned, 0),
+        penalty: DUMMY_XP_DAYS.reduce((s, d) => s + d.penalty, 0),
+        maxAbs:  Math.max(...DUMMY_XP_DAYS.map(d => Math.max(d.earned, d.penalty)), 1),
+    };
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
@@ -120,8 +136,9 @@ export default function AnalyticsPage() {
                         </ChartCard>
                     )}
 
-                    <div data-tour="analytics-charts" className="space-y-6">
-                    {noActivity && (
+                    <div data-tour="analytics-charts" className="relative space-y-6">
+                    {showDummyCharts && <Badge variant="B" className="absolute -top-1 right-0 z-10">Contoh</Badge>}
+                    {noActivity && !showDummyCharts && (
                         <div className="glass rounded-card shadow-card p-8 text-center">
                             <BarChart2 className="w-10 h-10 text-ink-muted mx-auto mb-3" />
                             <p className="text-ink font-bold">Belum ada data aktivitas</p>
@@ -129,11 +146,11 @@ export default function AnalyticsPage() {
                         </div>
                     )}
 
-                    {!noActivity && (
+                    {(!noActivity || showDummyCharts) && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <ChartCard title="Mood & Energi" sub="Rata-rata harian (skala 1-5)">
                                 <ResponsiveContainer width="100%" height={200} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
-                                    <LineChart data={moodEnergyData}>
+                                    <LineChart data={showDummyCharts ? DUMMY_MOOD_ENERGY : moodEnergyData}>
                                         <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                                         <YAxis domain={[1, 5]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} />
                                         <Tooltip content={<ChartTip />} isAnimationActive={false} />
@@ -145,20 +162,20 @@ export default function AnalyticsPage() {
                             </ChartCard>
 
                             <ChartCard title="Distribusi Waktu" sub="Jam per kategori, 30 hari">
-                                {categoryData.length === 0 ? (
+                                {(showDummyCharts ? DUMMY_CATEGORY_DATA : categoryData).length === 0 ? (
                                     <p className="text-ink-muted text-sm py-8 text-center">Belum ada data</p>
                                 ) : (
                                     <div className="flex items-center gap-4">
                                         <ResponsiveContainer width="60%" height={200} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
                                             <PieChart>
-                                                <Pie data={categoryData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
-                                                    {categoryData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                                <Pie data={showDummyCharts ? DUMMY_CATEGORY_DATA : categoryData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
+                                                    {(showDummyCharts ? DUMMY_CATEGORY_DATA : categoryData).map((e, i) => <Cell key={i} fill={e.color} />)}
                                                 </Pie>
                                                 <Tooltip formatter={(v) => [`${Number(v).toFixed(1)} jam`]} isAnimationActive={false} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                         <div className="flex-1 space-y-1.5">
-                                            {categoryData.map(c => (
+                                            {(showDummyCharts ? DUMMY_CATEGORY_DATA : categoryData).map(c => (
                                                 <div key={c.name} className="flex items-center gap-2">
                                                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
                                                     <span className="text-xs text-ink-soft flex-1">{c.name}</span>
@@ -172,11 +189,11 @@ export default function AnalyticsPage() {
                         </div>
                     )}
 
-                    {!noActivity && (
+                    {(!noActivity || showDummyCharts) && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <ChartCard title="Peak Hours" sub="Jam kamu paling sering mulai aktivitas">
                                 <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
-                                    <BarChart data={peakHoursData} barSize={8}>
+                                    <BarChart data={showDummyCharts ? DUMMY_PEAK_HOURS : peakHoursData} barSize={8}>
                                         <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={2} />
                                         <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
                                         <Tooltip content={<ChartTip />} cursor={false} isAnimationActive={false} />
@@ -187,7 +204,7 @@ export default function AnalyticsPage() {
 
                             <ChartCard title="Hari Terbaik" sub="Hari dalam seminggu yang paling aktif">
                                 <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
-                                    <BarChart data={bestDayData} barSize={24}>
+                                    <BarChart data={showDummyCharts ? DUMMY_BEST_DAY : bestDayData} barSize={24}>
                                         <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                                         <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
                                         <Tooltip content={<ChartTip />} cursor={false} isAnimationActive={false} />
@@ -198,20 +215,32 @@ export default function AnalyticsPage() {
                         </div>
                     )}
 
-                    {!noActivity && (
+                    {(!noActivity || showDummyCharts) && (
                         <ChartCard title="Activity Heatmap" sub="6 bulan lalu · hari ini · 6 bulan ke depan">
-                            <ActivityHeatmap activities={activities} />
+                            <ActivityHeatmap activities={showDummyCharts ? DUMMY_HEATMAP_ACTIVITIES : activities} />
                         </ChartCard>
                     )}
 
-                    {!noActivity && (
-                        <ExpGrowthChart data={expData} />
+                    {(!noActivity || showDummyCharts) && (
+                        <ExpGrowthChart data={showDummyCharts ? DUMMY_EXP_DATA : expData} />
                     )}
                     </div>
 
-                    <div data-tour="analytics-radar" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div data-tour="analytics-radar" className="relative grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {(showDummyRadar || (isOnboarding && habitRate === null)) && (
+                            <Badge variant="B" className="absolute -top-1 right-0 z-10">Contoh</Badge>
+                        )}
                         <ChartCard title="Strength Radar" sub="Kekuatanmu berdasarkan quest yang diselesaikan">
-                            {radarData.every(r => r.score === 0) ? (
+                            {showDummyRadar ? (
+                                <ResponsiveContainer width="100%" height={220} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
+                                    <RadarChart data={DUMMY_RADAR_DATA}>
+                                        <PolarGrid stroke="#e3e9f3" />
+                                        <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: '#586484' }} />
+                                        <Radar dataKey="score" name="Strength" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
+                                        <Tooltip content={<ChartTip />} isAnimationActive={false} />
+                                    </RadarChart>
+                                </ResponsiveContainer>
+                            ) : radarData.every(r => r.score === 0) ? (
                                 <p className="text-ink-muted text-sm py-8 text-center">Selesaikan quest untuk melihat kekuatanmu</p>
                             ) : (
                                 <ResponsiveContainer width="100%" height={220} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
@@ -225,21 +254,21 @@ export default function AnalyticsPage() {
                             )}
                         </ChartCard>
 
-                        {habitRate !== null && (
+                        {displayHabitRate !== null && (
                             <ChartCard title="Habit Completion" sub="Tingkat penyelesaian habit 12 minggu terakhir">
                                 <div className="flex items-center gap-6 h-full py-4">
                                     <div className="text-center">
-                                        <p className="text-5xl font-extrabold text-success">{habitRate}%</p>
+                                        <p className="text-5xl font-extrabold text-success">{displayHabitRate}%</p>
                                         <p className="text-ink-muted text-xs mt-1">Completion Rate</p>
                                     </div>
                                     <div className="flex-1">
                                         <div className="h-4 bg-surface-2 rounded-full overflow-hidden border border-line">
-                                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${habitRate}%`, background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' }} />
+                                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${displayHabitRate}%`, background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' }} />
                                         </div>
                                         <p className="text-ink-muted text-xs mt-2 flex items-center gap-1">
-                                            {habitRate >= 80 ? <><Flame className="w-3.5 h-3.5 text-danger shrink-0" /> Konsistensi luar biasa!</> :
-                                                habitRate >= 60 ? '👍 Cukup bagus, terus tingkatkan!' :
-                                                    habitRate >= 40 ? '⚡ Masih perlu usaha lebih.' :
+                                            {displayHabitRate >= 80 ? <><Flame className="w-3.5 h-3.5 text-danger shrink-0" /> Konsistensi luar biasa!</> :
+                                                displayHabitRate >= 60 ? '👍 Cukup bagus, terus tingkatkan!' :
+                                                    displayHabitRate >= 40 ? '⚡ Masih perlu usaha lebih.' :
                                                         '💪 Mulai bangun konsistensi sekarang.'}
                                         </p>
                                     </div>
@@ -264,14 +293,15 @@ export default function AnalyticsPage() {
                         </ChartCard>
                     )}
 
-                    <div data-tour="analytics-xp-history">
+                    <div data-tour="analytics-xp-history" className="relative">
+                        {showDummyXP && <Badge variant="B" className="absolute -top-1 right-0 z-10">Contoh</Badge>}
                         <XPHistory
-                            days={days}
+                            days={showDummyXP ? DUMMY_XP_DAYS : days}
                             loading={xpLoading}
-                            totalEarned={totalEarned}
-                            totalPenalty={totalPenalty}
-                            totalNet={totalNet}
-                            maxAbs={maxAbs}
+                            totalEarned={showDummyXP ? dummyXPTotals.earned : totalEarned}
+                            totalPenalty={showDummyXP ? dummyXPTotals.penalty : totalPenalty}
+                            totalNet={showDummyXP ? dummyXPTotals.earned - dummyXPTotals.penalty : totalNet}
+                            maxAbs={showDummyXP ? dummyXPTotals.maxAbs : maxAbs}
                         />
                     </div>
                 </>

@@ -5,6 +5,7 @@ import { Bot, Send, Trash2, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAIGameMaster } from '@/hooks/useAIGameMaster';
 import { useAIChat } from '@/hooks/useAIChat';
+import { useLearningGraph } from '@/hooks/useLearningGraph';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useWorkTasks } from '@/hooks/useWorkTasks';
 import { useSituation } from '@/hooks/useSituation';
@@ -34,7 +35,8 @@ export default function ChatPage() {
     const [confirmClear, setConfirmClear] = useState(false);
 
     const chatContext = useChatContext(profile, ai, actLog, workTasks, sit, habits, finance, journal);
-    const { messages, input, setInput, loading, typing, error, historyLoaded, send, reset } = useAIChat(chatContext, profile?.uid, profile?.aiSettings);
+    const learningGraph = useLearningGraph(profile?.uid, profile?.aiSettings);
+    const { messages, input, setInput, loading, typing, error, historyLoaded, send, reset } = useAIChat(chatContext, profile?.uid, profile?.aiSettings, learningGraph.recordExchange);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
