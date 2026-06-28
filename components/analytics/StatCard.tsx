@@ -14,7 +14,7 @@ interface StatCardProps {
     trend?: { pct: number | null; goodWhenUp?: boolean; periodLabel?: string };
 }
 
-export function StatCard({ icon: Icon, label, value, sub, color = 'text-brand', bg = 'bg-brand-soft', trend }: StatCardProps) {
+export const StatCard = React.memo(function StatCard({ icon: Icon, label, value, sub, color = 'text-brand', bg = 'bg-brand-soft', trend }: StatCardProps) {
     const showTrend = trend && trend.pct !== null && Number.isFinite(trend.pct);
     const isUp = showTrend && trend!.pct! >= 0;
     const isGood = showTrend && (trend!.goodWhenUp === false ? !isUp : isUp);
@@ -35,4 +35,4 @@ export function StatCard({ icon: Icon, label, value, sub, color = 'text-brand', 
             )}
         </div>
     );
-}
+});

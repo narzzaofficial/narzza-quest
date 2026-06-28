@@ -8,7 +8,7 @@ interface ChartCardProps {
     children: React.ReactNode;
 }
 
-export function ChartCard({ title, sub, children }: ChartCardProps) {
+export const ChartCard = React.memo(function ChartCard({ title, sub, children }: ChartCardProps) {
     return (
         <div className="glass rounded-card shadow-card">
             <div className="p-5">
@@ -19,4 +19,4 @@ export function ChartCard({ title, sub, children }: ChartCardProps) {
             </div>
         </div>
     );
-}
+});

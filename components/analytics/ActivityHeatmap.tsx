@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { MONTH_NAMES_SHORT } from '@/constants/ui';
 import type { ActivityEntry } from '@/types';
 
@@ -19,7 +20,7 @@ function cellColor(count: number, maxCount: number): string {
     return '#4f7cff';
 }
 
-export function ActivityHeatmap({ activities }: { activities: ActivityEntry[] }) {
+export const ActivityHeatmap = memo(function ActivityHeatmap({ activities }: { activities: ActivityEntry[] }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
@@ -143,4 +144,4 @@ export function ActivityHeatmap({ activities }: { activities: ActivityEntry[] })
             </div>
         </div>
     );
-}
+});

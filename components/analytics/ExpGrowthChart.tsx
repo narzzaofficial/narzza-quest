@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import {
     AreaChart, Area, BarChart, Bar, Cell,
     XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
@@ -45,7 +45,7 @@ function CumulativeTip({ active, payload, label }: any) {
     );
 }
 
-export function ExpGrowthChart({ data }: { data: ExpPoint[] }) {
+export const ExpGrowthChart = memo(function ExpGrowthChart({ data }: { data: ExpPoint[] }) {
     const [mode, setMode] = useState<'cumulative' | 'daily'>('cumulative');
 
     const totalCumulative = data[data.length - 1]?.cumulative ?? 0;
@@ -181,4 +181,4 @@ export function ExpGrowthChart({ data }: { data: ExpPoint[] }) {
             )}
         </div>
     );
-}
+});

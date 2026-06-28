@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { memo, useMemo, useEffect, useRef, useState } from 'react';
 
 import {
     LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -28,6 +28,38 @@ import {
 } from '@/constants/onboardingPreviewData';
 import Badge from '@/components/ui/Badge';
 
+// ─── Lazy section: only renders children when near the viewport ───────────────
+const LazySection = memo(function LazySection({
+    children, minHeight = 240,
+}: { children: React.ReactNode; minHeight?: number }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+            { rootMargin: '300px' }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <div ref={ref}>
+            {visible ? children : <div style={{ minHeight }} />}
+        </div>
+    );
+});
+
+// Constant — computed once, never changes
+const DUMMY_XP_TOTALS = {
+    earned:  DUMMY_XP_DAYS.reduce((s, d) => s + d.earned, 0),
+    penalty: DUMMY_XP_DAYS.reduce((s, d) => s + d.penalty, 0),
+    maxAbs:  Math.max(...DUMMY_XP_DAYS.map(d => Math.max(d.earned, d.penalty)), 1),
+};
+
 export default function AnalyticsPage() {
     const [tab, setTab] = useState<'life' | 'finance'>('life');
     const { profile } = useAuth();
@@ -41,6 +73,28 @@ export default function AnalyticsPage() {
     } = useAnalytics(profile?.uid, profile?.goal?.focusAreas);
     const { run: isOnboarding } = useOnboardingTour('analytics', ANALYTICS_TOUR_STEPS);
 
+    // Derived flags — memoized so they don't recompute on unrelated re-renders
+    const noActivity      = useMemo(() => activities.length === 0, [activities]);
+    const showDummyCharts = useMemo(() => isOnboarding && noActivity, [isOnboarding, noActivity]);
+    const showDummyRadar  = useMemo(() => isOnboarding && radarData.every(r => r.score === 0), [isOnboarding, radarData]);
+    const displayHabitRate = useMemo(
+        () => (isOnboarding && habitRate === null ? DUMMY_HABIT_RATE : habitRate),
+        [isOnboarding, habitRate]
+    );
+    const showDummyXP = useMemo(
+        () => isOnboarding && !days.some(d => d.earned > 0 || d.penalty > 0),
+        [isOnboarding, days]
+    );
+
+    // Stable data references for charts
+    const moodData     = useMemo(() => showDummyCharts ? DUMMY_MOOD_ENERGY    : moodEnergyData,  [showDummyCharts, moodEnergyData]);
+    const catData      = useMemo(() => showDummyCharts ? DUMMY_CATEGORY_DATA  : categoryData,    [showDummyCharts, categoryData]);
+    const peakData     = useMemo(() => showDummyCharts ? DUMMY_PEAK_HOURS     : peakHoursData,   [showDummyCharts, peakHoursData]);
+    const bestDayArr   = useMemo(() => showDummyCharts ? DUMMY_BEST_DAY       : bestDayData,     [showDummyCharts, bestDayData]);
+    const heatmapData  = useMemo(() => showDummyCharts ? DUMMY_HEATMAP_ACTIVITIES : activities,  [showDummyCharts, activities]);
+    const expChartData = useMemo(() => showDummyCharts ? DUMMY_EXP_DATA       : expData,         [showDummyCharts, expData]);
+    const radarDisplay = useMemo(() => showDummyRadar  ? DUMMY_RADAR_DATA     : radarData,       [showDummyRadar,  radarData]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -48,17 +102,6 @@ export default function AnalyticsPage() {
             </div>
         );
     }
-
-    const noActivity = activities.length === 0;
-    const showDummyCharts = isOnboarding && noActivity;
-    const showDummyRadar = isOnboarding && radarData.every(r => r.score === 0);
-    const displayHabitRate = isOnboarding && habitRate === null ? DUMMY_HABIT_RATE : habitRate;
-    const showDummyXP = isOnboarding && !days.some(d => d.earned > 0 || d.penalty > 0);
-    const dummyXPTotals = {
-        earned:  DUMMY_XP_DAYS.reduce((s, d) => s + d.earned, 0),
-        penalty: DUMMY_XP_DAYS.reduce((s, d) => s + d.penalty, 0),
-        maxAbs:  Math.max(...DUMMY_XP_DAYS.map(d => Math.max(d.earned, d.penalty)), 1),
-    };
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
@@ -88,6 +131,7 @@ export default function AnalyticsPage() {
                 <FinanceAnalytics />
             ) : (
                 <>
+                    {/* Stats — always above the fold, no lazy */}
                     <div data-tour="analytics-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <StatCard icon={Activity} label="Jam Tercatat" value={`${totalHoursLogged}j`} sub="30 hari" trend={{ pct: periodComparison.hoursPct, periodLabel: 'vs minggu lalu' }} />
                         <StatCard icon={Zap} label="Rata-rata Mood" value={avgMood} sub="(1-5)" color="text-xp" bg="bg-xp-soft" trend={{ pct: periodComparison.moodPct, periodLabel: 'vs minggu lalu' }} />
@@ -136,174 +180,180 @@ export default function AnalyticsPage() {
                         </ChartCard>
                     )}
 
+                    {/* Charts section — lazy load below the fold */}
                     <div data-tour="analytics-charts" className="relative space-y-6">
-                    {showDummyCharts && <Badge variant="B" className="absolute -top-1 right-0 z-10">Contoh</Badge>}
-                    {noActivity && !showDummyCharts && (
-                        <div className="glass rounded-card shadow-card p-8 text-center">
-                            <BarChart2 className="w-10 h-10 text-ink-muted mx-auto mb-3" />
-                            <p className="text-ink font-bold">Belum ada data aktivitas</p>
-                            <p className="text-ink-muted text-sm mt-1">Mulai catat aktivitasmu di <span className="text-brand font-semibold">Life Log</span> untuk melihat analitik di sini.</p>
-                        </div>
-                    )}
+                        {showDummyCharts && <Badge variant="B" className="absolute -top-1 right-0 z-10">Contoh</Badge>}
+                        {noActivity && !showDummyCharts && (
+                            <div className="glass rounded-card shadow-card p-8 text-center">
+                                <BarChart2 className="w-10 h-10 text-ink-muted mx-auto mb-3" />
+                                <p className="text-ink font-bold">Belum ada data aktivitas</p>
+                                <p className="text-ink-muted text-sm mt-1">Mulai catat aktivitasmu di <span className="text-brand font-semibold">Life Log</span> untuk melihat analitik di sini.</p>
+                            </div>
+                        )}
 
-                    {(!noActivity || showDummyCharts) && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <ChartCard title="Mood & Energi" sub="Rata-rata harian (skala 1-5)">
+                        {(!noActivity || showDummyCharts) && (
+                            <LazySection minHeight={220}>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <ChartCard title="Mood & Energi" sub="Rata-rata harian (skala 1-5)">
+                                        <ResponsiveContainer width="100%" height={200} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
+                                            <LineChart data={moodData}>
+                                                <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                                                <YAxis domain={[1, 5]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} />
+                                                <Tooltip content={<ChartTip />} isAnimationActive={false} />
+                                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                                <Line type="monotone" dataKey="mood" name="Mood" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                                                <Line type="monotone" dataKey="energy" name="Energi" stroke="#10b981" strokeWidth={2} dot={false} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </ChartCard>
+
+                                    <ChartCard title="Distribusi Waktu" sub="Jam per kategori, 30 hari">
+                                        {catData.length === 0 ? (
+                                            <p className="text-ink-muted text-sm py-8 text-center">Belum ada data</p>
+                                        ) : (
+                                            <div className="flex items-center gap-4">
+                                                <ResponsiveContainer width="60%" height={200} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
+                                                    <PieChart>
+                                                        <Pie data={catData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
+                                                            {catData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                                        </Pie>
+                                                        <Tooltip formatter={(v) => [`${Number(v).toFixed(1)} jam`]} isAnimationActive={false} />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                                <div className="flex-1 space-y-1.5">
+                                                    {catData.map(c => (
+                                                        <div key={c.name} className="flex items-center gap-2">
+                                                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
+                                                            <span className="text-xs text-ink-soft flex-1">{c.name}</span>
+                                                            <span className="text-xs font-bold text-ink">{c.value}j</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </ChartCard>
+                                </div>
+                            </LazySection>
+                        )}
+
+                        {(!noActivity || showDummyCharts) && (
+                            <LazySection minHeight={200}>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <ChartCard title="Peak Hours" sub="Jam kamu paling sering mulai aktivitas">
+                                        <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
+                                            <BarChart data={peakData} barSize={8}>
+                                                <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={2} />
+                                                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
+                                                <Tooltip content={<ChartTip />} cursor={false} isAnimationActive={false} />
+                                                <Bar dataKey="count" name="Aktivitas" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </ChartCard>
+
+                                    <ChartCard title="Hari Terbaik" sub="Hari dalam seminggu yang paling aktif">
+                                        <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
+                                            <BarChart data={bestDayArr} barSize={24}>
+                                                <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                                                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
+                                                <Tooltip content={<ChartTip />} cursor={false} isAnimationActive={false} />
+                                                <Bar dataKey="count" name="Aktivitas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </ChartCard>
+                                </div>
+                            </LazySection>
+                        )}
+
+                        {(!noActivity || showDummyCharts) && (
+                            <LazySection minHeight={180}>
+                                <ChartCard title="Activity Heatmap" sub="6 bulan lalu · hari ini · 6 bulan ke depan">
+                                    <ActivityHeatmap activities={heatmapData} />
+                                </ChartCard>
+                            </LazySection>
+                        )}
+
+                        {(!noActivity || showDummyCharts) && (
+                            <LazySection minHeight={280}>
+                                <ExpGrowthChart data={expChartData} />
+                            </LazySection>
+                        )}
+                    </div>
+
+                    <LazySection minHeight={240}>
+                        <div data-tour="analytics-radar" className="relative grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {(showDummyRadar || (isOnboarding && habitRate === null)) && (
+                                <Badge variant="B" className="absolute -top-1 right-0 z-10">Contoh</Badge>
+                            )}
+                            <ChartCard title="Strength Radar" sub="Kekuatanmu berdasarkan quest yang diselesaikan">
+                                {radarData.every(r => r.score === 0) && !showDummyRadar ? (
+                                    <p className="text-ink-muted text-sm py-8 text-center">Selesaikan quest untuk melihat kekuatanmu</p>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height={220} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
+                                        <RadarChart data={radarDisplay}>
+                                            <PolarGrid stroke="#e3e9f3" />
+                                            <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: '#586484' }} />
+                                            <Radar dataKey="score" name="Strength" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
+                                            <Tooltip content={<ChartTip />} isAnimationActive={false} />
+                                        </RadarChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </ChartCard>
+
+                            {displayHabitRate !== null && (
+                                <ChartCard title="Habit Completion" sub="Tingkat penyelesaian habit 12 minggu terakhir">
+                                    <div className="flex items-center gap-6 h-full py-4">
+                                        <div className="text-center">
+                                            <p className="text-5xl font-extrabold text-success">{displayHabitRate}%</p>
+                                            <p className="text-ink-muted text-xs mt-1">Completion Rate</p>
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="h-4 bg-surface-2 rounded-full overflow-hidden border border-line">
+                                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${displayHabitRate}%`, background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' }} />
+                                            </div>
+                                            <p className="text-ink-muted text-xs mt-2 flex items-center gap-1">
+                                                {displayHabitRate >= 80 ? <><Flame className="w-3.5 h-3.5 text-danger shrink-0" /> Konsistensi luar biasa!</> :
+                                                    displayHabitRate >= 60 ? '👍 Cukup bagus, terus tingkatkan!' :
+                                                        displayHabitRate >= 40 ? '⚡ Masih perlu usaha lebih.' :
+                                                            '💪 Mulai bangun konsistensi sekarang.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </ChartCard>
+                            )}
+                        </div>
+                    </LazySection>
+
+                    {moodVsQuestData.length > 0 && (
+                        <LazySection minHeight={220}>
+                            <ChartCard title="Mood vs Output" sub="Korelasi rata-rata mood dengan quest selesai per hari">
                                 <ResponsiveContainer width="100%" height={200} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
-                                    <LineChart data={showDummyCharts ? DUMMY_MOOD_ENERGY : moodEnergyData}>
+                                    <LineChart data={moodVsQuestData}>
                                         <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                                        <YAxis domain={[1, 5]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} />
+                                        <YAxis yAxisId="mood" domain={[1, 5]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} />
+                                        <YAxis yAxisId="quests" orientation="right" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
                                         <Tooltip content={<ChartTip />} isAnimationActive={false} />
                                         <Legend wrapperStyle={{ fontSize: 11 }} />
-                                        <Line type="monotone" dataKey="mood" name="Mood" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                                        <Line type="monotone" dataKey="energy" name="Energi" stroke="#10b981" strokeWidth={2} dot={false} />
+                                        <Line yAxisId="mood" type="monotone" dataKey="mood" name="Mood" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                                        <Line yAxisId="quests" type="monotone" dataKey="quests" name="Quest" stroke="#10b981" strokeWidth={2} dot={false} strokeDasharray="4 2" />
                                     </LineChart>
                                 </ResponsiveContainer>
                             </ChartCard>
+                        </LazySection>
+                    )}
 
-                            <ChartCard title="Distribusi Waktu" sub="Jam per kategori, 30 hari">
-                                {(showDummyCharts ? DUMMY_CATEGORY_DATA : categoryData).length === 0 ? (
-                                    <p className="text-ink-muted text-sm py-8 text-center">Belum ada data</p>
-                                ) : (
-                                    <div className="flex items-center gap-4">
-                                        <ResponsiveContainer width="60%" height={200} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
-                                            <PieChart>
-                                                <Pie data={showDummyCharts ? DUMMY_CATEGORY_DATA : categoryData} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
-                                                    {(showDummyCharts ? DUMMY_CATEGORY_DATA : categoryData).map((e, i) => <Cell key={i} fill={e.color} />)}
-                                                </Pie>
-                                                <Tooltip formatter={(v) => [`${Number(v).toFixed(1)} jam`]} isAnimationActive={false} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                        <div className="flex-1 space-y-1.5">
-                                            {(showDummyCharts ? DUMMY_CATEGORY_DATA : categoryData).map(c => (
-                                                <div key={c.name} className="flex items-center gap-2">
-                                                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
-                                                    <span className="text-xs text-ink-soft flex-1">{c.name}</span>
-                                                    <span className="text-xs font-bold text-ink">{c.value}j</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </ChartCard>
+                    <LazySection minHeight={200}>
+                        <div data-tour="analytics-xp-history" className="relative">
+                            {showDummyXP && <Badge variant="B" className="absolute -top-1 right-0 z-10">Contoh</Badge>}
+                            <XPHistory
+                                days={showDummyXP ? DUMMY_XP_DAYS : days}
+                                loading={xpLoading}
+                                totalEarned={showDummyXP ? DUMMY_XP_TOTALS.earned : totalEarned}
+                                totalPenalty={showDummyXP ? DUMMY_XP_TOTALS.penalty : totalPenalty}
+                                totalNet={showDummyXP ? DUMMY_XP_TOTALS.earned - DUMMY_XP_TOTALS.penalty : totalNet}
+                                maxAbs={showDummyXP ? DUMMY_XP_TOTALS.maxAbs : maxAbs}
+                            />
                         </div>
-                    )}
-
-                    {(!noActivity || showDummyCharts) && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <ChartCard title="Peak Hours" sub="Jam kamu paling sering mulai aktivitas">
-                                <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
-                                    <BarChart data={showDummyCharts ? DUMMY_PEAK_HOURS : peakHoursData} barSize={8}>
-                                        <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={2} />
-                                        <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
-                                        <Tooltip content={<ChartTip />} cursor={false} isAnimationActive={false} />
-                                        <Bar dataKey="count" name="Aktivitas" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </ChartCard>
-
-                            <ChartCard title="Hari Terbaik" sub="Hari dalam seminggu yang paling aktif">
-                                <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
-                                    <BarChart data={showDummyCharts ? DUMMY_BEST_DAY : bestDayData} barSize={24}>
-                                        <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                                        <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
-                                        <Tooltip content={<ChartTip />} cursor={false} isAnimationActive={false} />
-                                        <Bar dataKey="count" name="Aktivitas" fill="#10b981" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </ChartCard>
-                        </div>
-                    )}
-
-                    {(!noActivity || showDummyCharts) && (
-                        <ChartCard title="Activity Heatmap" sub="6 bulan lalu · hari ini · 6 bulan ke depan">
-                            <ActivityHeatmap activities={showDummyCharts ? DUMMY_HEATMAP_ACTIVITIES : activities} />
-                        </ChartCard>
-                    )}
-
-                    {(!noActivity || showDummyCharts) && (
-                        <ExpGrowthChart data={showDummyCharts ? DUMMY_EXP_DATA : expData} />
-                    )}
-                    </div>
-
-                    <div data-tour="analytics-radar" className="relative grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {(showDummyRadar || (isOnboarding && habitRate === null)) && (
-                            <Badge variant="B" className="absolute -top-1 right-0 z-10">Contoh</Badge>
-                        )}
-                        <ChartCard title="Strength Radar" sub="Kekuatanmu berdasarkan quest yang diselesaikan">
-                            {showDummyRadar ? (
-                                <ResponsiveContainer width="100%" height={220} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
-                                    <RadarChart data={DUMMY_RADAR_DATA}>
-                                        <PolarGrid stroke="#e3e9f3" />
-                                        <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: '#586484' }} />
-                                        <Radar dataKey="score" name="Strength" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
-                                        <Tooltip content={<ChartTip />} isAnimationActive={false} />
-                                    </RadarChart>
-                                </ResponsiveContainer>
-                            ) : radarData.every(r => r.score === 0) ? (
-                                <p className="text-ink-muted text-sm py-8 text-center">Selesaikan quest untuk melihat kekuatanmu</p>
-                            ) : (
-                                <ResponsiveContainer width="100%" height={220} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
-                                    <RadarChart data={radarData}>
-                                        <PolarGrid stroke="#e3e9f3" />
-                                        <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: '#586484' }} />
-                                        <Radar dataKey="score" name="Strength" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
-                                        <Tooltip content={<ChartTip />} isAnimationActive={false} />
-                                    </RadarChart>
-                                </ResponsiveContainer>
-                            )}
-                        </ChartCard>
-
-                        {displayHabitRate !== null && (
-                            <ChartCard title="Habit Completion" sub="Tingkat penyelesaian habit 12 minggu terakhir">
-                                <div className="flex items-center gap-6 h-full py-4">
-                                    <div className="text-center">
-                                        <p className="text-5xl font-extrabold text-success">{displayHabitRate}%</p>
-                                        <p className="text-ink-muted text-xs mt-1">Completion Rate</p>
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="h-4 bg-surface-2 rounded-full overflow-hidden border border-line">
-                                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${displayHabitRate}%`, background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)' }} />
-                                        </div>
-                                        <p className="text-ink-muted text-xs mt-2 flex items-center gap-1">
-                                            {displayHabitRate >= 80 ? <><Flame className="w-3.5 h-3.5 text-danger shrink-0" /> Konsistensi luar biasa!</> :
-                                                displayHabitRate >= 60 ? '👍 Cukup bagus, terus tingkatkan!' :
-                                                    displayHabitRate >= 40 ? '⚡ Masih perlu usaha lebih.' :
-                                                        '💪 Mulai bangun konsistensi sekarang.'}
-                                        </p>
-                                    </div>
-                                </div>
-                            </ChartCard>
-                        )}
-                    </div>
-
-                    {moodVsQuestData.length > 0 && (
-                        <ChartCard title="Mood vs Output" sub="Korelasi rata-rata mood dengan quest selesai per hari">
-                            <ResponsiveContainer width="100%" height={200} minWidth={1} minHeight={1} style={{ touchAction: 'pan-y' }}>
-                                <LineChart data={moodVsQuestData}>
-                                    <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                                    <YAxis yAxisId="mood" domain={[1, 5]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} />
-                                    <YAxis yAxisId="quests" orientation="right" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={20} allowDecimals={false} />
-                                    <Tooltip content={<ChartTip />} isAnimationActive={false} />
-                                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                                    <Line yAxisId="mood" type="monotone" dataKey="mood" name="Mood" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                                    <Line yAxisId="quests" type="monotone" dataKey="quests" name="Quest" stroke="#10b981" strokeWidth={2} dot={false} strokeDasharray="4 2" />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </ChartCard>
-                    )}
-
-                    <div data-tour="analytics-xp-history" className="relative">
-                        {showDummyXP && <Badge variant="B" className="absolute -top-1 right-0 z-10">Contoh</Badge>}
-                        <XPHistory
-                            days={showDummyXP ? DUMMY_XP_DAYS : days}
-                            loading={xpLoading}
-                            totalEarned={showDummyXP ? dummyXPTotals.earned : totalEarned}
-                            totalPenalty={showDummyXP ? dummyXPTotals.penalty : totalPenalty}
-                            totalNet={showDummyXP ? dummyXPTotals.earned - dummyXPTotals.penalty : totalNet}
-                            maxAbs={showDummyXP ? dummyXPTotals.maxAbs : maxAbs}
-                        />
-                    </div>
+                    </LazySection>
                 </>
             )}
         </div>
